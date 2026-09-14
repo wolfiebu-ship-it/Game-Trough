@@ -79,7 +79,9 @@ sowie Notreparatur und Waldtrunk als Sofortkauf.
 ## Technik
 
 - reines HTML/CSS/JavaScript mit Canvas 2D, ~1800 Zeilen, keine Abhängigkeiten
-- interne Auflösung 256 × 144, hart hochskaliert (`image-rendering: pixelated`)
+- interne Auflösung 256 × 144 Spielpixel, gezeichnet in einen dreifach feinen
+  Rückpuffer (768 × 432): die Welt scrollt dadurch in Drittelpixeln statt in
+  ganzen Pixeln, bleibt aber knackig (`image-rendering: pixelated`)
 - Simulation läuft bildsynchron mit der tatsächlich verstrichenen Zeit (in
   Teilschritten von höchstens 1/40 s); feste 60-Hz-Pakete ruckelten sichtbar
   auf 120-Hz-Bildschirmen

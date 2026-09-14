@@ -55,7 +55,7 @@
 <body>
 <div id="wrap">
   <div id="stack">
-    <canvas id="game" width="256" height="144"></canvas>
+    <canvas id="game" width="768" height="432"></canvas>
     <div id="touch">
       <div class="stick" id="stickL"><div class="knob" id="knobL"></div></div>
       <div class="stick" id="stickR"><div class="knob" id="knobR"></div></div>
@@ -84,7 +84,10 @@ const cv  = document.getElementById('game');
 const ctx = cv.getContext('2d', { alpha:false });
 ctx.imageSmoothingEnabled = false;
 
-const VW = 256, VH = 144;                 // sichtbare Aufloesung (echte Pixel)
+const VW = 256, VH = 144;                 // sichtbare Aufloesung in Spielpixeln
+const SS = 3;                             // Rueckpuffer je Spielpixel: erlaubt
+                                          // Drittelschritte beim Scrollen
+const q  = v => Math.round(v*SS)/SS;      // auf Drittelpixel rasten
 const WW = 896, WH = 640;                 // Weltgroesse
 
 const clamp = (v,a,b)=> v<a?a:(v>b?b:v);
@@ -1666,8 +1669,8 @@ function update(dt){
 
   // Kamera: fest auf die Spielfigur gerastert — kein Vorhalten, kein Nachziehen,
   // dadurch steht das Bild relativ zum Helden absolut ruhig.
-  cam.x = clamp(Math.round(player.x) - (VW>>1), 0, WW-VW);
-  cam.y = clamp(Math.round(player.y) - (VH>>1), 0, WH-VH);
+  cam.x = clamp(q(player.x - VW/2), 0, WW-VW-1);
+  cam.y = clamp(q(player.y - VH/2), 0, WH-VH-1);
 
   game.shake=Math.max(0,game.shake-dt*22);
   game.flash=Math.max(0,game.flash-dt*2);
@@ -1684,7 +1687,7 @@ function update(dt){
    ------------------------------------------------------------------ */
 function drawSpr(s, x, y, flip, flash){
   const img = flash ? s.flash : s.img;
-  x=Math.round(x); y=Math.round(y);
+  x=q(x); y=q(y);
   if(flip){ ctx.save(); ctx.translate(x+s.w, y); ctx.scale(-1,1); ctx.drawImage(img,0,0); ctx.restore(); }
   else ctx.drawImage(img, x, y);
 }
@@ -1792,9 +1795,10 @@ function drawShocks(){
   }
 }
 function drawWorld(){
-  const cx=Math.round(cam.x), cy=Math.round(cam.y);
-  ctx.drawImage(GROUND, cx, cy, VW, VH, 0, 0, VW, VH);
-  ctx.save(); ctx.translate(-cx,-cy);
+  const cx=Math.floor(cam.x), cy=Math.floor(cam.y);
+  const fx=cam.x-cx, fy=cam.y-cy;                 // Bruchteil: immer ein Drittelvielfaches
+  ctx.drawImage(GROUND, cx, cy, VW+1, VH+1, -fx, -fy, VW+1, VH+1);
+  ctx.save(); ctx.translate(-cam.x, -cam.y);
 
   // Tor (mit Schadensstufe)
   const stage = game.castleHp<=0 ? 3 : (game.castleHp/game.castleMax>0.66 ? 0 : (game.castleHp/game.castleMax>0.33 ? 1 : 2));
@@ -1838,7 +1842,7 @@ function drawWorld(){
   }
   // Alles Sortierbare nach Fusslinie zeichnen
   const list=[];
-  const vx0=cx-40, vx1=cx+VW+40, vy0=cy-60, vy1=cy+VH+60;
+  const vx0=cx-40, vx1=cx+VW+40, vy0=cy-60, vy1=cy+VH+60;   // grosszuegiger Rand
   for(const p of props){
     if(p.x+p.w<vx0||p.x>vx1||p.y+p.h<vy0||p.y>vy1) continue;
     list.push({s:p.sort, kind:'prop', o:p});
@@ -2076,6 +2080,8 @@ function drawPause(){
 const btnDash=document.getElementById('dashBtn'), btnHeal=document.getElementById('healBtn');
 const btnUltra=document.getElementById('ultraBtn');
 function render(){
+  ctx.setTransform(SS,0,0,SS,0,0);
+  ctx.imageSmoothingEnabled=false;
   touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
   if(btnDash) btnDash.classList.toggle('cool', player.dashCd>0);
   if(btnHeal) btnHeal.classList.toggle('cool', player.healCd>0 || player.hp>=player.maxHp);
@@ -2097,7 +2103,7 @@ function render(){
    15. Schleife
    ------------------------------------------------------------------ */
 resetPlayer();
-cam.x=clamp(Math.round(player.x)-(VW>>1),0,WW-VW); cam.y=clamp(Math.round(player.y)-(VH>>1),0,WH-VH);
+cam.x=clamp(q(player.x-VW/2),0,WW-VW-1); cam.y=clamp(q(player.y-VH/2),0,WH-VH-1);
 rollCards();
 
 let last=performance.now();
