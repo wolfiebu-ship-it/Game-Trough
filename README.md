@@ -48,11 +48,13 @@ unten links das Werkstattfenster.
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 20 gibt es nach jeder
   Welle 20 bis 30 Schrauben Prämie obendrauf.
 - **Ultras**: Der Ultra-Balken füllt sich durch ausgeteilten Schaden. Nach
-  Welle 10 gibt es den **Klingensturm** (anderthalb Sekunden Wirbel, der alles
-  im Umkreis zerlegt), nach Welle 15 den **Pfeilregen** (drei Salven in alle
-  Richtungen), nach Welle 20 den **Donnerschlag** (Druckwelle, betäubt die
-  Bots und heilt ein Herz). Mehrere Ultras wechselst du mit `C` oder durch
-  Antippen des Namens.
+  Welle 3 gibt es den **Donnerblitz** (neun Einschläge auf die dicksten Bots
+  in der Nähe, mit Betäubung), nach Welle 10 den **Klingensturm** (anderthalb
+  Sekunden Wirbel, der alles im Umkreis zerlegt), nach Welle 15 den
+  **Pfeilregen** (drei Salven in alle Richtungen), nach Welle 20 den
+  **Donnerschlag** (Druckwelle, betäubt die Bots und heilt ein Herz). Mehrere
+  Ultras wechselst du mit `C` oder durch Antippen des Namens. Sobald ein
+  Kolossus auftaucht, ist der Balken geschenkt voll.
 - **Kombo**: Zwei schnelle Hiebe hintereinander enden im dritten, schweren
   Schlag — mehr Schaden, mehr Wucht, weiter Bogen.
 - **Deckung**: Durch Bäume läuft man hindurch — wer im Laub steckt, lässt die

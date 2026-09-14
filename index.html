@@ -922,7 +922,7 @@ const player = {
   dashT:0, dashCd:0, dashDir:0, dashCdMax:2.8,
   bowCd:0, bowCdMax:0.85, arrowDmg:4, arrowSpeed:176, shootT:0,
   healCd:0, healCdMax:15, regenT:0, regenEvery:5,
-  ultra:0, ultraMax:100, ultraSel:0, stormT:0, stormTick:0, rainT:0, rainLeft:0,
+  ultra:0, ultraMax:100, ultraSel:0, stormT:0, stormTick:0, rainT:0, rainLeft:0, boltT:0, boltLeft:0,
   inv:0, anim:0, hurtT:0, alive:true,
   lifesteal:0, thorns:0, magnet:34,
   upg:{}
@@ -931,7 +931,8 @@ function resetPlayer(){
   player.x = CAS.gate.x + 34; player.y = CAS.center.y;
   player.vx=player.vy=0; player.hp=player.maxHp; player.inv=1.2;
   player.swing=null; player.atkCd=0; player.dashT=0; player.dashCd=0; player.bowCd=0;
-  player.healCd=0; player.regenT=0; player.stormT=0; player.rainT=0; player.rainLeft=0; player.alive=true;
+  player.healCd=0; player.regenT=0; player.stormT=0; player.rainT=0; player.rainLeft=0;
+  player.boltLeft=0; player.boltT=0; player.alive=true;
 }
 
 const BOT = {
@@ -940,14 +941,15 @@ const BOT = {
   archer: {name:'SCHÜTZE', spr:SPR.archer, hp:11, dmg:1, speed:31, r:6,  range:80, windup:0.55, cd:1.9,  scrap:2, score:22, kbR:1.0,  aggro:210, ranged:true},
   bruiser:{name:'BRECHER', spr:SPR.bruiser,hp:52, dmg:3, speed:23, r:9,  range:17, windup:0.7,  cd:1.5,  scrap:4, score:45, kbR:0.22, aggro:120, gateDmg:3},
   bomber: {name:'ZÜNDER',  spr:SPR.bomber, hp:9,  dmg:4, speed:58, r:5,  range:13, windup:0.9,  cd:9,    scrap:3, score:28, kbR:1.1,  aggro:230, fuse:true},
-  boss:   {name:'KOLOSSUS',spr:SPR.boss,   hp:360,dmg:5, speed:24, r:16, range:30, windup:0.8,  cd:1.8,  scrap:45, score:420, kbR:0.03, aggro:999, boss:true, gateDmg:9}
+  boss:   {name:'KOLOSSUS',spr:SPR.boss,   hp:320,dmg:5, speed:24, r:16, range:30, windup:0.8,  cd:1.8,  scrap:45, score:420, kbR:0.03, aggro:999, boss:true, gateDmg:9}
 };
 
-const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters=[];
+const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters=[], blitze=[];
 
 function spawnEnemy(type, x, y){
   const d=BOT[type];
-  const mul = 1 + Math.max(0, game.wave-1)*0.085;
+  // Bosse wachsen halb so schnell mit, sonst wird der erste Kolossus zur Wand
+  const mul = 1 + Math.max(0, game.wave-1)*(d.boss?0.045:0.085);
   enemies.push({
     type, d, x, y, vx:0, vy:0, r:d.r,
     hp: Math.round(d.hp*mul), hpMax: Math.round(d.hp*mul),
@@ -1097,6 +1099,7 @@ const shocks = waves;                       // Druckwellen (Boss-Schlag, Explosi
    ------------------------------------------------------------------ */
 /* --- Ultras: ab Welle 10 freigeschaltet, aufgeladen durch ausgeteilten Schaden --- */
 const ULTRAS = [
+  { id:'bolt',  name:'DONNERBLITZ',  wave:3,  hint:'NEUN EINSCHLAEGE AUF DIE DICKSTEN BOTS' },
   { id:'storm', name:'KLINGENSTURM', wave:10, hint:'WIRBEL, DER ALLES UM DICH TRIFFT' },
   { id:'rain',  name:'PFEILREGEN',   wave:15, hint:'PFEILE IN ALLE RICHTUNGEN' },
   { id:'quake', name:'DONNERSCHLAG', wave:20, hint:'DRUCKWELLE, BETAEUBUNG, HEILUNG' }
@@ -1106,7 +1109,7 @@ function activeUltra(){ const o=ownedUltras(); return o.length ? o[player.ultraS
 function ultraReady(){ return activeUltra() && player.ultra >= player.ultraMax; }
 function chargeUltra(v){
   if(!ownedUltras().length) return;
-  if(player.stormT>0 || player.rainLeft>0) return;      // die Ultra laedt sich nicht selbst
+  if(player.stormT>0 || player.rainLeft>0 || player.boltLeft>0) return;  // laedt sich nicht selbst
   player.ultra = Math.min(player.ultraMax, player.ultra + v);
 }
 function cycleUltra(){
@@ -1118,7 +1121,9 @@ function fireUltra(){
   if(!ultraReady() || !player.alive) return;
   const u=activeUltra(); player.ultra=0;
   say(u.name+'!', 1.4, PAL.y); game.flash=0.4;
-  if(u.id==='storm'){
+  if(u.id==='bolt'){
+    player.boltLeft=9; player.boltT=0; game.white=0.5; shake(2); SFX.boom();
+  } else if(u.id==='storm'){
     player.stormT=1.5; player.stormTick=0; player.inv=Math.max(player.inv,1.6);
     SFX.heavy();
   } else if(u.id==='rain'){
@@ -1141,6 +1146,34 @@ function fireUltra(){
 }
 function updateUltra(dt){
   const p=player;
+  if(p.boltLeft>0){
+    p.boltT-=dt;
+    if(p.boltT<=0){
+      p.boltT=0.12; p.boltLeft--;
+      // Ziel: der dickste Bot in der Naehe, Bosse zuerst
+      let ziel=null, best=-1;
+      for(const e of enemies){
+        if(e.dead||e.spawnT>0) continue;
+        const d=dist(p.x,p.y,e.x,e.y); if(d>160) continue;
+        const w=(e.d.boss?9999:0) + e.hp - d*0.3 - (e.getroffen||0)*40;
+        if(w>best){ best=w; ziel=e; }
+      }
+      const tx = ziel ? ziel.x : p.x+rr(-50,50), ty = ziel ? ziel.y : p.y+rr(-40,40);
+      if(ziel) ziel.getroffen=(ziel.getroffen||0)+1;
+      blitze.push({x:tx, y:ty, t:0, dur:0.28, seed:rr(0,9)});
+      shocks.push({x:tx, y:ty, r:4, max:26, t:0, col:PAL.C});
+      game.white=Math.max(game.white||0, 0.45); shake(1.4); SFX.boom();
+      burst(tx, ty-4, 16, PAL.C, 100, 0.45);
+      for(const e of enemies){
+        if(e.dead||e.spawnT>0) continue;
+        if(dist(tx,ty,e.x,e.y) < 24+e.r){
+          damageEnemy(e, p.dmg*3, 100, Math.atan2(e.y-ty, e.x-tx), true);
+          if(!e.dead){ e.st='cool'; e.t=0; e.cd=Math.max(e.cd,1.1); }   // betaeubt
+        }
+      }
+      if(p.boltLeft===0) for(const e of enemies) e.getroffen=0;
+    }
+  }
   if(p.stormT>0){
     p.stormT-=dt; p.inv=Math.max(p.inv,0.2);
     p.stormTick-=dt;
@@ -1235,6 +1268,12 @@ function doSpawns(dt){
     spawnEnemy(t, x, y);
     for(let k=0;k<6;k++) part(x,y-6,rr(-20,20),rr(-20,20),0.4,PAL.C,1);
     if(t==='boss'){
+      if(!game.ultras.length){                    // Hilfe fuer den ersten Kolossus
+        game.ultras.push('bolt'); player.ultraSel=0;
+        say('ULTRA FREI: DONNERBLITZ', 2.4, PAL.y);
+      }
+      player.ultra = player.ultraMax;              // zum Boss ist die Ultra immer geladen
+      say('ULTRA BEREIT', 1.6, PAL.C);
       say('KOLOSSUS ERWACHT', 2.2, PAL.R);
       shake(4); SFX.boom(); burst(x, y-10, 30, PAL.R, 110, 0.7, 2);
     }
@@ -1307,7 +1346,7 @@ function newGame(){
   Object.assign(player, { speed:64, dmg:5, reach:26, arc:1.5, atkSpeed:1, maxHp:10,
     dashCdMax:2.8, bowCdMax:0.85, arrowDmg:4, bowCd:0, shootT:0,
     healCdMax:15, healCd:0, regenT:0, regenEvery:5,
-    ultra:0, ultraSel:0, stormT:0, rainT:0, rainLeft:0,
+    ultra:0, ultraSel:0, stormT:0, rainT:0, rainLeft:0, boltLeft:0, boltT:0,
     lifesteal:0, thorns:0, magnet:34, upg:{}, combo:0 });
   resetPlayer(); rollCards();
 }
@@ -1629,6 +1668,7 @@ function updateFX(dt){
     if(s.r>s.max-1.5) shocks.splice(i,1);
   }
   for(let i=floaters.length-1;i>=0;i--){ const f=floaters[i]; f.t+=dt; f.y-=14*dt; if(f.t>1) floaters.splice(i,1); }
+  for(let i=blitze.length-1;i>=0;i--){ const b=blitze[i]; b.t+=dt; if(b.t>=b.dur) blitze.splice(i,1); }
 }
 
 /* ------------------------------------------------------------------
@@ -1722,6 +1762,7 @@ function update(dt){
   game.shake=Math.max(0,game.shake-dt*22);
   game.flash=Math.max(0,game.flash-dt*2);
   game.redFlash=Math.max(0,game.redFlash-dt*2);
+  game.white=Math.max(0,(game.white||0)-dt*3.2);
   game.msgT=Math.max(0,game.msgT-dt);
   if(game.msgT<=0 && MSGQ.length){ const m=MSGQ.shift(); game.msg=m.txt; game.msgT=m.dur; game.msgCol=m.col; }
   game.tutorial=Math.max(0,game.tutorial-dt);
@@ -1829,6 +1870,20 @@ function drawEnemy(e){
     ctx.fillStyle=PAL.r; ctx.fillRect(bx,by,Math.round(w*e.hp/e.hpMax),2);
   }
 }
+function drawBlitz(b){
+  const a = 1 - b.t/b.dur, oben = b.y-78, n = 10;
+  let px = b.x + Math.sin(b.seed)*9, py = oben;
+  ctx.globalAlpha = Math.max(0, a);
+  for(let i=1;i<=n;i++){
+    const f=i/n;
+    const nx = b.x + (1-f)*Math.sin(b.seed + i*2.7)*13;
+    const ny = oben + (b.y-oben)*f;
+    pxLine(px, py, nx, ny, i%3===0 ? PAL.C : '#ffffff', 1);
+    if(i%3===1) pxLine(nx, ny, nx + Math.sin(b.seed+i*1.7)*8, ny+6, PAL.C, 1);
+    px=nx; py=ny;
+  }
+  ctx.globalAlpha=1;
+}
 function drawShocks(){
   for(const s of shocks){
     const a=1-s.r/s.max;
@@ -1932,6 +1987,7 @@ function drawWorld(){
   }
   // Effekte obenauf
   for(const s of slashes) drawSlash(s);
+  for(const b of blitze) drawBlitz(b);
   drawShocks();
   for(const p of parts){
     const a=p.life/p.max;
@@ -2093,6 +2149,9 @@ function drawHUD(){
     const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
     ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 24, game.msgCol||PAL.y, sc); ctx.globalAlpha=1;
   }
+  if(game.white>0){
+    ctx.globalAlpha=Math.min(0.5,game.white*0.5); ctx.fillStyle='#dff6ff'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
+  }
   if(game.redFlash>0){
     ctx.globalAlpha=game.redFlash*0.5; ctx.fillStyle='#8c1c1c'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   }
@@ -2120,14 +2179,14 @@ function drawTitle(){
     'RECHTER DAUMEN: ZIELEN',
     'TASTEN: SCHWERT, BOGEN, ROLLE',
     'HEILEN-TASTE: ALLE 15 SEKUNDEN',
-    'AB WELLE 10: ULTRA UNTEN LINKS',
+    'AB WELLE 3: ULTRA UNTEN LINKS',
     'IN DER RUHE: SHOP UNTEN LINKS'
   ] : [
     'WASD LAUFEN · MAUS ZIELEN',
     'KLICK ODER LEERTASTE: SCHWERT',
     'RECHTSKLICK ODER Q: PFEIL',
     'SHIFT: ROLLE · H: HEILEN (15 S)',
-    'AB WELLE 10: X ULTRA · C WECHSELN',
+    'AB WELLE 3: X ULTRA · C WECHSELN',
     'B: SHOP · ENTER: WELLE STARTEN'
   ];
   rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+43+i*10, '#9fb79a', 1));
