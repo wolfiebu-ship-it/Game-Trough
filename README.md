@@ -45,8 +45,10 @@ unten links das Werkstattfenster.
   hindurch, die Bots nicht.
 - **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
-  offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 20 gibt es nach jeder
-  Welle 20 bis 30 Schrauben Prämie obendrauf.
+  offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 10 gibt es nach jeder
+  gehaltenen Welle eine Prämie obendrauf: 10 Schrauben ab Welle 10, 20 ab
+  Welle 20, 30 ab Welle 30 — und ab Welle 50 das Doppelte der Wellenzahl
+  (Welle 50 gibt 100, Welle 100 gibt 200), jeweils plus etwas Zufall.
 - **Ultras**: Der Ultra-Balken füllt sich durch ausgeteilten Schaden. Nach
   Welle 3 gibt es den **Donnerblitz** (neun Einschläge auf die dicksten Bots
   in der Nähe, mit Betäubung), nach Welle 10 den **Klingensturm** (anderthalb
@@ -76,10 +78,18 @@ unten links das Werkstattfenster.
 
 ## Verbesserungen
 
-Vierzehn Karten, immer drei zufällige zur Auswahl: schärfere Klinge, leichtere
-Stiefel, Extra-Herz, Wirbelklinge, Torpanzer, Hetzrolle, schnelle Hiebe,
-Blutdurst, Dornenpanzer, schneller Köcher, scharfe Spitzen, Schraubenmagnet
-sowie Notreparatur und Waldtrunk als Sofortkauf.
+Zweiundzwanzig Karten, immer vier zufällige zur Auswahl.
+
+*Kampf*: schärfere Klinge, Wirbelklinge, schnelle Hiebe, Blutdurst,
+Dornenpanzer, **Feuerklinge** (Hiebe entzünden die Bots).
+*Bogen*: schneller Köcher, scharfe Spitzen, **Eispfeile** (bremsen),
+**Doppelschuss** (ein Pfeil mehr je Schuss).
+*Überleben*: Extra-Herz, leichtere Stiefel, Hetzrolle, **Schutzschild**
+(fängt einen Treffer ab und lädt sich nach), **Zweites Leben** (einmal
+wieder auf die Beine).
+*Burg und Beute*: Torpanzer, Notreparatur, **Turmwache** (die Burg schießt
+selbst auf anrückende Bots), Schraubenmagnet, **Schatzsucher** (mehr Beute),
+**Kampfgeist** (Ultra lädt schneller), Waldtrunk.
 
 ## Technik
 
