@@ -2100,15 +2100,18 @@ resetPlayer();
 cam.x=clamp(Math.round(player.x)-(VW>>1),0,WW-VW); cam.y=clamp(Math.round(player.y)-(VH>>1),0,WH-VH);
 rollCards();
 
-let last=performance.now(), acc=0;
-const STEP=1/60;
+let last=performance.now();
+const MAXSTEP=1/40;                       // groesster Simulationsschritt
 function frame(now){
   requestAnimationFrame(frame);
+  // Genau die verstrichene Zeit simulieren — nicht in festen 60-Hz-Paketen.
+  // Sonst bewegt sich die Welt bei 120 Hz nur in jedem zweiten Bild und in
+  // Doppelschritten: genau das sah wie Wackeln aus.
   let dt=(now-last)/1000; last=now;
-  if(dt>0.25) dt=0.25;
-  acc+=dt;
-  let guard=0;
-  while(acc>=STEP && guard++<6){ update(STEP); acc-=STEP; }
+  if(!(dt>0)) dt=1/60;
+  if(dt>0.2) dt=0.2;
+  let rest=dt;
+  while(rest>0.00001){ const step=Math.min(rest, MAXSTEP); update(step); rest-=step; }
   render();
 }
 requestAnimationFrame(frame);
