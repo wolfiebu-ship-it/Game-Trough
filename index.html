@@ -291,19 +291,27 @@ sprite([
   '.......KiKKiK.......','......Ki....iK......','......Ki....iK......','......KK....KK......'])];
 
 SPR.boss = [sprite([
-  '........................','........KKKKKKKK........','.......KmMMMMMMmK.......','......KmMMMMMMMMmK......',
-  '......KMrrrrrrrrMK......','......KMrRRrrRRrMK......','......KmMMMMMMMMmK......','....KKKKMMMMMMMMKKKK....',
-  '...KMMMKMMMMMMMMKMMMK...','...KMMMKMiiiiiiMKMMMK...','...KMMMKMiiiiiiMKMMMK...','...KwwwKMMMMMMMMKwwwK...',
-  '...KwwwKKMMMMMMKKwwwK...','....KKK..KMMMMK..KKK....','.........KMMMMK.........','........KMMMMMMK........',
-  '.......KMiiiiiiMK.......','.......KMMMMMMMMK.......','......KKKMMMMMMKKK......','......KMMKK..KKMMK......',
-  '......KMMK....KMMK......','......KMMK....KMMK......','......KiiK....KiiK......','......KKKK....KKKK......']),
+  '................................','.........KKKKKKKKKKKKKK.........','........KmMMMMMMMMMMMMmK........',
+  '.......KmMMMMMMMMMMMMMMmK.......','.......KMrrrrrrrrrrrrrrMK.......','.......KMrRRrrrrrrrrRRrMK.......',
+  '.......KmMMMMMMMMMMMMMMmK.......','.....KKKKMMMMMMMMMMMMMMKKKK.....','....KMMMMKMMMMMMMMMMMMKMMMMK....',
+  '....KMMMMKMiiiiiiiiiiMKMMMMK....','....KMMMMKMiicccccciiMKMMMMK....','....KMMMMKMiicCCCCciiMKMMMMK....',
+  '....KMMMMKMiicccccciiMKMMMMK....','....KwwwwKMMMMMMMMMMMMKwwwwK....','....KwwwwKKMMMMMMMMMMKKwwwwK....',
+  '.....KKKK..KMMMMMMMMK..KKKK.....','...........KMMMMMMMMK...........','..........KMiiiiiiiiMK..........',
+  '..........KMMMMMMMMMMK..........','........KKKMMMMMMMMMMKKK........','........KMMKMMMMMMMMKMMK........',
+  '.........KMMMK....KMMMK.........','.........KMMMK....KMMMK.........','.........KiiiK....KiiiK.........',
+  '.........KMMMK....KMMMK.........','........KKMMMKK..KKMMMKK........','........KwwwwwK..KwwwwwK........',
+  '........KKKKKKK..KKKKKKK........']),
 sprite([
-  '........................','........KKKKKKKK........','.......KmMMMMMMmK.......','......KmMMMMMMMMmK......',
-  '......KMrrrrrrrrMK......','......KMrRRrrRRrMK......','......KmMMMMMMMMmK......','....KKKKMMMMMMMMKKKK....',
-  '...KMMMKMMMMMMMMKMMMK...','...KMMMKMiiiiiiMKMMMK...','...KMMMKMiiiiiiMKMMMK...','...KwwwKMMMMMMMMKwwwK...',
-  '....KwwKKMMMMMMKKwwK....','.....KK..KMMMMK..KK.....','.........KMMMMK.........','........KMMMMMMK........',
-  '.......KMiiiiiiMK.......','.......KMMMMMMMMK.......','......KKKMMMMMMKKK......','.....KKMMKK..KKMMKK.....',
-  '.....KMMK......KMMK.....','.....KMMK......KMMK.....','.....KiiK......KiiK.....','.....KKKK......KKKK.....'])];
+  '................................','.........KKKKKKKKKKKKKK.........','........KmMMMMMMMMMMMMmK........',
+  '.......KmMMMMMMMMMMMMMMmK.......','.......KMrrrrrrrrrrrrrrMK.......','.......KMrRRrrrrrrrrRRrMK.......',
+  '.......KmMMMMMMMMMMMMMMmK.......','.....KKKKMMMMMMMMMMMMMMKKKK.....','....KMMMMKMMMMMMMMMMMMKMMMMK....',
+  '....KMMMMKMiiiiiiiiiiMKMMMMK....','....KMMMMKMiicCCCCciiMKMMMMK....','....KMMMMKMiicccccciiMKMMMMK....',
+  '....KwwwwKMiicccccciiMKwwwwK....','....KwwwwKMMMMMMMMMMMMKwwwwK....','.....KKKKKKMMMMMMMMMMKKKKKK.....',
+  '...........KMMMMMMMMK...........','...........KMMMMMMMMK...........','..........KMiiiiiiiiMK..........',
+  '..........KMMMMMMMMMMK..........','........KKKMMMMMMMMMMKKK........','........KMMKMMMMMMMMKMMK........',
+  '.........KMMMK....KMMMK.........','.........KMMMK....KMMMK.........','.........KiiiK....KiiiK.........',
+  '.........KMMMK....KMMMK.........','........KKMMMKK..KKMMMKK........','........KwwwwwK...KwwwwwK.......',
+  '........KKKKKKK...KKKKKKK.......'])];
 
 // --- HUD-Symbole ----------------------------------------------------
 SPR.heart  = sprite(['.KK.KK.','KRRKRRK','KRrrrRK','KRrrrRK','.KRrRK.','..KRK..','...K...']);
@@ -932,7 +940,7 @@ const BOT = {
   archer: {name:'SCHÜTZE', spr:SPR.archer, hp:11, dmg:1, speed:31, r:6,  range:80, windup:0.55, cd:1.9,  scrap:2, score:22, kbR:1.0,  aggro:210, ranged:true},
   bruiser:{name:'BRECHER', spr:SPR.bruiser,hp:52, dmg:3, speed:23, r:9,  range:17, windup:0.7,  cd:1.5,  scrap:4, score:45, kbR:0.22, aggro:120, gateDmg:3},
   bomber: {name:'ZÜNDER',  spr:SPR.bomber, hp:9,  dmg:4, speed:58, r:5,  range:13, windup:0.9,  cd:9,    scrap:3, score:28, kbR:1.1,  aggro:230, fuse:true},
-  boss:   {name:'KOLOSSUS',spr:SPR.boss,   hp:210,dmg:4, speed:21, r:12, range:24, windup:0.85, cd:2.0,  scrap:35, score:300, kbR:0.05, aggro:999, boss:true, gateDmg:8}
+  boss:   {name:'KOLOSSUS',spr:SPR.boss,   hp:360,dmg:5, speed:24, r:16, range:30, windup:0.8,  cd:1.8,  scrap:45, score:420, kbR:0.03, aggro:999, boss:true, gateDmg:9}
 };
 
 const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters=[];
@@ -1226,6 +1234,10 @@ function doSpawns(dt){
     x=clamp(x,10,WW-10); y=clamp(y,16,WH-10);
     spawnEnemy(t, x, y);
     for(let k=0;k<6;k++) part(x,y-6,rr(-20,20),rr(-20,20),0.4,PAL.C,1);
+    if(t==='boss'){
+      say('KOLOSSUS ERWACHT', 2.2, PAL.R);
+      shake(4); SFX.boom(); burst(x, y-10, 30, PAL.R, 110, 0.7, 2);
+    }
   }
   game.spawnT = Math.max(0.9, 3.1 - game.wave*0.08);
 }
@@ -1459,6 +1471,7 @@ function updateEnemies(dt){
     e.ang=Math.atan2(ay,ax);
 
     let spd = e.d.speed * (inBush(e.x,e.y)?0.75:1);
+    if(e.d.boss && e.hp < e.hpMax*0.5) spd *= 1.35;          // angeschlagen wird er wild
     if(e.st!=='walk') spd *= (e.st==='windup'?0.25:0.5);
     if(e.st==='fuse') spd *= 1.35;
     e.vx = lerp(e.vx, ax*spd, 1-Math.pow(0.002,dt));
@@ -1473,7 +1486,8 @@ function updateEnemies(dt){
     const reachP = onPlayer && dp < e.d.range + player.r + 2;
     const reachG = !onPlayer && gd.d < (e.d.ranged ? e.d.range : e.d.range*0.8);
     if(e.st==='walk'){
-      if(e.cd<=0 && (reachP || reachG || (e.d.ranged && onPlayer && dp<e.d.range))){
+      if(e.cd<=0 && (reachP || reachG || (e.d.ranged && onPlayer && dp<e.d.range)
+                     || (e.d.boss && onPlayer && dp<150))){
         e.st = e.d.fuse ? 'fuse' : 'windup'; e.t=0;
         e.aimX = onPlayer ? player.x : gd.x; e.aimY = onPlayer ? player.y : gd.y;
       }
@@ -1496,8 +1510,9 @@ function updateEnemies(dt){
     if(e.d.boss){
       e.callT=(e.callT||6)-dt;
       if(e.callT<=0 && enemies.filter(x=>!x.dead).length<44){
-        e.callT=7;
-        for(let i=0;i<2;i++) spawnEnemy('scout', e.x+rr(-20,20), e.y+rr(-14,14));
+        const wut = e.hp < e.hpMax*0.5;
+        e.callT = wut ? 5 : 7;
+        for(let i=0;i<(wut?3:2);i++) spawnEnemy('scout', e.x+rr(-24,24), e.y+rr(-16,16));
         burst(e.x,e.y-10,14,PAL.C,70,0.5);
       }
     }
@@ -1516,11 +1531,27 @@ function strike(e, onPlayer, gd){
     SFX.shoot(); return;
   }
   if(d.boss){
-    shocks.push({x:e.x, y:e.y+2, r:6, max:40, t:0, col:PAL.R});
-    shake(2.5); SFX.boom();
-    burst(e.x,e.y+2,20,PAL.n,90,0.5);
-    if(player.alive && dist(e.x,e.y+2,player.x,player.y)<40) hurtPlayer(e.dmg, e.x, e.y);
-    if(gd.d<32) damageCastle(d.gateDmg, gd.x, gd.y);
+    const wut = e.hp < e.hpMax*0.5;                      // zweite Phase: er dreht durch
+    const dp = player.alive ? dist(e.x,e.y,player.x,player.y) : 1e9;
+    if(dp < 52 || !onPlayer){
+      // Stampfer: Druckwelle am Boden
+      shocks.push({x:e.x, y:e.y+2, r:8, max:wut?62:48, t:0, col:PAL.R});
+      if(wut) shocks.push({x:e.x, y:e.y+2, r:4, max:36, t:0, col:PAL.O});
+      shake(2.5); SFX.boom();
+      burst(e.x,e.y+2, wut?30:22, PAL.n, 110, 0.55);
+      if(player.alive && dp < (wut?58:46)) hurtPlayer(e.dmg, e.x, e.y);
+      if(gd.d<38) damageCastle(d.gateDmg, gd.x, gd.y);
+    } else {
+      // Salve aus den Schulterwerfern
+      const n = wut?7:5, weite=wut?0.95:0.6;
+      const basis = Math.atan2((player.y-6)-(e.y-12), player.x-e.x);
+      for(let i=0;i<n;i++){
+        const a = basis + (i-(n-1)/2) * (weite/(n-1));
+        bullets.push({ x:e.x+Math.cos(a)*11, y:e.y-12+Math.sin(a)*9,
+          vx:Math.cos(a)*120, vy:Math.sin(a)*120, dmg:2, t:0, col:PAL.R });
+      }
+      SFX.shoot(); SFX.heavy(); shake(1.2);
+    }
     return;
   }
   if(onPlayer){
@@ -2029,6 +2060,16 @@ function drawHUD(){
   drawText(ctx, scr, 12, VH-10, PAL.y, 1);
   drawText(ctx, String(game.score), 18+textW(scr,1), VH-10, '#9fb79a', 1);
 
+  const chef = game.phase==='wave' ? enemies.find(e=>!e.dead && e.d.boss && e.spawnT<=0) : null;
+  if(chef){
+    const w=150, x=Math.round((VW-w)/2), y=VH-20;
+    drawTextC(ctx, chef.d.name + (chef.hp<chef.hpMax*0.5 ? '  ·  WUT' : ''), VW/2, y-9,
+      chef.hp<chef.hpMax*0.5 ? PAL.O : '#e9c0b0', 1);
+    ctx.fillStyle='#141019'; ctx.fillRect(x-1,y-1,w+2,6);
+    ctx.fillStyle='#3a1d22'; ctx.fillRect(x,y,w,4);
+    ctx.fillStyle=PAL.r; ctx.fillRect(x,y,Math.round(w*clamp(chef.hp/chef.hpMax,0,1)),4);
+    ctx.fillStyle=PAL.R; ctx.fillRect(x,y,Math.round(w*clamp(chef.hp/chef.hpMax,0,1)),1);
+  }
   let hintY = VH-26;
   if(game.phase==='rest'){
     drawShopButton();

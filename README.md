@@ -70,7 +70,7 @@ unten links das Werkstattfenster.
 | **Schütze** (lila) | hält Abstand und schießt Energiebolzen |
 | **Brecher** (rot, groß) | langsam, zäh, prügelt besonders hart aufs Tor |
 | **Zünder** (gelb) | rennt heran und sprengt sich — reißt auch eigene Bots mit |
-| **Kolossus** (Boss) | alle fünf Wellen: Schockwellen-Schlag und ruft Späher |
+| **Kolossus** (Boss) | alle fünf Wellen: doppelt so groß wie du, stampft Druckwellen aus dem Boden, feuert Salven aus den Schulterwerfern und ruft Späher. Unter halber Lebensanzeige geht er in **Wut**: schneller, weitere Druckwellen, größere Salven, mehr Verstärkung |
 
 ## Verbesserungen
 
