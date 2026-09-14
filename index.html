@@ -31,12 +31,16 @@
     align-items:center; justify-content:center; text-align:center; line-height:1.05;
     font-size:2.4vmin; font-weight:bold; letter-spacing:.04em; user-select:none;
     background:rgba(16,32,18,.5); text-shadow:0 0 6px rgba(0,0,0,.7); }
-  #swordBtn{ right:3.5%;  bottom:7%;  width:16vmin; height:16vmin;
-    border:2px solid rgba(215,220,236,.6); color:#eef3ff; }
-  #bowBtn  { right:20.5%; bottom:16%; width:13vmin; height:13vmin;
-    border:2px solid rgba(255,200,120,.55); color:#ffd9a0; }
-  #dashBtn { right:5%;    bottom:29%; width:11vmin; height:11vmin;
-    border:2px solid rgba(150,230,255,.5); color:#cfeeff; font-size:2.1vmin; }
+  #swordBtn{ right:2.5vmin; bottom:3vmin;   width:18vmin; height:18vmin;
+    border:2px solid rgba(215,220,236,.65); color:#eef3ff; font-size:2.6vmin; }
+  #bowBtn  { right:23vmin;  bottom:5.5vmin; width:14vmin; height:14vmin;
+    border:2px solid rgba(255,200,120,.6);  color:#ffd9a0; }
+  #dashBtn { right:4vmin;   bottom:24vmin;  width:12vmin; height:12vmin;
+    border:2px solid rgba(150,230,255,.55); color:#cfeeff; font-size:2.1vmin; }
+  #fsBtn{ position:absolute; right:2vmin; top:2vmin; width:9vmin; height:9vmin; border-radius:22%;
+    pointer-events:auto; display:flex; align-items:center; justify-content:center;
+    font-size:3.4vmin; user-select:none; color:#cfe8c2;
+    background:rgba(16,32,18,.45); border:2px solid rgba(200,240,190,.35); }
   .abtn.hit{ background:rgba(140,220,255,.45); }
   #touch.rest .abtn{ display:none; }
 </style>
@@ -44,13 +48,14 @@
 <body>
 <div id="wrap">
   <div id="stack">
-    <canvas id="game" width="384" height="216"></canvas>
+    <canvas id="game" width="256" height="144"></canvas>
     <div id="touch">
       <div class="stick" id="stickL"><div class="knob" id="knobL"></div></div>
       <div class="stick" id="stickR"><div class="knob" id="knobR"></div></div>
       <div class="abtn" id="swordBtn">SCHWERT</div>
       <div class="abtn" id="bowBtn">BOGEN</div>
       <div class="abtn" id="dashBtn">ROLLE</div>
+      <div id="fsBtn">⛶</div>
     </div>
   </div>
 </div>
@@ -70,7 +75,7 @@ const cv  = document.getElementById('game');
 const ctx = cv.getContext('2d', { alpha:false });
 ctx.imageSmoothingEnabled = false;
 
-const VW = 384, VH = 216;                 // sichtbare Aufloesung (echte Pixel)
+const VW = 256, VH = 144;                 // sichtbare Aufloesung (echte Pixel)
 const WW = 896, WH = 640;                 // Weltgroesse
 
 const clamp = (v,a,b)=> v<a?a:(v>b?b:v);
@@ -715,6 +720,12 @@ function touchEnd(e){
   }
   e.preventDefault();
 }
+// Wischen darf die Seite niemals verschieben (Capture laeuft auch ueber den Tasten)
+const lockScroll = e=>{ if(e.cancelable) e.preventDefault(); };
+document.addEventListener('touchmove', lockScroll, {passive:false, capture:true});
+document.addEventListener('gesturestart', lockScroll, {passive:false});
+document.addEventListener('dblclick', lockScroll, {passive:false});
+
 addEventListener('touchstart', touchStart, {passive:false});
 addEventListener('touchmove',  touchMove,  {passive:false});
 addEventListener('touchend',   touchEnd,   {passive:false});
@@ -726,6 +737,19 @@ function bindBtn(id, code){
     setTimeout(()=>el.classList.remove('hit'),110); };
   el.addEventListener('touchstart', go, {passive:false});
   el.addEventListener('mousedown', go);
+}
+const fsBtn=document.getElementById('fsBtn');
+if(fsBtn){
+  const wrap=document.getElementById('wrap');
+  if(!document.fullscreenEnabled && !wrap.webkitRequestFullscreen) fsBtn.style.display='none';
+  const go=e=>{ e.preventDefault(); e.stopPropagation(); isTouch=true; touchUI.classList.add('on');
+    try{
+      if(document.fullscreenElement) document.exitFullscreen();
+      else (wrap.requestFullscreen||wrap.webkitRequestFullscreen).call(wrap);
+    }catch(err){}
+  };
+  fsBtn.addEventListener('touchstart', go, {passive:false});
+  fsBtn.addEventListener('mousedown', go);
 }
 bindBtn('swordBtn','__attack');
 bindBtn('bowBtn','__bow');
@@ -1072,21 +1096,21 @@ const UPGRADES = [
    apply:()=>{ player.maxHp+=2; player.hp=player.maxHp; }},
   {id:'reach', name:'WIRBELKLINGE', max:3, cost:l=>16+l*10, desc:l=>'GRÖSSERER BOGEN',
    apply:()=>{ player.reach+=5; player.arc+=0.28; }},
-  {id:'gate',  name:'TORPANZER', max:5, cost:l=>14+l*8, desc:l=>'TOR +40 UND HEIL',
+  {id:'gate',  name:'TORPANZER', max:5, cost:l=>14+l*8, desc:l=>'TOR +40, HEIL',
    apply:()=>{ game.castleMax+=40; game.castleHp=game.castleMax; }},
   {id:'dash',  name:'HETZROLLE', max:3, cost:l=>14+l*9, desc:l=>'ROLLE LÄDT FIX',
    apply:()=>{ player.dashCdMax*=0.75; }},
-  {id:'fast',  name:'SCHNELLE HIEBE', max:4, cost:l=>15+l*9, desc:l=>'HIEBE +20% TEMPO',
+  {id:'fast',  name:'SCHNELLE HIEBE', max:4, cost:l=>15+l*9, desc:l=>'HIEBE +20%',
    apply:()=>{ player.atkSpeed*=1.2; }},
   {id:'leech', name:'BLUTDURST', max:3, cost:l=>20+l*12, desc:l=>'LEBENSRAUB 12%',
    apply:()=>{ player.lifesteal+=0.12; }},
-  {id:'thorn', name:'DORNENPANZER', max:3, cost:l=>16+l*10, desc:l=>'DORNEN: 4 SCHADEN',
+  {id:'thorn', name:'DORNENPANZER', max:3, cost:l=>16+l*10, desc:l=>'DORNEN +4',
    apply:()=>{ player.thorns+=4; }},
-  {id:'quiver',name:'SCHNELLER KÖCHER', max:4, cost:l=>14+l*9, desc:l=>'BOGEN LÄDT 20% FIX',
+  {id:'quiver',name:'SCHNELLER KÖCHER', max:4, cost:l=>14+l*9, desc:l=>'BOGEN +20% FIX',
    apply:()=>{ player.bowCdMax*=0.8; }},
   {id:'tips',  name:'SCHARFE SPITZEN', max:4, cost:l=>16+l*10, desc:l=>'PFEILSCHADEN +2',
    apply:()=>{ player.arrowDmg+=2; }},
-  {id:'magnet',name:'SCHRAUBENMAGNET', max:2, cost:l=>12+l*8, desc:l=>'SAMMELT VON WEIT',
+  {id:'magnet',name:'SCHRAUBENMAGNET', max:2, cost:l=>12+l*8, desc:l=>'SAMMELT WEITER',
    apply:()=>{ player.magnet+=40; }},
   {id:'repair',name:'NOTREPARATUR', max:99, cost:l=>10, desc:l=>'TOR +30 FLICKEN',
    apply:()=>{ game.castleHp=Math.min(game.castleMax, game.castleHp+30); }},
@@ -1423,9 +1447,9 @@ function updateFX(dt){
    ------------------------------------------------------------------ */
 let lastTap=null;
 function cardRects(){
-  const n=game.cards.length, w=110, h=40, gap=6;
-  const total=n*w+(n-1)*gap, x0=(VW-total)/2, y=VH-h-16;
-  return game.cards.map((c,i)=>({x:x0+i*(w+gap), y, w, h, i}));
+  const n=game.cards.length, w=228, h=14, gap=2;
+  const x=Math.round((VW-w)/2), y0=VH-12-(n*h+(n-1)*gap);
+  return game.cards.map((c,i)=>({x, y:y0+i*(h+gap), w, h, i}));
 }
 function tryTapCards(){
   if(!lastTap || game.phase!=='rest' || game.state!=='play') return false;
@@ -1695,7 +1719,7 @@ function drawWorld(){
 function drawHearts(){
   const n=Math.ceil(player.maxHp/2);
   for(let i=0;i<n;i++){
-    const x=6+i*9, y=6;
+    const x=4+i*8, y=3;
     drawSpr(SPR.heartE, x, y, false, false);
     const v=player.hp-i*2;
     if(v>=2) drawSpr(SPR.heart, x, y, false, false);
@@ -1703,23 +1727,28 @@ function drawHearts(){
       drawSpr(SPR.heart, x, y, false, false); ctx.restore(); }
   }
 }
+function bar(x,y,w,frac,col,label,dim){
+  ctx.fillStyle='#141019'; ctx.fillRect(x-1,y-1,w+2,5);
+  ctx.fillStyle=col; ctx.fillRect(x,y, Math.round(w*clamp(frac,0,1)), 3);
+  drawText(ctx, label, x+w+3, y-2, dim?'#5f6f5c':'#9fb79a', 1);
+}
 function drawGateBar(){
-  const w=74, x=VW-w-6, y=7;
-  drawSpr(SPR.tower, x-10, y-1, false, false);
+  const w=54, x=VW-w-4, y=4;
+  drawSpr(SPR.tower, x-9, y-1, false, false);
   ctx.fillStyle='#141019'; ctx.fillRect(x-1,y-1,w+2,7);
   ctx.fillStyle='#2a2d3c'; ctx.fillRect(x,y,w,5);
-  const f=Math.round(w*clamp(game.castleHp/game.castleMax,0,1));
-  const col = game.castleHp/game.castleMax>0.5 ? PAL.H : (game.castleHp/game.castleMax>0.25 ? PAL.O : PAL.r);
-  ctx.fillStyle=col; ctx.fillRect(x,y,f,5);
-  ctx.fillStyle='rgba(255,255,255,.25)'; ctx.fillRect(x,y,f,1);
-  drawText(ctx,'TOR', x+w-19, y+8, '#9fb79a', 1);
+  const f=game.castleHp/game.castleMax;
+  ctx.fillStyle = f>0.5 ? PAL.H : (f>0.25 ? PAL.O : PAL.r);
+  ctx.fillRect(x,y,Math.round(w*clamp(f,0,1)),5);
+  ctx.fillStyle='rgba(255,255,255,.25)'; ctx.fillRect(x,y,Math.round(w*clamp(f,0,1)),1);
+  drawText(ctx,'TOR', x+w-17, y+8, '#9fb79a', 1);
 }
 function drawEdgeMarkers(){
-  const pad=5;
+  const pad=4;
   const mark=(wx,wy,col)=>{
     const sx=wx-cam.x, sy=wy-cam.y;
     if(sx>=0&&sx<VW&&sy>=0&&sy<VH) return;
-    const x=clamp(sx,pad,VW-pad), y=clamp(sy,pad+12,VH-pad-12);
+    const x=clamp(sx,pad,VW-pad), y=clamp(sy,pad+11,VH-pad-11);
     ctx.fillStyle=col; ctx.fillRect(Math.round(x)-1,Math.round(y)-1,3,3);
     ctx.fillStyle='#141019'; ctx.fillRect(Math.round(x),Math.round(y),1,1);
   };
@@ -1727,19 +1756,19 @@ function drawEdgeMarkers(){
   mark(CAS.gatePost.x, CAS.gatePost.y, PAL.H);
 }
 function drawCards(){
-  const rects=cardRects();
-  rects.forEach((r,i)=>{
+  cardRects().forEach((r,i)=>{
     const c=game.cards[i]; if(!c) return;
     const afford = game.scrap>=c.cost && !c.bought;
-    panel(r.x, r.y, r.w, r.h, c.bought?'rgba(24,40,24,.9)':'rgba(10,18,12,.9)', c.bought?'#3d6b3a':(afford?PAL.H:'#4a4a4a'));
+    panel(r.x, r.y, r.w, r.h, c.bought?'rgba(24,40,24,.92)':'rgba(10,18,12,.92)',
+      c.bought?'#3d6b3a':(afford?PAL.H:'#4a4a4a'));
     drawText(ctx, String(i+1), r.x+4, r.y+4, afford?PAL.y:'#7a7a7a', 1);
-    drawText(ctx, c.u.name, r.x+13, r.y+4, c.bought?'#8fbf86':(afford?'#e9f5dc':'#8a8a8a'), 1);
-    drawText(ctx, c.u.desc(lvl(c.u.id)), r.x+5, r.y+15, '#9fb79a', 1);
-    if(c.bought) drawText(ctx, 'GEKAUFT', r.x+5, r.y+27, PAL.H, 1);
+    drawText(ctx, c.u.name, r.x+12, r.y+4, c.bought?'#8fbf86':(afford?'#e9f5dc':'#8a8a8a'), 1);
+    if(c.bought) drawText(ctx, 'GEKAUFT', r.x+r.w-45, r.y+4, PAL.H, 1);
     else {
-      drawSpr(SPR.bolt, r.x+5, r.y+26, false, false);
-      drawText(ctx, String(c.cost), r.x+13, r.y+27, afford?PAL.y:'#8a6a4a', 1);
-      const l=lvl(c.u.id); if(c.u.max<90) drawText(ctx, 'STUFE '+l+'/'+c.u.max, r.x+40, r.y+27, '#7f927b', 1);
+      drawText(ctx, c.u.desc(lvl(c.u.id)), r.x+110, r.y+4, '#9fb79a', 1);
+      const cs=String(c.cost);
+      drawText(ctx, cs, r.x+r.w-4-textW(cs,1), r.y+4, afford?PAL.y:'#8a6a4a', 1);
+      drawSpr(SPR.bolt, r.x+r.w-11-textW(cs,1), r.y+4, false, false);
     }
   });
 }
@@ -1747,107 +1776,100 @@ function drawHUD(){
   drawHearts();
   drawGateBar();
   drawEdgeMarkers();
-  // Welle / Gegner
+  bar(4, 12, 22, 1-player.dashCd/player.dashCdMax, player.dashCd>0?'#3a4a3a':PAL.C, 'ROLLE', player.dashCd>0);
+  bar(4, 19, 22, 1-player.bowCd/player.bowCdMax,  player.bowCd>0 ?'#4a4030':PAL.O, 'BOGEN', player.bowCd>0);
+
   const left = enemies.length + game.spawnList.length;
   if(game.phase==='wave'){
-    drawTextC(ctx, 'WELLE '+game.wave, VW/2, 6, '#e9f5dc', 1);
-    drawTextC(ctx, 'BOTS '+left, VW/2, 15, left>0?PAL.O:'#9fb79a', 1);
+    drawTextC(ctx, 'WELLE '+game.wave, VW/2, 3, '#e9f5dc', 1);
+    drawTextC(ctx, 'BOTS '+left, VW/2, 11, left>0?PAL.O:'#9fb79a', 1);
   } else {
-    drawTextC(ctx, 'RUHE  '+Math.ceil(game.restT), VW/2, 6, PAL.C, 1);
-    drawTextC(ctx, 'NÄCHSTE WELLE '+(game.wave+1), VW/2, 15, '#9fb79a', 1);
+    drawTextC(ctx, 'RUHE  '+Math.ceil(game.restT), VW/2, 3, PAL.C, 1);
+    drawTextC(ctx, 'WELLE '+(game.wave+1)+' KOMMT', VW/2, 11, '#9fb79a', 1);
   }
-  // Schrauben und Punkte
-  drawSpr(SPR.bolt, 6, VH-11, false, false);
-  drawText(ctx, String(game.scrap), 14, VH-11, PAL.y, 1);
-  const ptx='PUNKTE '+game.score;
-  drawText(ctx, ptx, VW-textW(ptx,1)-6, VH-11, '#9fb79a', 1);
-  // Rolle (unter den Herzen)
-  const cdw=24, cx0=6, cy0=16;
-  ctx.fillStyle='#141019'; ctx.fillRect(cx0-1,cy0-1,cdw+2,5);
-  ctx.fillStyle= player.dashCd>0 ? '#3a4a3a' : PAL.C;
-  ctx.fillRect(cx0,cy0, Math.round(cdw*(1-player.dashCd/player.dashCdMax)), 3);
-  drawText(ctx,'ROLLE', cx0+cdw+3, cy0-2, player.dashCd>0?'#5f6f5c':'#9fb79a',1);
-  // Bogen
-  ctx.fillStyle='#141019'; ctx.fillRect(cx0-1,cy0+6,cdw+2,5);
-  ctx.fillStyle= player.bowCd>0 ? '#4a4030' : PAL.O;
-  ctx.fillRect(cx0,cy0+7, Math.round(cdw*(1-player.bowCd/player.bowCdMax)), 3);
-  drawText(ctx,'BOGEN', cx0+cdw+3, cy0+5, player.bowCd>0?'#6f6350':'#b79a7a',1);
+  drawSpr(SPR.bolt, 4, VH-10, false, false);
+  const scr=String(game.scrap);
+  drawText(ctx, scr, 12, VH-10, PAL.y, 1);
+  drawText(ctx, String(game.score), 18+textW(scr,1), VH-10, '#9fb79a', 1);
 
+  let hintY = VH-24;
   if(game.phase==='rest'){
     drawCards();
-    if(inRect(player.x,player.y,COURT)) drawTextC(ctx, 'IM BURGHOF HEILT ES SICH', VW/2, VH-65, PAL.H, 1);
-    else drawTextC(ctx, isTouch ? 'KARTE ANTIPPEN ZUM KAUFEN' : 'TASTE 1-3 KAUFEN   ·   ENTER: WELLE STARTEN',
-      VW/2, VH-65, '#9fb79a', 1);
-  }
-  if(game.msgT>0){
-    const a=Math.min(1,game.msgT);
-    ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 34, game.msgCol||PAL.y, 2); ctx.globalAlpha=1;
+    hintY = cardRects()[0].y - 10;
+    drawTextC(ctx, inRect(player.x,player.y,COURT) ? 'IM BURGHOF HEILST DU'
+      : (isTouch ? 'KARTE ANTIPPEN ZUM KAUFEN' : 'TASTE 1-3 KAUFEN · ENTER: START'),
+      VW/2, hintY, inRect(player.x,player.y,COURT)?PAL.H:'#9fb79a', 1);
+    hintY -= 10;
   }
   if(game.tutorial>0 && game.wave<=1 && game.msgT<=0){
     ctx.globalAlpha=Math.min(1,game.tutorial/2);
-    const y0 = game.phase==='rest' ? VH-98 : VH-40;
     drawTextC(ctx, isTouch ? 'LINKS LAUFEN · RECHTS ZIELEN' : 'WASD LAUFEN · MAUS ZIELEN',
-      VW/2, y0, '#cfe8c2', 1);
-    drawTextC(ctx, isTouch ? 'SCHWERT · BOGEN · ROLLE ALS TASTEN RECHTS' : 'KLICK: SCHWERT · RECHTSKLICK: BOGEN · SHIFT: ROLLE',
-      VW/2, y0+10, '#9fb79a', 1);
+      VW/2, hintY-10, '#cfe8c2', 1);
+    drawTextC(ctx, isTouch ? 'TASTEN: SCHWERT, BOGEN, ROLLE' : 'KLICK SCHWERT · RECHTS BOGEN',
+      VW/2, hintY, '#9fb79a', 1);
     ctx.globalAlpha=1;
   }
-  // Bildschirmrand faerben
+  if(game.msgT>0){
+    const a=Math.min(1,game.msgT);
+    const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
+    ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 24, game.msgCol||PAL.y, sc); ctx.globalAlpha=1;
+  }
   if(game.redFlash>0){
     ctx.globalAlpha=game.redFlash*0.5; ctx.fillStyle='#8c1c1c'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   }
   if(player.hp<=2 && player.alive){
     const pulse=0.18+0.12*Math.sin(game.time*7);
-    ctx.globalAlpha=pulse; ctx.fillStyle='#7a1212'; ctx.fillRect(0,0,VW,6); ctx.fillRect(0,VH-6,VW,6);
-    ctx.fillRect(0,0,4,VH); ctx.fillRect(VW-4,0,4,VH); ctx.globalAlpha=1;
+    ctx.globalAlpha=pulse; ctx.fillStyle='#7a1212';
+    ctx.fillRect(0,0,VW,4); ctx.fillRect(0,VH-4,VW,4); ctx.fillRect(0,0,3,VH); ctx.fillRect(VW-3,0,3,VH);
+    ctx.globalAlpha=1;
   }
 }
 
 function drawTitle(){
   ctx.globalAlpha=0.55; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
-  const w=250, h=142, x=(VW-w)/2, y=(VH-h)/2-6;
+  const w=232, h=116, x=Math.round((VW-w)/2), y=10;
   panel(x,y,w,h);
-  drawTextC(ctx,'WALDWACHT', VW/2, y+12, PAL.H, 3);
-  drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+38, '#cfe8c2', 1);
+  drawTextC(ctx,'WALDWACHT', VW/2, y+9, PAL.H, 3);
+  drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+33, '#cfe8c2', 1);
   const rows = isTouch ? [
     'LINKER DAUMEN: LAUFEN',
     'RECHTER DAUMEN: ZIELEN',
-    'TASTEN RECHTS: SCHWERT, BOGEN, ROLLE',
-    'IN DER RUHE KARTEN ANTIPPEN ZUM KAUFEN'
+    'TASTEN: SCHWERT, BOGEN, ROLLE',
+    'IN DER RUHE KARTEN ANTIPPEN'
   ] : [
-    'WASD ODER PFEILE: LAUFEN   ·   MAUS: ZIELEN',
-    'KLICK ODER LEERTASTE: SCHWERTHIEB',
-    'RECHTSKLICK ODER Q: PFEIL SCHIESSEN',
-    'SHIFT: ROLLE (KURZ UNVERWUNDBAR)',
-    '1-3: KARTEN KAUFEN   ·   ENTER: WELLE FRUEH STARTEN'
+    'WASD LAUFEN · MAUS ZIELEN',
+    'KLICK ODER LEERTASTE: SCHWERT',
+    'RECHTSKLICK ODER Q: PFEIL',
+    'SHIFT: ROLLE (UNVERWUNDBAR)',
+    '1-3: KARTEN · ENTER: WELLE'
   ];
-  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+54+i*11, '#9fb79a', 1));
-  drawTextC(ctx, 'DREI HERZEN VERLOREN ODER TOR ZERSTÖRT = ENDE', VW/2, y+h-26, '#7f927b', 1);
+  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+47+i*10, '#9fb79a', 1));
+  drawTextC(ctx, 'HERZEN LEER ODER TOR KAPUTT = ENDE', VW/2, y+h-13, '#7f927b', 1);
   const blink = Math.floor(game.time*2)%2===0;
-  drawTextC(ctx, blink ? (isTouch?'TIPPEN ZUM START':'LEERTASTE ZUM START') : '', VW/2, y+h-14, PAL.y, 1);
-  if(game.best>0) drawTextC(ctx, 'BESTE PUNKTZAHL '+game.best, VW/2, y+h+6, PAL.y, 1);
+  drawTextC(ctx, blink ? (isTouch?'TIPPEN ZUM START':'LEERTASTE ZUM START') : '', VW/2, y+h+6, PAL.y, 1);
+  if(game.best>0) drawTextC(ctx, 'BESTE PUNKTZAHL '+game.best, VW/2, y+h+16, PAL.y, 1);
 }
 function drawOver(){
   ctx.globalAlpha=0.6; ctx.fillStyle='#20060a'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
-  const w=214, h=100, x=(VW-w)/2, y=(VH-h)/2;
-  panel(x,y,w,h,'rgba(14,8,10,.92)','#7a2a2a');
-  drawTextC(ctx,'WALD VERLOREN', VW/2, y+10, PAL.R, 2);
-  drawTextC(ctx, game.msg, VW/2, y+30, '#e9c0b0', 1);
-  drawTextC(ctx,'WELLEN GEHALTEN: '+Math.max(0,game.wave-1), VW/2, y+46, '#cfe8c2', 1);
-  drawTextC(ctx,'BOTS ZERLEGT: '+game.kills, VW/2, y+57, '#cfe8c2', 1);
-  drawTextC(ctx,'PUNKTE: '+game.score, VW/2, y+68, PAL.y, 1);
-  drawTextC(ctx,'BESTE: '+game.best, VW/2, y+79, '#9fb79a', 1);
+  const w=200, h=92, x=Math.round((VW-w)/2), y=Math.round((VH-h)/2)-4;
+  panel(x,y,w,h,'rgba(14,8,10,.94)','#7a2a2a');
+  drawTextC(ctx,'WALD VERLOREN', VW/2, y+8, PAL.R, 2);
+  drawTextC(ctx, game.msg, VW/2, y+26, '#e9c0b0', 1);
+  drawTextC(ctx,'WELLEN GEHALTEN: '+Math.max(0,game.wave-1), VW/2, y+40, '#cfe8c2', 1);
+  drawTextC(ctx,'BOTS ZERLEGT: '+game.kills, VW/2, y+51, '#cfe8c2', 1);
+  drawTextC(ctx,'PUNKTE: '+game.score, VW/2, y+62, PAL.y, 1);
+  drawTextC(ctx,'BESTE: '+game.best, VW/2, y+73, '#9fb79a', 1);
   if(game.deadT>1.0 && Math.floor(game.time*2)%2===0)
     drawTextC(ctx, isTouch?'TIPPEN':'LEERTASTE', VW/2, y+h+4, '#cfe8c2', 1);
 }
 function drawPause(){
   ctx.globalAlpha=0.6; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
-  drawTextC(ctx,'PAUSE', VW/2, VH/2-14, PAL.H, 2);
-  drawTextC(ctx,'P ODER ESC: WEITER', VW/2, VH/2+8, '#9fb79a', 1);
+  drawTextC(ctx,'PAUSE', VW/2, VH/2-12, PAL.H, 2);
+  drawTextC(ctx,'P ODER ESC: WEITER', VW/2, VH/2+6, '#9fb79a', 1);
 }
 
 function render(){
-  if(isTouch) touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
+  touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
   ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH);
   const sx = game.shake>0 ? Math.round(rr(-game.shake,game.shake)) : 0;
   const sy = game.shake>0 ? Math.round(rr(-game.shake,game.shake)) : 0;
