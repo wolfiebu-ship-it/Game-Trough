@@ -37,13 +37,13 @@ unten links das Werkstattfenster.
 
 - **Herzen**: Du startest mit fünf Herzen (halbe Herzen zählen mit). Sie stehen
   oben links. Bei null ist Schluss.
-- **Heilen**: alle 20 Sekunden wächst ein halbes Herz von selbst nach (der feine
+- **Heilen**: alle 5 Sekunden wächst ein halbes Herz von selbst nach (der feine
   Streifen unter den Herzen zeigt den Fortschritt), dazu heilt die Heiltaste
   alle 15 Sekunden ein ganzes Herz.
 - **Das Tor**: Die Bots rennen zur Burg und hacken auf das Tor ein. Fällt das
   Tor, ist das Spiel ebenfalls vorbei. Das Tor erkennt nur dich — du kannst
   hindurch, die Bots nicht.
-- **Ruhephase**: Nach jeder Welle bleiben 22 Sekunden. Im Burghof heilst du dich,
+- **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 20 gibt es nach jeder
   Welle 20 bis 30 Schrauben Prämie obendrauf.

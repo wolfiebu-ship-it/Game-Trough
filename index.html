@@ -921,7 +921,7 @@ const player = {
   atkT:0, atkCd:0, swing:null, combo:0, comboT:0,
   dashT:0, dashCd:0, dashDir:0, dashCdMax:2.8,
   bowCd:0, bowCdMax:0.85, arrowDmg:4, arrowSpeed:176, shootT:0,
-  healCd:0, healCdMax:15, regenT:0, regenEvery:20,
+  healCd:0, healCdMax:15, regenT:0, regenEvery:5,
   ultra:0, ultraMax:100, ultraSel:0, stormT:0, stormTick:0, rainT:0, rainLeft:0,
   inv:0, anim:0, hurtT:0, alive:true,
   lifesteal:0, thorns:0, magnet:34,
@@ -1199,7 +1199,7 @@ function startWave(){
 }
 function endWave(){
   game.phase='rest';
-  game.restT = 22;
+  game.restT = 5;                      // kurze Verschnaufpause, der Shop haelt sie an
   say('WELLE '+game.wave+' GESCHAFFT', 2.0, PAL.H);
   game.score += 50 + game.wave*10;
   // Ultras freischalten
@@ -1300,13 +1300,13 @@ function newGame(){
   slashes.length=0; waves.length=0; floaters.length=0;
   MSGQ.length=0;
   game.ultras=[];
-  Object.assign(game, { state:'play', phase:'rest', wave:0, restT:14, spawnList:[], spawnT:0, paused:false,
+  Object.assign(game, { state:'play', phase:'rest', wave:0, restT:6, spawnList:[], spawnT:0, paused:false,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
     flash:0, redFlash:0, msg:'', msgT:0, msgCol:PAL.y, shopOpen:false, cards:[], cardSel:0, tutorial:16 });
   say('HALTE DIE BOTS VOM TOR FERN', 2.4, PAL.H);
   Object.assign(player, { speed:64, dmg:5, reach:26, arc:1.5, atkSpeed:1, maxHp:10,
     dashCdMax:2.8, bowCdMax:0.85, arrowDmg:4, bowCd:0, shootT:0,
-    healCdMax:15, healCd:0, regenT:0, regenEvery:20,
+    healCdMax:15, healCd:0, regenT:0, regenEvery:5,
     ultra:0, ultraSel:0, stormT:0, rainT:0, rainLeft:0,
     lifesteal:0, thorns:0, magnet:34, upg:{}, combo:0 });
   resetPlayer(); rollCards();
