@@ -55,8 +55,11 @@ unten links das Werkstattfenster.
   Antippen des Namens.
 - **Kombo**: Zwei schnelle Hiebe hintereinander enden im dritten, schweren
   Schlag — mehr Schaden, mehr Wucht, weiter Bogen.
-- **Deckung**: Büsche bremsen dich und die Bots, Bäume und Felsen blockieren
-  Wege und Geschosse. Auf den Lichtungen kämpft es sich am freiesten.
+- **Deckung**: Durch Bäume läuft man hindurch — wer im Laub steckt, lässt die
+  Krone durchscheinend werden, Farben und Umriss bleiben sichtbar. Das gilt auch
+  für Bots dicht bei dir, damit niemand hinter einer Krone verschwindet. Büsche
+  bremsen, Felsen und Mauern blockieren. Auf den Lichtungen kämpft es sich am
+  freiesten.
 
 ## Die Bots
 

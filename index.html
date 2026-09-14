@@ -323,6 +323,19 @@ function pxDisc(g, cx, cy, r, col){          // pixelgenauer Kreis
     g.fillRect(x0, y, Math.max(1,x1-x0), 1);
   }
 }
+// Durchscheinende Fassung eines Bildes: Farben blass, dunkler Umriss kraeftiger,
+// damit man die Form des Baums noch erkennt, waehrend man hindurchlaeuft.
+function makeGhost(src){
+  const c=cvs(src.width, src.height), g=c.getContext('2d');
+  g.drawImage(src,0,0);
+  const id=g.getImageData(0,0,c.width,c.height), d=id.data;
+  for(let i=0;i<d.length;i+=4){
+    if(d[i+3]===0) continue;
+    const dunkel = d[i]<46 && d[i+1]<46 && d[i+2]<56;
+    d[i+3] = dunkel ? 200 : 96;
+  }
+  g.putImageData(id,0,0); return c;
+}
 function hash2(x,y,s){
   let h=Math.imul(x|0,374761393) ^ Math.imul(y|0,668265263) ^ Math.imul(s|0,1274126177);
   h=Math.imul(h^(h>>>13), 1274126177);
@@ -355,7 +368,7 @@ function makeTree(seed){
   for(const b of blobs) pxDisc(g,b.x-0.5,b.y-1.5,b.r*0.82,PAL.G);
   for(const b of blobs) pxDisc(g,b.x-1.5,b.y-2.5,b.r*0.5,PAL.h);
   for(const b of blobs) if(R()<0.7) pxDisc(g,b.x-2,b.y-3.5,b.r*0.22,PAL.H);
-  return { img:c, w, h, anchorY:h-2 };
+  return { img:c, ghost:makeGhost(c), w, h, anchorY:h-2 };
 }
 // --- Busch: flach, ohne Kollision, dient als Deckung ----------------
 function makeBush(seed){
@@ -367,7 +380,7 @@ function makeBush(seed){
   for(const b of blobs) pxDisc(g,b.x,b.y-1,b.r*0.8,PAL.G);
   for(const b of blobs) pxDisc(g,b.x-1,b.y-2,b.r*0.4,PAL.h);
   if(R()<0.5){ g.fillStyle=PAL.R; for(let i=0;i<3;i++) g.fillRect(4+Math.floor(R()*12), 6+Math.floor(R()*5), 1,1); }
-  return { img:c, w, h, anchorY:h-1 };
+  return { img:c, ghost:makeGhost(c), w, h, anchorY:h-1 };
 }
 // --- Fels -----------------------------------------------------------
 function makeRock(seed){
@@ -577,13 +590,14 @@ const GROUND = cvs(WW,WH);
 const props   = [];        // {img,x,y,w,h,sort,kind}
 const solids  = [];        // {x,y,r} Kollisionskreise
 const bushes  = [];        // {x,y,r} bremsen und verstecken
+const spots=[];          // nur fuer den Abstand beim Pflanzen, keine Kollision
 (function plantForest(){
   const R=mulberry(20240914);
   const free=(x,y,pad)=>{
     if(x<14||x>WW-14||y<18||y>WH-10) return false;
     if(inRect(x,y,{x:CAS.x-22,y:CAS.y-26,w:CAS.w+44,h:CAS.h+46})) return false;
     if(distToPath(x,y) < 20+pad) return false;
-    for(const s of solids) if(dist2(x,y,s.x,s.y) < (s.r+pad+7)*(s.r+pad+7)) return false;
+    for(const s of spots) if(dist2(x,y,s.x,s.y) < (s.r+pad+7)*(s.r+pad+7)) return false;
     return true;
   };
   // Baeume: dicht am Rand, licht in den Lichtungen
@@ -595,8 +609,9 @@ const bushes  = [];        // {x,y,r} bremsen und verstecken
     if(R()>p) continue;
     if(!free(x,y,4)) continue;
     const t=TREES[Math.floor(R()*TREES.length)];
-    props.push({img:t.img, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'tree'});
-    solids.push({x, y:y-1, r:5.5});
+    // Baeume sind Deckung, keine Mauer: man laeuft hindurch, sie werden dabei blass
+    props.push({img:t.img, ghost:t.ghost, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'tree'});
+    spots.push({x, y:y-1, r:5.5});
     guard++;
   }
   for(let i=0;i<90;i++){                          // Felsen
@@ -604,17 +619,17 @@ const bushes  = [];        // {x,y,r} bremsen und verstecken
     if(!free(x,y,2)) continue;
     const t=ROCKS[Math.floor(R()*ROCKS.length)];
     props.push({img:t.img, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'rock'});
-    solids.push({x, y, r:5});
+    solids.push({x, y, r:5}); spots.push({x, y, r:5});
   }
   for(let i=0;i<150;i++){                         // Buesche (Deckung, keine Mauer)
     const x=10+R()*(WW-20), y=24+R()*(WH-32);
     if(x<14||x>WW-14||y<20||y>WH-10) continue;
     if(inRect(x,y,{x:CAS.x-18,y:CAS.y-20,w:CAS.w+36,h:CAS.h+40})) continue;
     if(distToPath(x,y)<13) continue;
-    let ok=true; for(const s of solids) if(dist2(x,y,s.x,s.y)<80){ ok=false; break; }
+    let ok=true; for(const s of spots) if(dist2(x,y,s.x,s.y)<80){ ok=false; break; }
     if(!ok) continue;
     const t=BUSHES[Math.floor(R()*BUSHES.length)];
-    props.push({img:t.img, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'bush'});
+    props.push({img:t.img, ghost:t.ghost, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'bush'});
     bushes.push({x, y, r:8});
   }
   for(let i=0;i<26;i++){                          // Stuempfe als Deko
@@ -622,20 +637,21 @@ const bushes  = [];        // {x,y,r} bremsen und verstecken
     if(!free(x,y,1)) continue;
     const t=STUMPS[Math.floor(R()*STUMPS.length)];
     props.push({img:t.img, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'stump'});
-    solids.push({x, y, r:4});
+    solids.push({x, y, r:4}); spots.push({x, y, r:4});
   }
 })();
 
 // Faesser und Kisten im Burghof
 (function courtyardProps(){
-  const spots=[
+  const stellen=[
     {x:COURT.x+14, y:COURT.y+18}, {x:COURT.x+26, y:COURT.y+22},
     {x:COURT.x+14, y:COURT.y+COURT.h-14}, {x:COURT.x+COURT.w-16, y:COURT.y+16},
     {x:COURT.x+COURT.w-18, y:COURT.y+COURT.h-16}
   ];
-  for(const sp of spots){
+  for(const sp of stellen){
     props.push({img:SPR.barrel.img, x:sp.x-4, y:sp.y-8, w:8, h:9, sort:sp.y, kind:'barrel'});
     solids.push({x:sp.x, y:sp.y-2, r:4});
+    spots.push({x:sp.x, y:sp.y-2, r:4});
   }
 })();
 
@@ -1617,7 +1633,7 @@ function tryTapCards(){
 }
 function update(dt){
   readInput();
-  game.time+=dt;
+  game.time+=dt; game.dt=dt;
   const startEdge = pressed.has(' ')||pressed.has('Enter')||pressed.has('__attack')||pressed.has('e');
   if(pressed.has('m')){ muted=!muted; if(muted&&AC){ master.gain.value=0; } else if(AC){ master.gain.value=0.5; } }
 
@@ -1853,12 +1869,32 @@ function drawWorld(){
   }
   if(player.alive) list.push({s:player.y, kind:'player', o:player});
   list.sort((a,b)=>a.s-b.s);
+  // Wer laesst Laub durchscheinen: die Spielfigur und Bots dicht bei ihr
+  const boxen=[];
+  if(player.alive) boxen.push({x0:player.x-6, x1:player.x+6, y0:player.y-16, y1:player.y+2});
+  for(const e of enemies){
+    if(e.dead || e.spawnT>0) continue;
+    if(dist2(e.x,e.y,player.x,player.y) > 90*90) continue;
+    boxen.push({x0:e.x-e.r, x1:e.x+e.r, y0:e.y-e.r*2.2, y1:e.y+2});
+  }
   for(const it of list){
     if(it.kind==='prop'){
       const p=it.o;
-      if(p.kind==='bush' && player.alive && Math.abs(player.x-(p.x+p.w/2))<p.w*0.6 && Math.abs(player.y-(p.y+p.h))<10) ctx.globalAlpha=0.75;
-      ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y));
-      ctx.globalAlpha=1;
+      const x=Math.round(p.x), y=Math.round(p.y);
+      if(p.ghost){
+        // Steckt jemand im Laub? Dann durchscheinend zeichnen.
+        let drin=false;
+        for(const b of boxen)
+          if(b.x1>p.x && b.x0<p.x+p.w && b.y1>p.y && b.y0<p.y+p.h){ drin=true; break; }
+        const ziel = drin ? 1 : 0;
+        if(p.gh===undefined) p.gh=ziel;
+        p.gh = lerp(p.gh, ziel, 1-Math.pow(0.0008, game.dt||0.016));
+        if(p.gh>0.02){
+          if(p.gh<0.98){ ctx.globalAlpha=1-p.gh; ctx.drawImage(p.img, x, y); }
+          ctx.globalAlpha=p.gh; ctx.drawImage(p.ghost, x, y);
+          ctx.globalAlpha=1;
+        } else ctx.drawImage(p.img, x, y);
+      } else ctx.drawImage(p.img, x, y);
     }
     else if(it.kind==='bot') drawEnemy(it.o);
     else drawPlayer();
