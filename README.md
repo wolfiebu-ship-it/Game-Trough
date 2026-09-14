@@ -80,8 +80,9 @@ sowie Notreparatur und Waldtrunk als Sofortkauf.
 
 - reines HTML/CSS/JavaScript mit Canvas 2D, ~1800 Zeilen, keine Abhängigkeiten
 - interne Auflösung 256 × 144, hart hochskaliert (`image-rendering: pixelated`)
-- Simulation laeuft bildsynchron mit der echten Zeitspanne (in Teilschritten
-  von höchstens 1/40 s) — feste 60-Hz-Pakete ruckelten auf 120-Hz-Bildschirmen
+- Simulation läuft bildsynchron mit der tatsächlich verstrichenen Zeit (in
+  Teilschritten von höchstens 1/40 s); feste 60-Hz-Pakete ruckelten sichtbar
+  auf 120-Hz-Bildschirmen
 - Figuren und Bots sind handgepixelte Sprites, direkt als Zeichenketten im Code;
   gelaufen wird im Dreierzyklus, die Rolle ist eine gedrehte Kugelhaltung
 - Wald, Boden, Burg und Tor werden prozedural gemalt (Wertrauschen, Pixelkreise);
