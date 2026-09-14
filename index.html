@@ -9,7 +9,9 @@
   :root{ color-scheme: dark; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ height:100%; margin:0; background:#0b120d; overflow:hidden; touch-action:none;
+    overscroll-behavior:none; overflow-anchor:none;
     font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; color:#cfe8c2; }
+  body{ position:fixed; inset:0; width:100%; }
   #wrap{ position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
   #stack{ position:relative; width:min(100vw, calc(100vh * 16 / 9)); aspect-ratio:16/9; max-height:100vh; }
   canvas{ display:block; width:100%; height:100%; image-rendering:pixelated;
@@ -18,21 +20,25 @@
   /* --- Touch: zwei Sticks im Brawl-Stars-Stil, rein visuell --- */
   #touch{ position:absolute; inset:0; display:none; pointer-events:none; }
   #touch.on{ display:block; }
-  .stick{ position:absolute; width:26vmin; height:26vmin; margin:-13vmin 0 0 -13vmin; border-radius:50%;
-    border:2px solid rgba(200,240,190,.28); background:rgba(10,25,12,.28); opacity:0; transition:opacity .12s; }
+  .stick{ position:absolute; width:17vmin; height:17vmin; margin:-8.5vmin 0 0 -8.5vmin; border-radius:50%;
+    border:2px solid rgba(200,240,190,.26); background:rgba(10,25,12,.24); opacity:0; transition:opacity .12s; }
   .stick.on{ opacity:1; }
-  .knob{ position:absolute; width:11vmin; height:11vmin; margin:-5.5vmin 0 0 -5.5vmin; border-radius:50%;
-    background:rgba(205,240,180,.45); border:2px solid rgba(230,255,220,.6); box-shadow:0 0 12px rgba(0,0,0,.4); }
+  .knob{ position:absolute; width:7vmin; height:7vmin; margin:-3.5vmin 0 0 -3.5vmin; border-radius:50%;
+    background:rgba(205,240,180,.45); border:2px solid rgba(230,255,220,.6); box-shadow:0 0 10px rgba(0,0,0,.4); }
   #stickR{ border-color:rgba(255,190,120,.4); }
   #stickR .knob{ background:rgba(255,190,110,.5); border-color:rgba(255,220,160,.7); }
-  #hintTouch{ position:absolute; left:0; right:0; bottom:1.5%; text-align:center; font-size:2.2vmin;
-    color:rgba(220,240,210,.45); pointer-events:none; }
-  #dashBtn{ position:absolute; right:3%; bottom:26%; width:13vmin; height:13vmin; border-radius:50%;
-    pointer-events:auto; display:flex; align-items:center; justify-content:center;
-    font-size:2.6vmin; font-weight:bold; letter-spacing:.05em; user-select:none;
-    background:rgba(20,45,25,.5); border:2px solid rgba(150,230,255,.5); color:#cfeeff;
-    text-shadow:0 0 6px rgba(0,0,0,.6); }
-  #dashBtn.hit{ background:rgba(120,220,255,.45); }
+  .abtn{ position:absolute; border-radius:50%; pointer-events:auto; display:flex;
+    align-items:center; justify-content:center; text-align:center; line-height:1.05;
+    font-size:2.4vmin; font-weight:bold; letter-spacing:.04em; user-select:none;
+    background:rgba(16,32,18,.5); text-shadow:0 0 6px rgba(0,0,0,.7); }
+  #swordBtn{ right:3.5%;  bottom:7%;  width:16vmin; height:16vmin;
+    border:2px solid rgba(215,220,236,.6); color:#eef3ff; }
+  #bowBtn  { right:20.5%; bottom:16%; width:13vmin; height:13vmin;
+    border:2px solid rgba(255,200,120,.55); color:#ffd9a0; }
+  #dashBtn { right:5%;    bottom:29%; width:11vmin; height:11vmin;
+    border:2px solid rgba(150,230,255,.5); color:#cfeeff; font-size:2.1vmin; }
+  .abtn.hit{ background:rgba(140,220,255,.45); }
+  #touch.rest .abtn{ display:none; }
 </style>
 </head>
 <body>
@@ -42,8 +48,9 @@
     <div id="touch">
       <div class="stick" id="stickL"><div class="knob" id="knobL"></div></div>
       <div class="stick" id="stickR"><div class="knob" id="knobR"></div></div>
-      <div id="dashBtn">ROLLE</div>
-      <div id="hintTouch">links ziehen = laufen &nbsp;·&nbsp; rechts ziehen = zielen, loslassen = Hieb</div>
+      <div class="abtn" id="swordBtn">SCHWERT</div>
+      <div class="abtn" id="bowBtn">BOGEN</div>
+      <div class="abtn" id="dashBtn">ROLLE</div>
     </div>
   </div>
 </div>
@@ -650,7 +657,7 @@ cv.addEventListener('mousedown', e=>{
   e.preventDefault(); audioUnlock();
   const p=canvasPos(e.clientX,e.clientY); lastTap={x:p.x,y:p.y};
   if(e.button===0) pressed.add('__attack');
-  if(e.button===2) pressed.add('__dash');
+  if(e.button===2) pressed.add('__bow');
 });
 cv.addEventListener('contextmenu', e=>e.preventDefault());
 
@@ -701,10 +708,7 @@ function touchEnd(e){
   for(const t of e.changedTouches){
     for(const key of ['L','R']){ const s=sticks[key];
       if(s.id===t.identifier){
-        if(s===sticks.R){
-          if(s.moved && Math.hypot(s.dx,s.dy)>0.25){ IN.aim=Math.atan2(s.dy,s.dx); pressed.add('__attack'); }
-          else if(performance.now()-s.t0 < 260) pressed.add('__attack');
-        }
+        if(s===sticks.R && !s.moved && performance.now()-s.t0 < 260) pressed.add('__attack');
         s.id=null; s.dx=0; s.dy=0; s.el.classList.remove('on');
       }
     }
@@ -715,14 +719,17 @@ addEventListener('touchstart', touchStart, {passive:false});
 addEventListener('touchmove',  touchMove,  {passive:false});
 addEventListener('touchend',   touchEnd,   {passive:false});
 addEventListener('touchcancel',touchEnd,   {passive:false});
-const dashBtn=document.getElementById('dashBtn');
-if(dashBtn){
+function bindBtn(id, code){
+  const el=document.getElementById(id); if(!el) return;
   const go=e=>{ e.preventDefault(); e.stopPropagation(); isTouch=true; touchUI.classList.add('on');
-    audioUnlock(); pressed.add('__dash'); dashBtn.classList.add('hit');
-    setTimeout(()=>dashBtn.classList.remove('hit'),120); };
-  dashBtn.addEventListener('touchstart', go, {passive:false});
-  dashBtn.addEventListener('mousedown', go);
+    audioUnlock(); pressed.add(code); el.classList.add('hit');
+    setTimeout(()=>el.classList.remove('hit'),110); };
+  el.addEventListener('touchstart', go, {passive:false});
+  el.addEventListener('mousedown', go);
 }
+bindBtn('swordBtn','__attack');
+bindBtn('bowBtn','__bow');
+bindBtn('dashBtn','__dash');
 
 function readInput(){
   let mx=0,my=0;
@@ -736,6 +743,7 @@ function readInput(){
   IN.aimHeld = sticks.R.id!==null && Math.hypot(sticks.R.dx,sticks.R.dy)>0.25;
   if(IN.aimHeld) IN.aim=Math.atan2(sticks.R.dy,sticks.R.dx);
   IN.attackEdge = pressed.has('__attack')||pressed.has(' ')||pressed.has('j');
+  IN.bowEdge    = pressed.has('__bow')||pressed.has('q')||pressed.has('f');
   IN.dashEdge   = pressed.has('__dash')||pressed.has('Shift')||pressed.has('l')||pressed.has('k');
 }
 
@@ -779,6 +787,7 @@ function noise(t, dur, peak=0.2, filt=1800, q=1){
 }
 const SFX = {
   swing(){ if(!AC)return; const t=AC.currentTime; noise(t,0.12,0.16,2600,1.2); },
+  bow(){ if(!AC)return; const t=AC.currentTime; noise(t,0.07,0.12,1700,3); tone(520,t,0.12,'triangle',0.16,-300); },
   hit(){ if(!AC)return; const t=AC.currentTime; noise(t,0.09,0.3,1200,2); tone(220,t,0.08,'square',0.2,-120); },
   heavy(){ if(!AC)return; const t=AC.currentTime; noise(t,0.16,0.34,800,1.5); tone(130,t,0.14,'sawtooth',0.22,-70); },
   botDie(){ if(!AC)return; const t=AC.currentTime; noise(t,0.22,0.24,700,0.8); tone(320,t,0.2,'square',0.16,-260); },
@@ -843,6 +852,7 @@ const player = {
   face:'down', flip:false, aim:0,
   atkT:0, atkCd:0, swing:null, combo:0, comboT:0,
   dashT:0, dashCd:0, dashDir:0, dashCdMax:1.0,
+  bowCd:0, bowCdMax:0.85, arrowDmg:4, arrowSpeed:176, shootT:0,
   inv:0, anim:0, hurtT:0, alive:true,
   lifesteal:0, thorns:0, magnet:34,
   upg:{}
@@ -850,7 +860,7 @@ const player = {
 function resetPlayer(){
   player.x = CAS.gate.x + 34; player.y = CAS.center.y;
   player.vx=player.vy=0; player.hp=player.maxHp; player.inv=1.2;
-  player.swing=null; player.atkCd=0; player.dashT=0; player.dashCd=0; player.alive=true;
+  player.swing=null; player.atkCd=0; player.dashT=0; player.dashCd=0; player.bowCd=0; player.alive=true;
 }
 
 const BOT = {
@@ -866,7 +876,7 @@ const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters
 
 function spawnEnemy(type, x, y){
   const d=BOT[type];
-  const mul = 1 + Math.max(0, game.wave-1)*0.11;
+  const mul = 1 + Math.max(0, game.wave-1)*0.085;
   enemies.push({
     type, d, x, y, vx:0, vy:0, r:d.r,
     hp: Math.round(d.hp*mul), hpMax: Math.round(d.hp*mul),
@@ -940,6 +950,16 @@ function playerAttack(){
                 reach:player.swing.reach, t:0, dur:dur*0.9, heavy});
   heavy ? SFX.heavy() : SFX.swing();
 }
+function playerShoot(){
+  if(player.bowCd>0 || player.dashT>0 || player.swing || !player.alive) return;
+  player.bowCd = player.bowCdMax; player.shootT = 0.2;
+  const a=player.aim;
+  bullets.push({ x:player.x+Math.cos(a)*7, y:player.y-7+Math.sin(a)*5,
+    vx:Math.cos(a)*player.arrowSpeed, vy:Math.sin(a)*player.arrowSpeed,
+    dmg:player.arrowDmg, t:0, col:PAL.S, own:true, ang:a });
+  player.vx -= Math.cos(a)*18; player.vy -= Math.sin(a)*18;      // kleiner Rueckstoss
+  SFX.bow();
+}
 function playerDash(){
   if(player.dashCd>0 || player.dashT>0 || !player.alive) return;
   const mv=Math.hypot(IN.mx,IN.my);
@@ -980,7 +1000,7 @@ function killEnemy(e){
   for(let i=0;i<n;i++) drops.push({x:e.x, y:e.y-4, vx:rr(-40,40), vy:rr(-50,10), z:0, vz:rr(20,50), t:0, type:'scrap'});
   const heartChance = e.d.boss ? 1 : 0.07;
   if(Math.random()<heartChance) drops.push({x:e.x, y:e.y-4, vx:rr(-20,20), vy:rr(-20,10), z:0, vz:40, t:0, type:'heart'});
-  if(e.d.boss){ game.msg='KOLOSSUS ZERSCHLAGEN!'; game.msgT=2.5; game.slow=0.9; }
+  if(e.d.boss){ say('KOLOSSUS ZERSCHLAGEN', 2.2, PAL.O); game.slow=0.9; }
 }
 function damageCastle(dmg, x, y){
   if(game.castleHp<=0) return;
@@ -995,13 +1015,18 @@ const shocks = waves;                       // Druckwellen (Boss-Schlag, Explosi
 /* ------------------------------------------------------------------
    8. Wellen, Ruhephase, Werkstatt
    ------------------------------------------------------------------ */
+const MSGQ=[];                                  // Nachrichten laufen nacheinander durch
+function say(txt, dur=2.0, col){
+  if(MSGQ.length>2) MSGQ.length=2;              // nichts aufstauen lassen
+  MSGQ.push({txt, dur, col:col||PAL.y});
+}
 function buildWave(n){
   const list=[], add=(t,c)=>{ for(let i=0;i<c;i++) list.push(t); };
-  add('scout', 4 + Math.round(n*1.4));
-  if(n>=2) add('blade',   Math.round(n*0.75));
-  if(n>=3) add('archer',  1 + Math.round(n*0.35));
-  if(n>=4) add('bruiser', Math.round(n*0.3));
-  if(n>=6) add('bomber',  Math.round(n*0.3));
+  add('scout', 3 + Math.round(n*1.1));
+  if(n>=3) add('blade',   Math.round((n-1)*0.6));
+  if(n>=4) add('archer',  1 + Math.round((n-3)*0.35));
+  if(n>=5) add('bruiser', Math.round((n-3)*0.3));
+  if(n>=7) add('bomber',  Math.round((n-5)*0.3));
   if(n%5===0) add('boss', 1 + Math.floor(n/15));
   // durchmischen, damit die Gruppen bunt anrücken
   for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
@@ -1010,13 +1035,13 @@ function buildWave(n){
 function startWave(){
   game.wave++;
   game.phase='wave'; game.spawnList=buildWave(game.wave); game.spawnT=0.4;
-  game.msg = (game.wave%5===0) ? 'WELLE '+game.wave+' — KOLOSSUS!' : 'WELLE '+game.wave;
-  game.msgT=2.2; SFX.wave();
+  say((game.wave%5===0) ? 'WELLE '+game.wave+': KOLOSSUS' : 'WELLE '+game.wave, 2.0);
+  SFX.wave();
 }
 function endWave(){
   game.phase='rest';
   game.restT = 22;
-  game.msg='WELLE '+game.wave+' GESCHAFFT'; game.msgT=2.2;
+  say('WELLE '+game.wave+' GESCHAFFT', 2.0, PAL.H);
   game.score += 50 + game.wave*10;
   rollCards();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
@@ -1025,7 +1050,7 @@ function doSpawns(dt){
   if(!game.spawnList.length) return;
   game.spawnT-=dt;
   if(game.spawnT>0) return;
-  const group = Math.min(game.spawnList.length, ri(2,3)+Math.floor(game.wave/4));
+  const group = Math.min(game.spawnList.length, ri(1,2)+Math.floor(game.wave/5));
   const s = pick(SPAWNS);
   for(let i=0;i<group;i++){
     const t=game.spawnList.pop();
@@ -1034,7 +1059,7 @@ function doSpawns(dt){
     spawnEnemy(t, x, y);
     for(let k=0;k<6;k++) part(x,y-6,rr(-20,20),rr(-20,20),0.4,PAL.C,1);
   }
-  game.spawnT = Math.max(0.8, 2.4 - game.wave*0.07);
+  game.spawnT = Math.max(0.9, 3.1 - game.wave*0.08);
 }
 
 /* --- Werkstatt: Verbesserungen gegen Schrauben ----------------------- */
@@ -1057,6 +1082,10 @@ const UPGRADES = [
    apply:()=>{ player.lifesteal+=0.12; }},
   {id:'thorn', name:'DORNENPANZER', max:3, cost:l=>16+l*10, desc:l=>'DORNEN: 4 SCHADEN',
    apply:()=>{ player.thorns+=4; }},
+  {id:'quiver',name:'SCHNELLER KÖCHER', max:4, cost:l=>14+l*9, desc:l=>'BOGEN LÄDT 20% FIX',
+   apply:()=>{ player.bowCdMax*=0.8; }},
+  {id:'tips',  name:'SCHARFE SPITZEN', max:4, cost:l=>16+l*10, desc:l=>'PFEILSCHADEN +2',
+   apply:()=>{ player.arrowDmg+=2; }},
   {id:'magnet',name:'SCHRAUBENMAGNET', max:2, cost:l=>12+l*8, desc:l=>'SAMMELT VON WEIT',
    apply:()=>{ player.magnet+=40; }},
   {id:'repair',name:'NOTREPARATUR', max:99, cost:l=>10, desc:l=>'TOR +30 FLICKEN',
@@ -1076,10 +1105,9 @@ function rollCards(){
 function buyCard(i){
   const c=game.cards[i]; if(!c) return;
   if(c.bought){ SFX.no(); return; }
-  if(game.scrap < c.cost){ SFX.no(); game.msg='ZU WENIG SCHRAUBEN'; game.msgT=1.2; return; }
+  if(game.scrap < c.cost){ SFX.no(); say('ZU WENIG SCHRAUBEN', 1.1, PAL.R); return; }
   game.scrap -= c.cost; player.upg[c.u.id]=lvl(c.u.id)+1; c.u.apply(); c.bought=true;
-  SFX.buy(); game.msg=c.u.name+' ERWORBEN'; game.msgT=1.6;
-  floater(player.x, player.y-20, '+'+c.u.name, PAL.y);
+  SFX.buy(); say(c.u.name, 1.4, PAL.H);
 }
 
 function gameOver(reason){
@@ -1090,11 +1118,14 @@ function gameOver(reason){
 function newGame(){
   enemies.length=0; bullets.length=0; parts.length=0; drops.length=0;
   slashes.length=0; waves.length=0; floaters.length=0;
-  Object.assign(game, { state:'play', phase:'rest', wave:0, restT:8, spawnList:[], spawnT:0, paused:false,
+  MSGQ.length=0;
+  Object.assign(game, { state:'play', phase:'rest', wave:0, restT:14, spawnList:[], spawnT:0, paused:false,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
-    flash:0, redFlash:0, msg:'HALTE DIE WELLEN AUF', msgT:2.4, shopOpen:false, cards:[], cardSel:0, tutorial:14 });
+    flash:0, redFlash:0, msg:'', msgT:0, msgCol:PAL.y, shopOpen:false, cards:[], cardSel:0, tutorial:16 });
+  say('HALTE DIE BOTS VOM TOR FERN', 2.4, PAL.H);
   Object.assign(player, { speed:64, dmg:5, reach:26, arc:1.5, atkSpeed:1, maxHp:10,
-    dashCdMax:1.0, lifesteal:0, thorns:0, magnet:34, upg:{}, combo:0 });
+    dashCdMax:1.0, bowCdMax:0.85, arrowDmg:4, bowCd:0, shootT:0,
+    lifesteal:0, thorns:0, magnet:34, upg:{}, combo:0 });
   resetPlayer(); rollCards();
 }
 
@@ -1148,13 +1179,14 @@ function updatePlayer(dt){
   else p.face = sa<0 ? 'up' : 'down';
 
   // --- Angriff ---
-  if(IN.attackEdge){
-    if(!IN.aimHeld && !(mouseInside && IN.mouseAim && !isTouch)){
-      const t=nearestEnemy(p.x,p.y-6, p.reach+26, p.aim, 1.1);   // sanfte Zielhilfe
-      if(t) p.aim=Math.atan2(t.y-(p.y-6), t.x-p.x);
-    }
-    playerAttack();
-  }
+  p.bowCd=Math.max(0,p.bowCd-dt); p.shootT=Math.max(0,p.shootT-dt);
+  const assist=(range,spread)=>{
+    if(IN.aimHeld || (mouseInside && IN.mouseAim && !isTouch)) return;
+    const t=nearestEnemy(p.x,p.y-6, range, p.aim, spread);
+    if(t) p.aim=Math.atan2(t.y-(p.y-6), t.x-p.x);
+  };
+  if(IN.attackEdge){ assist(p.reach+26, 1.1); playerAttack(); }
+  if(IN.bowEdge){ assist(150, 0.9); playerShoot(); }
   if(IN.dashEdge) playerDash();
 
   // --- Schwunghitbox ---
@@ -1329,13 +1361,22 @@ function updateBullets(dt){
     const b=bullets[i]; b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt;
     let gone = b.t>3.5 || b.x<4||b.x>WW-4||b.y<8||b.y>WH-4;
     if(!gone) for(const s of solids) if(dist2(b.x,b.y+4,s.x,s.y) < s.r*s.r*0.8){ gone=true; break; }
-    if(!gone && inRect(b.x,b.y+4,GATE_RECT)){ damageCastle(1,b.x,b.y); gone=true; }
     if(!gone) for(const r of WALLS) if(inRect(b.x,b.y+4,r)){ gone=true; break; }
-    if(!gone && player.alive && player.inv<=0 && dist(b.x,b.y,player.x,player.y-6) < 6.5){
-      hurtPlayer(b.dmg, b.x, b.y); gone=true;
+    if(b.own){
+      if(!gone) for(const e of enemies){
+        if(e.dead || e.spawnT>0) continue;
+        if(dist(b.x, b.y, e.x, e.y-e.r*0.7) < e.r+3.5){
+          damageEnemy(e, b.dmg, 80, Math.atan2(b.vy,b.vx), false); gone=true; break;
+        }
+      }
+    } else {
+      if(!gone && inRect(b.x,b.y+4,GATE_RECT)){ damageCastle(1,b.x,b.y); gone=true; }
+      if(!gone && player.alive && player.inv<=0 && dist(b.x,b.y,player.x,player.y-6) < 6.5){
+        hurtPlayer(b.dmg, b.x, b.y); gone=true;
+      }
     }
     if(gone){ burst(b.x,b.y,5,b.col,50,0.25); bullets.splice(i,1); continue; }
-    if(Math.random()<dt*30) part(b.x,b.y,0,0,0.25,b.col,1);
+    if(!b.own && Math.random()<dt*30) part(b.x,b.y,0,0,0.25,b.col,1);
   }
 }
 function updateDrops(dt){
@@ -1455,6 +1496,7 @@ function update(dt){
   game.flash=Math.max(0,game.flash-dt*2);
   game.redFlash=Math.max(0,game.redFlash-dt*2);
   game.msgT=Math.max(0,game.msgT-dt);
+  if(game.msgT<=0 && MSGQ.length){ const m=MSGQ.shift(); game.msg=m.txt; game.msgT=m.dur; game.msgCol=m.col; }
   game.tutorial=Math.max(0,game.tutorial-dt);
   musicTick();
   pressed.clear();
@@ -1523,6 +1565,11 @@ function drawPlayer(){
   const tipx=hx+Math.cos(p.aim)*8, tipy=hy+Math.sin(p.aim)*7;
   const behind = Math.sin(p.aim) < -0.35;
   if(behind && !p.swing){ pxLine(hx,hy,tipx,tipy,PAL.M); pxLine(hx,hy+1,tipx,tipy+1,PAL.K); }
+  if(p.shootT>0){                                   // Bogen kurz sichtbar
+    const bx=p.x+Math.cos(p.aim)*6, by=p.y-8+Math.sin(p.aim)*5, n=p.aim+Math.PI/2;
+    pxLine(bx+Math.cos(n)*4, by+Math.sin(n)*3, bx-Math.cos(n)*4, by-Math.sin(n)*3, PAL.B);
+    pxLine(bx+Math.cos(n)*3+Math.cos(p.aim), by+Math.sin(n)*2, bx-Math.cos(n)*3+Math.cos(p.aim), by-Math.sin(n)*2, PAL.n);
+  }
   const blink = p.inv>0 && Math.floor(p.inv*18)%2===0;
   if(!blink) drawSpr(s, px, py, p.flip, p.hurtT>0);
   if(!behind && !p.swing){ pxLine(hx,hy+1,tipx,tipy+1,PAL.K); pxLine(hx,hy,tipx,tipy,PAL.w); }
@@ -1591,8 +1638,16 @@ function drawWorld(){
   }
   // Geschosse
   for(const b of bullets){
-    ctx.fillStyle=PAL.P; ctx.fillRect(Math.round(b.x)-1, Math.round(b.y)-1, 3,3);
-    ctx.fillStyle='#ffffff'; ctx.fillRect(Math.round(b.x), Math.round(b.y), 1,1);
+    if(b.own){
+      const a=Math.atan2(b.vy,b.vx);
+      pxLine(b.x-Math.cos(a)*5, b.y-Math.sin(a)*5, b.x, b.y, PAL.B);
+      ctx.fillStyle=PAL.w; ctx.fillRect(Math.round(b.x),Math.round(b.y),1,1);
+      ctx.fillStyle=PAL.S;
+      ctx.fillRect(Math.round(b.x-Math.cos(a)*6),Math.round(b.y-Math.sin(a)*6),1,1);
+    } else {
+      ctx.fillStyle=PAL.P; ctx.fillRect(Math.round(b.x)-1, Math.round(b.y)-1, 3,3);
+      ctx.fillStyle='#ffffff'; ctx.fillRect(Math.round(b.x), Math.round(b.y), 1,1);
+    }
   }
   // Alles Sortierbare nach Fusslinie zeichnen
   const list=[];
@@ -1712,22 +1767,28 @@ function drawHUD(){
   ctx.fillStyle= player.dashCd>0 ? '#3a4a3a' : PAL.C;
   ctx.fillRect(cx0,cy0, Math.round(cdw*(1-player.dashCd/player.dashCdMax)), 3);
   drawText(ctx,'ROLLE', cx0+cdw+3, cy0-2, player.dashCd>0?'#5f6f5c':'#9fb79a',1);
+  // Bogen
+  ctx.fillStyle='#141019'; ctx.fillRect(cx0-1,cy0+6,cdw+2,5);
+  ctx.fillStyle= player.bowCd>0 ? '#4a4030' : PAL.O;
+  ctx.fillRect(cx0,cy0+7, Math.round(cdw*(1-player.bowCd/player.bowCdMax)), 3);
+  drawText(ctx,'BOGEN', cx0+cdw+3, cy0+5, player.bowCd>0?'#6f6350':'#b79a7a',1);
 
   if(game.phase==='rest'){
     drawCards();
-    drawTextC(ctx, 'TASTE 1-3 KAUFEN   ·   ENTER: WELLE STARTEN', VW/2, VH-65, '#9fb79a', 1);
-    if(inRect(player.x,player.y,COURT)) drawTextC(ctx, 'IM BURGHOF HEILT ES SICH', VW/2, VH-75, PAL.H, 1);
+    if(inRect(player.x,player.y,COURT)) drawTextC(ctx, 'IM BURGHOF HEILT ES SICH', VW/2, VH-65, PAL.H, 1);
+    else drawTextC(ctx, isTouch ? 'KARTE ANTIPPEN ZUM KAUFEN' : 'TASTE 1-3 KAUFEN   ·   ENTER: WELLE STARTEN',
+      VW/2, VH-65, '#9fb79a', 1);
   }
   if(game.msgT>0){
     const a=Math.min(1,game.msgT);
-    ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 34, PAL.y, 2); ctx.globalAlpha=1;
+    ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 34, game.msgCol||PAL.y, 2); ctx.globalAlpha=1;
   }
-  if(game.tutorial>0 && game.wave<=1){
+  if(game.tutorial>0 && game.wave<=1 && game.msgT<=0){
     ctx.globalAlpha=Math.min(1,game.tutorial/2);
     const y0 = game.phase==='rest' ? VH-98 : VH-40;
-    drawTextC(ctx, isTouch ? 'LINKS LAUFEN · RECHTS ZIELEN UND HIEB' : 'WASD LAUFEN · MAUS ZIELEN · KLICK: SCHWERTHIEB',
+    drawTextC(ctx, isTouch ? 'LINKS LAUFEN · RECHTS ZIELEN' : 'WASD LAUFEN · MAUS ZIELEN',
       VW/2, y0, '#cfe8c2', 1);
-    drawTextC(ctx, isTouch ? 'ROLLE-TASTE WEICHT AUS' : 'SHIFT ODER RECHTSKLICK: ROLLE (UNVERWUNDBAR)',
+    drawTextC(ctx, isTouch ? 'SCHWERT · BOGEN · ROLLE ALS TASTEN RECHTS' : 'KLICK: SCHWERT · RECHTSKLICK: BOGEN · SHIFT: ROLLE',
       VW/2, y0+10, '#9fb79a', 1);
     ctx.globalAlpha=1;
   }
@@ -1750,15 +1811,15 @@ function drawTitle(){
   drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+38, '#cfe8c2', 1);
   const rows = isTouch ? [
     'LINKER DAUMEN: LAUFEN',
-    'RECHTER DAUMEN: ZIELEN, LOSLASSEN = HIEB',
-    'ROLLE-TASTE: AUSWEICHEN',
+    'RECHTER DAUMEN: ZIELEN',
+    'TASTEN RECHTS: SCHWERT, BOGEN, ROLLE',
     'IN DER RUHE KARTEN ANTIPPEN ZUM KAUFEN'
   ] : [
-    'WASD ODER PFEILE: LAUFEN',
-    'MAUS: ZIELEN   ·   KLICK / LEERTASTE: SCHWERTHIEB',
-    'SHIFT ODER RECHTSKLICK: ROLLE (KURZ UNVERWUNDBAR)',
-    '1-3: KARTEN KAUFEN   ·   ENTER: WELLE FRUEH STARTEN',
-    'P: PAUSE   ·   M: TON'
+    'WASD ODER PFEILE: LAUFEN   ·   MAUS: ZIELEN',
+    'KLICK ODER LEERTASTE: SCHWERTHIEB',
+    'RECHTSKLICK ODER Q: PFEIL SCHIESSEN',
+    'SHIFT: ROLLE (KURZ UNVERWUNDBAR)',
+    '1-3: KARTEN KAUFEN   ·   ENTER: WELLE FRUEH STARTEN'
   ];
   rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+54+i*11, '#9fb79a', 1));
   drawTextC(ctx, 'DREI HERZEN VERLOREN ODER TOR ZERSTÖRT = ENDE', VW/2, y+h-26, '#7f927b', 1);
@@ -1786,6 +1847,7 @@ function drawPause(){
 }
 
 function render(){
+  if(isTouch) touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
   ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH);
   const sx = game.shake>0 ? Math.round(rr(-game.shake,game.shake)) : 0;
   const sy = game.shake>0 ? Math.round(rr(-game.shake,game.shake)) : 0;
