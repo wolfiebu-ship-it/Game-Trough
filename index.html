@@ -37,6 +37,9 @@
     border:2px solid rgba(255,200,120,.6);  color:#ffd9a0; }
   #dashBtn { right:4vmin;   bottom:24vmin;  width:12vmin; height:12vmin;
     border:2px solid rgba(150,230,255,.55); color:#cfeeff; font-size:2.1vmin; }
+  #healBtn { right:21vmin;  bottom:22vmin;  width:11vmin; height:11vmin;
+    border:2px solid rgba(255,140,150,.6);  color:#ffc9cf; font-size:2.0vmin; }
+  .abtn.cool{ opacity:.38; }
   #fsBtn{ position:absolute; right:2vmin; top:2vmin; width:9vmin; height:9vmin; border-radius:22%;
     pointer-events:auto; display:flex; align-items:center; justify-content:center;
     font-size:3.4vmin; user-select:none; color:#cfe8c2;
@@ -55,6 +58,7 @@
       <div class="abtn" id="swordBtn">SCHWERT</div>
       <div class="abtn" id="bowBtn">BOGEN</div>
       <div class="abtn" id="dashBtn">ROLLE</div>
+      <div class="abtn" id="healBtn">HEILEN</div>
       <div id="fsBtn">⛶</div>
     </div>
   </div>
@@ -754,6 +758,7 @@ if(fsBtn){
 bindBtn('swordBtn','__attack');
 bindBtn('bowBtn','__bow');
 bindBtn('dashBtn','__dash');
+bindBtn('healBtn','__heal');
 
 function readInput(){
   let mx=0,my=0;
@@ -769,6 +774,7 @@ function readInput(){
   IN.attackEdge = pressed.has('__attack')||pressed.has(' ')||pressed.has('j');
   IN.bowEdge    = pressed.has('__bow')||pressed.has('q')||pressed.has('f');
   IN.dashEdge   = pressed.has('__dash')||pressed.has('Shift')||pressed.has('l')||pressed.has('k');
+  IN.healEdge   = pressed.has('__heal')||pressed.has('h')||pressed.has('r');
 }
 
 /* ------------------------------------------------------------------
@@ -875,8 +881,9 @@ const player = {
   speed:64, dmg:5, reach:26, arc:1.5, atkSpeed:1,
   face:'down', flip:false, aim:0,
   atkT:0, atkCd:0, swing:null, combo:0, comboT:0,
-  dashT:0, dashCd:0, dashDir:0, dashCdMax:1.0,
+  dashT:0, dashCd:0, dashDir:0, dashCdMax:2.8,
   bowCd:0, bowCdMax:0.85, arrowDmg:4, arrowSpeed:176, shootT:0,
+  healCd:0, healCdMax:15, regenT:0, regenEvery:20,
   inv:0, anim:0, hurtT:0, alive:true,
   lifesteal:0, thorns:0, magnet:34,
   upg:{}
@@ -884,7 +891,8 @@ const player = {
 function resetPlayer(){
   player.x = CAS.gate.x + 34; player.y = CAS.center.y;
   player.vx=player.vy=0; player.hp=player.maxHp; player.inv=1.2;
-  player.swing=null; player.atkCd=0; player.dashT=0; player.dashCd=0; player.bowCd=0; player.alive=true;
+  player.swing=null; player.atkCd=0; player.dashT=0; player.dashCd=0; player.bowCd=0;
+  player.healCd=0; player.regenT=0; player.alive=true;
 }
 
 const BOT = {
@@ -920,7 +928,7 @@ function burst(x,y,n,col,spd=40,life=0.4,size=1){
     part(x,y,Math.cos(a)*s,Math.sin(a)*s,rr(life*0.5,life),col,size,0); }
 }
 function floater(x,y,txt,col){ floaters.push({x,y,txt,col,t:0}); }
-function shake(v){ game.shake=Math.min(7,game.shake+v); }
+function shake(v){ game.shake=Math.min(2, game.shake+v*0.28); }   // nur noch ein Hauch
 
 /* --- Kollision ------------------------------------------------------ */
 function collideWorld(e, isEnemy){
@@ -983,6 +991,14 @@ function playerShoot(){
     dmg:player.arrowDmg, t:0, col:PAL.S, own:true, ang:a });
   player.vx -= Math.cos(a)*18; player.vy -= Math.sin(a)*18;      // kleiner Rueckstoss
   SFX.bow();
+}
+function playerHeal(){
+  if(!player.alive || player.healCd>0) return;
+  if(player.hp>=player.maxHp){ SFX.no(); return; }        // nicht verschenken
+  player.healCd = player.healCdMax;
+  player.hp = Math.min(player.maxHp, player.hp+2);        // ein ganzes Herz
+  SFX.heal(); floater(player.x, player.y-20, 'HEILUNG', PAL.R);
+  for(let i=0;i<14;i++) part(player.x+rr(-5,5), player.y-rr(2,14), rr(-10,10), rr(-26,-8), 0.6, i%2?PAL.H:PAL.R, 1);
 }
 function playerDash(){
   if(player.dashCd>0 || player.dashT>0 || !player.alive) return;
@@ -1148,7 +1164,8 @@ function newGame(){
     flash:0, redFlash:0, msg:'', msgT:0, msgCol:PAL.y, shopOpen:false, cards:[], cardSel:0, tutorial:16 });
   say('HALTE DIE BOTS VOM TOR FERN', 2.4, PAL.H);
   Object.assign(player, { speed:64, dmg:5, reach:26, arc:1.5, atkSpeed:1, maxHp:10,
-    dashCdMax:1.0, bowCdMax:0.85, arrowDmg:4, bowCd:0, shootT:0,
+    dashCdMax:2.8, bowCdMax:0.85, arrowDmg:4, bowCd:0, shootT:0,
+    healCdMax:15, healCd:0, regenT:0, regenEvery:20,
     lifesteal:0, thorns:0, magnet:34, upg:{}, combo:0 });
   resetPlayer(); rollCards();
 }
@@ -1212,6 +1229,14 @@ function updatePlayer(dt){
   if(IN.attackEdge){ assist(p.reach+26, 1.1); playerAttack(); }
   if(IN.bowEdge){ assist(150, 0.9); playerShoot(); }
   if(IN.dashEdge) playerDash();
+  if(IN.healEdge) playerHeal();
+  // langsame Selbstheilung: alle 20 Sekunden ein halbes Herz
+  p.healCd=Math.max(0,p.healCd-dt);
+  if(p.hp<p.maxHp){
+    p.regenT+=dt;
+    if(p.regenT>=p.regenEvery){ p.regenT=0; p.hp=Math.min(p.maxHp,p.hp+1);
+      SFX.heal(); floater(p.x,p.y-18,'+',PAL.R); burst(p.x,p.y-8,5,PAL.H,26,0.5); }
+  } else p.regenT=0;
 
   // --- Schwunghitbox ---
   if(p.swing){
@@ -1510,11 +1535,10 @@ function update(dt){
     if(game.restT<=0) startWave();
   }
 
-  // Kamera
-  const tx=clamp(player.x + Math.cos(player.aim)*14 - VW/2, 0, WW-VW);
-  const ty=clamp(player.y + Math.sin(player.aim)*10 - VH/2, 0, WH-VH);
-  cam.x=lerp(cam.x,tx,1-Math.pow(0.0001,dt));
-  cam.y=lerp(cam.y,ty,1-Math.pow(0.0001,dt));
+  // Kamera: fest auf die Spielfigur gerastert — kein Vorhalten, kein Nachziehen,
+  // dadurch steht das Bild relativ zum Helden absolut ruhig.
+  cam.x = clamp(Math.round(player.x) - (VW>>1), 0, WW-VW);
+  cam.y = clamp(Math.round(player.y) - (VH>>1), 0, WH-VH);
 
   game.shake=Math.max(0,game.shake-dt*22);
   game.flash=Math.max(0,game.flash-dt*2);
@@ -1581,8 +1605,7 @@ function drawPlayer(){
   const fr = moving ? (Math.floor(p.anim*7)%2) : 0;
   const set = p.face==='side' ? SPR.pSide : (p.face==='up' ? SPR.pUp : SPR.pDown);
   const s=set[fr];
-  const bob = moving ? (Math.floor(p.anim*7)%2) : 0;
-  const px=p.x-8, py=p.y-15-bob;
+  const px=p.x-8, py=p.y-15;
   shadow(p.x, p.y, 11);
   // Schwert in der Hand (zeigt in Zielrichtung)
   const hx=p.x+Math.cos(p.aim)*5, hy=p.y-8+Math.sin(p.aim)*4;
@@ -1732,6 +1755,12 @@ function bar(x,y,w,frac,col,label,dim){
   ctx.fillStyle=col; ctx.fillRect(x,y, Math.round(w*clamp(frac,0,1)), 3);
   drawText(ctx, label, x+w+3, y-2, dim?'#5f6f5c':'#9fb79a', 1);
 }
+function drawRegen(){
+  const n=Math.ceil(player.maxHp/2), w=n*8-1;
+  ctx.fillStyle='#1c2a1c'; ctx.fillRect(4,10,w,1);
+  ctx.fillStyle=PAL.G;
+  ctx.fillRect(4,10, Math.round(w*clamp(player.regenT/player.regenEvery,0,1)), 1);
+}
 function drawGateBar(){
   const w=54, x=VW-w-4, y=4;
   drawSpr(SPR.tower, x-9, y-1, false, false);
@@ -1774,10 +1803,12 @@ function drawCards(){
 }
 function drawHUD(){
   drawHearts();
+  drawRegen();
   drawGateBar();
   drawEdgeMarkers();
-  bar(4, 12, 22, 1-player.dashCd/player.dashCdMax, player.dashCd>0?'#3a4a3a':PAL.C, 'ROLLE', player.dashCd>0);
-  bar(4, 19, 22, 1-player.bowCd/player.bowCdMax,  player.bowCd>0 ?'#4a4030':PAL.O, 'BOGEN', player.bowCd>0);
+  bar(4, 13, 22, 1-player.dashCd/player.dashCdMax, player.dashCd>0?'#3a4a3a':PAL.C, 'ROLLE', player.dashCd>0);
+  bar(4, 20, 22, 1-player.bowCd/player.bowCdMax,   player.bowCd>0 ?'#4a4030':PAL.O, 'BOGEN', player.bowCd>0);
+  bar(4, 27, 22, 1-player.healCd/player.healCdMax, player.healCd>0?'#4a3038':PAL.R, 'HEILEN', player.healCd>0);
 
   const left = enemies.length + game.spawnList.length;
   if(game.phase==='wave'){
@@ -1835,16 +1866,18 @@ function drawTitle(){
     'LINKER DAUMEN: LAUFEN',
     'RECHTER DAUMEN: ZIELEN',
     'TASTEN: SCHWERT, BOGEN, ROLLE',
+    'HEILEN-TASTE: ALLE 15 SEKUNDEN',
     'IN DER RUHE KARTEN ANTIPPEN'
   ] : [
     'WASD LAUFEN · MAUS ZIELEN',
     'KLICK ODER LEERTASTE: SCHWERT',
     'RECHTSKLICK ODER Q: PFEIL',
-    'SHIFT: ROLLE (UNVERWUNDBAR)',
+    'SHIFT: ROLLE · H: HEILEN (15 S)',
     '1-3: KARTEN · ENTER: WELLE'
   ];
   rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+47+i*10, '#9fb79a', 1));
-  drawTextC(ctx, 'HERZEN LEER ODER TOR KAPUTT = ENDE', VW/2, y+h-13, '#7f927b', 1);
+  drawTextC(ctx, 'ALLE 20 S HEILT EIN HALBES HERZ NACH', VW/2, y+h-22, '#7f927b', 1);
+  drawTextC(ctx, 'HERZEN LEER ODER TOR KAPUTT = ENDE', VW/2, y+h-12, '#7f927b', 1);
   const blink = Math.floor(game.time*2)%2===0;
   drawTextC(ctx, blink ? (isTouch?'TIPPEN ZUM START':'LEERTASTE ZUM START') : '', VW/2, y+h+6, PAL.y, 1);
   if(game.best>0) drawTextC(ctx, 'BESTE PUNKTZAHL '+game.best, VW/2, y+h+16, PAL.y, 1);
@@ -1868,8 +1901,11 @@ function drawPause(){
   drawTextC(ctx,'P ODER ESC: WEITER', VW/2, VH/2+6, '#9fb79a', 1);
 }
 
+const btnDash=document.getElementById('dashBtn'), btnHeal=document.getElementById('healBtn');
 function render(){
   touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
+  if(btnDash) btnDash.classList.toggle('cool', player.dashCd>0);
+  if(btnHeal) btnHeal.classList.toggle('cool', player.healCd>0 || player.hp>=player.maxHp);
   ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH);
   const sx = game.shake>0 ? Math.round(rr(-game.shake,game.shake)) : 0;
   const sy = game.shake>0 ? Math.round(rr(-game.shake,game.shake)) : 0;
@@ -1885,7 +1921,7 @@ function render(){
    15. Schleife
    ------------------------------------------------------------------ */
 resetPlayer();
-cam.x=clamp(player.x-VW/2,0,WW-VW); cam.y=clamp(player.y-VH/2,0,WH-VH);
+cam.x=clamp(Math.round(player.x)-(VW>>1),0,WW-VW); cam.y=clamp(Math.round(player.y)-(VH>>1),0,WH-VH);
 rollCards();
 
 let last=performance.now(), acc=0;
