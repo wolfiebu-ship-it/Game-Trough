@@ -1,61 +1,82 @@
-# NEON CLASH
+# WALDWACHT
 
-Ein kleines, fieses 2D-Fighting-Game im Neon-/Retrowave-Look.
-Alles steckt in **einer einzigen Datei** — kein Server, keine Installation, keine Assets.
+Ein Top-Down-Pixelspiel: Du verteidigst deine Waldburg gegen Wellen von Schrott-Bots.
+Schwert, Herzen, Burgtor, Wald — alles steckt in **einer einzigen HTML-Datei**.
+Kein Build, keine Assets, kein Server: jedes Pixel, jeder Baum und jeder Ton
+entsteht beim Laden zur Laufzeit.
 
 ## Starten
 
-`index.html` doppelklicken. Fertig.
-
-(Wer mag, kann auch `npx serve .` benutzen — nötig ist es nicht.)
+`index.html` doppelklicken. Fertig. (Alternativ `npx serve .` — nötig ist es nicht.)
 
 ## Steuerung
 
-**Spieler 1**
+**Tastatur und Maus**
 
-| Taste | Aktion |
+| Eingabe | Aktion |
 |---|---|
-| `A` / `D` | laufen |
-| `W` | springen |
-| `S` | ducken |
-| `J` | leichter Angriff (Jab) |
-| `K` | schwerer Angriff (Smash) |
-| `S` + `K` | tiefer Sweep |
-| Sprung + `J` | Dive Kick |
-| `L` | **NEON WAVE** (Special, kostet 50 Meter) |
-| `H` oder `Shift` | blocken |
-| `A`/`D` doppelt tippen | Dash |
+| `W A S D` / Pfeile | laufen (frei, analog — kein Raster) |
+| Maus | zielen |
+| Linksklick oder `Leertaste` | Schwerthieb |
+| `Shift` oder Rechtsklick | Rolle (kurz unverwundbar) |
+| `1` `2` `3` | Karte in der Ruhephase kaufen |
+| `Enter` / `E` | nächste Welle früher starten |
+| `P` / `Esc` | Pause · `M` Ton an/aus |
 
-**Spieler 2** (im 2-Spieler-Modus)
-
-Pfeiltasten zum Bewegen, `,` leicht, `.` schwer, `/` Special, rechte `Shift` blocken.
-
-`M` schaltet den Ton an/aus. Auf dem Handy erscheinen automatisch Touch-Buttons.
+**Handy / Tablet** — zwei Daumensticks wie in Brawl Stars:
+links ziehen = laufen, rechts ziehen = zielen und beim Loslassen zuschlagen,
+kurzes Tippen rechts = Hieb nach vorn, `ROLLE`-Taste = ausweichen.
+Karten in der Ruhephase einfach antippen.
 
 ## Spielregeln
 
-- **Best of 3**: Wer zwei Runden gewinnt, gewinnt den Kampf. 60 Sekunden pro Runde,
-  bei Zeitablauf gewinnt die höhere Lebensanzeige.
-- **Blocken ist gestaffelt** — genau hier liegt die Tiefe:
-  - tiefe Angriffe (Sweep) kann man **nur geduckt** blocken
-  - Sprungangriffe (Dive Kick) **nur im Stehen**
-  - alles andere geht in beiden Haltungen
-  - Blocken kostet trotzdem ein bisschen Chip-Schaden
-- **Combos**: Treffer in Folge zählen hoch, aber jeder weitere Treffer macht weniger
-  Schaden und stößt stärker weg — Endlos-Combos gibt es also nicht.
-- **Special-Meter** füllt sich durch aus- und eingeteilten Schaden. Ab 50 % leuchtet
-  die Figur, ab da ist die NEON WAVE zündbar (26 Schaden, riesige Reichweite).
-- Wer am Boden liegt, ist beim Aufstehen unverwundbar.
-- Die CPU hat drei Schwierigkeitsgrade und wird mit jeder Runde eine Spur aggressiver.
+- **Herzen**: Du startest mit fünf Herzen (halbe Herzen zählen mit). Sie stehen
+  oben links. Bei null ist Schluss.
+- **Das Tor**: Die Bots rennen zur Burg und hacken auf das Tor ein. Fällt das
+  Tor, ist das Spiel ebenfalls vorbei. Das Tor erkennt nur dich — du kannst
+  hindurch, die Bots nicht.
+- **Ruhephase**: Nach jeder Welle bleiben 22 Sekunden. Im Burghof heilst du dich,
+  eingesammelte Schrauben gibst du in der Kartenauswahl unten aus.
+- **Kombo**: Zwei schnelle Hiebe hintereinander enden im dritten, schweren
+  Schlag — mehr Schaden, mehr Wucht, weiter Bogen.
+- **Deckung**: Büsche bremsen dich und die Bots, Bäume und Felsen blockieren
+  Wege und Geschosse. Auf den Lichtungen kämpft es sich am freiesten.
+
+## Die Bots
+
+| Bot | Verhalten |
+|---|---|
+| **Späher** (cyan) | schnell, schwach, kommt in Rudeln |
+| **Klinge** (orange) | stürzt sich mit Sägearmen nach vorn |
+| **Schütze** (lila) | hält Abstand und schießt Energiebolzen |
+| **Brecher** (rot, groß) | langsam, zäh, prügelt besonders hart aufs Tor |
+| **Zünder** (gelb) | rennt heran und sprengt sich — reißt auch eigene Bots mit |
+| **Kolossus** (Boss) | alle fünf Wellen: Schockwellen-Schlag und ruft Späher |
+
+## Verbesserungen
+
+Zwölf Karten, immer drei zufällige zur Auswahl: schärfere Klinge, leichtere
+Stiefel, Extra-Herz, Wirbelklinge, Torpanzer, Hetzrolle, schnelle Hiebe,
+Blutdurst, Dornenpanzer, Schraubenmagnet sowie Notreparatur und Waldtrunk
+als Sofortkauf.
 
 ## Technik
 
-- reines HTML/CSS/JavaScript mit Canvas 2D, ~1200 Zeilen, keine Abhängigkeiten
+- reines HTML/CSS/JavaScript mit Canvas 2D, ~1600 Zeilen, keine Abhängigkeiten
+- interne Auflösung 384 × 216, hart hochskaliert (`image-rendering: pixelated`)
 - feste Simulationsrate von 60 Hz (Accumulator-Loop), Rendern unabhängig davon
-- echte Frame-Daten pro Move (startup / active / recovery), AABB-Hitboxen gegen Hurtboxen
-- Juice: Hitstop, Slowmo beim K.O., Screenshake, Partikel, Dash-Nachbilder, Bodenspiegelung
-- Figuren sind prozedural animiert (Gelenkwinkel pro Zustand), es gibt keine Sprites
-- alle Sounds werden zur Laufzeit mit der WebAudio-API synthetisiert
+- Figuren und Bots sind handgepixelte Sprites, direkt als Zeichenketten im Code
+- Wald, Boden, Burg und Tor werden prozedural gemalt (Wertrauschen, Pixelkreise);
+  der Weltboden entsteht einmalig pixelweise und wird danach nur noch geblittet
+- Tiefensortierung nach Fußlinie, damit man hinter Bäumen und Mauern verschwindet
+- eigene 5×7-Bitmapschrift für die gesamte Anzeige
+- Juice: Hitstop, Screenshake, Funken, Schockwellen, Trefferblitz, Lagerfeuer
+- alle Geräusche und die kleine Endlosmusik werden per WebAudio synthetisiert
 
-Zum Herumprobieren liegt in der Konsole `window.NEON_CLASH` mit `Game`, `F` (beide
-Kämpfer) und `MOVES` bereit, z. B. `NEON_CLASH.F[0].meter = 100`.
+Zum Herumprobieren liegt in der Konsole `window.WALDWACHT` mit `game`, `player`,
+`enemies` und `spawnEnemy` bereit, z. B. `WALDWACHT.spawnEnemy('boss', 500, 320)`.
+
+---
+
+Das frühere Projekt **NEON CLASH** (2D-Fighting-Game) liegt weiterhin als
+`neon-clash.html` im Repo.
