@@ -40,12 +40,16 @@
   #healBtn { right:21vmin;  bottom:22vmin;  width:11vmin; height:11vmin;
     border:2px solid rgba(255,140,150,.6);  color:#ffc9cf; font-size:2.0vmin; }
   .abtn.cool{ opacity:.38; }
+  #ultraBtn{ left:2.5vmin; bottom:3vmin; width:15vmin; height:15vmin;
+    border:2px solid rgba(255,230,120,.75); color:#ffe66d;
+    background:rgba(40,34,10,.5); box-shadow:0 0 10px rgba(255,220,100,.25); }
+  #touch:not(.hasUltra) #ultraBtn{ display:none; }
+  #touch.rest .abtn{ display:none !important; }
   #fsBtn{ position:absolute; right:2vmin; top:2vmin; width:9vmin; height:9vmin; border-radius:22%;
     pointer-events:auto; display:flex; align-items:center; justify-content:center;
     font-size:3.4vmin; user-select:none; color:#cfe8c2;
     background:rgba(16,32,18,.45); border:2px solid rgba(200,240,190,.35); }
   .abtn.hit{ background:rgba(140,220,255,.45); }
-  #touch.rest .abtn{ display:none; }
 </style>
 </head>
 <body>
@@ -59,6 +63,7 @@
       <div class="abtn" id="bowBtn">BOGEN</div>
       <div class="abtn" id="dashBtn">ROLLE</div>
       <div class="abtn" id="healBtn">HEILEN</div>
+      <div class="abtn" id="ultraBtn">ULTRA</div>
       <div id="fsBtn">⛶</div>
     </div>
   </div>
@@ -762,6 +767,7 @@ bindBtn('swordBtn','__attack');
 bindBtn('bowBtn','__bow');
 bindBtn('dashBtn','__dash');
 bindBtn('healBtn','__heal');
+bindBtn('ultraBtn','__ultra');
 
 function readInput(){
   let mx=0,my=0;
@@ -778,6 +784,8 @@ function readInput(){
   IN.bowEdge    = pressed.has('__bow')||pressed.has('q')||pressed.has('f');
   IN.dashEdge   = pressed.has('__dash')||pressed.has('Shift')||pressed.has('l')||pressed.has('k');
   IN.healEdge   = pressed.has('__heal')||pressed.has('h')||pressed.has('r');
+  IN.ultraEdge  = pressed.has('__ultra')||pressed.has('x');
+  IN.swapEdge   = pressed.has('__swap')||pressed.has('c');
 }
 
 /* ------------------------------------------------------------------
@@ -872,7 +880,7 @@ const game = {
   scrap:0, score:0, kills:0, best:0,
   castleHp:120, castleMax:120,
   shake:0, hitstop:0, slow:0, flash:0, redFlash:0,
-  msg:'', msgT:0, shopOpen:false, cards:[], cardSel:0, tutorial:0, time:0
+  msg:'', msgT:0, shopOpen:false, cards:[], cardSel:0, tutorial:0, time:0, ultras:[]
 };
 try{ game.best = parseInt(localStorage.getItem('waldwacht_best')||'0',10)||0; }catch(e){}
 
@@ -887,6 +895,7 @@ const player = {
   dashT:0, dashCd:0, dashDir:0, dashCdMax:2.8,
   bowCd:0, bowCdMax:0.85, arrowDmg:4, arrowSpeed:176, shootT:0,
   healCd:0, healCdMax:15, regenT:0, regenEvery:20,
+  ultra:0, ultraMax:100, ultraSel:0, stormT:0, stormTick:0, rainT:0, rainLeft:0,
   inv:0, anim:0, hurtT:0, alive:true,
   lifesteal:0, thorns:0, magnet:34,
   upg:{}
@@ -895,7 +904,7 @@ function resetPlayer(){
   player.x = CAS.gate.x + 34; player.y = CAS.center.y;
   player.vx=player.vy=0; player.hp=player.maxHp; player.inv=1.2;
   player.swing=null; player.atkCd=0; player.dashT=0; player.dashCd=0; player.bowCd=0;
-  player.healCd=0; player.regenT=0; player.alive=true;
+  player.healCd=0; player.regenT=0; player.stormT=0; player.rainT=0; player.rainLeft=0; player.alive=true;
 }
 
 const BOT = {
@@ -1026,6 +1035,7 @@ function damageEnemy(e, dmg, kb, ang, heavy){
   burst(e.x, e.y-e.r, heavy?10:6, PAL.C, heavy?90:60, 0.3);
   burst(e.x, e.y-e.r, 3, PAL.O, 50, 0.35);
   game.hitstop = Math.max(game.hitstop, heavy?0.08:0.045); if(heavy) shake(1.2);
+  chargeUltra(dmg*0.6);
   heavy ? SFX.heavy() : SFX.hit();
   if(player.lifesteal>0 && Math.random()<player.lifesteal && player.hp<player.maxHp){
     player.hp=Math.min(player.maxHp, player.hp+1); SFX.heal(); floater(player.x, player.y-18, '+', PAL.R);
@@ -1034,7 +1044,7 @@ function damageEnemy(e, dmg, kb, ang, heavy){
 }
 function killEnemy(e){
   e.dead=true;
-  game.kills++; game.score += e.d.score;
+  game.kills++; game.score += e.d.score; chargeUltra(e.d.boss?40:5);
   burst(e.x, e.y-e.r, e.d.boss?46:16, PAL.M, e.d.boss?150:80, 0.6, e.d.boss?2:1);
   burst(e.x, e.y-e.r, e.d.boss?26:8, PAL.C, 70, 0.5);
   burst(e.x, e.y-e.r, 6, PAL.O, 60, 0.45);
@@ -1058,6 +1068,85 @@ const shocks = waves;                       // Druckwellen (Boss-Schlag, Explosi
 /* ------------------------------------------------------------------
    8. Wellen, Ruhephase, Werkstatt
    ------------------------------------------------------------------ */
+/* --- Ultras: ab Welle 10 freigeschaltet, aufgeladen durch ausgeteilten Schaden --- */
+const ULTRAS = [
+  { id:'storm', name:'KLINGENSTURM', wave:10, hint:'WIRBEL, DER ALLES UM DICH TRIFFT' },
+  { id:'rain',  name:'PFEILREGEN',   wave:15, hint:'PFEILE IN ALLE RICHTUNGEN' },
+  { id:'quake', name:'DONNERSCHLAG', wave:20, hint:'DRUCKWELLE, BETAEUBUNG, HEILUNG' }
+];
+function ownedUltras(){ return ULTRAS.filter(u=> game.ultras.includes(u.id)); }
+function activeUltra(){ const o=ownedUltras(); return o.length ? o[player.ultraSel % o.length] : null; }
+function ultraReady(){ return activeUltra() && player.ultra >= player.ultraMax; }
+function chargeUltra(v){
+  if(!ownedUltras().length) return;
+  if(player.stormT>0 || player.rainLeft>0) return;      // die Ultra laedt sich nicht selbst
+  player.ultra = Math.min(player.ultraMax, player.ultra + v);
+}
+function cycleUltra(){
+  const o=ownedUltras(); if(o.length<2) return;
+  player.ultraSel=(player.ultraSel+1)%o.length; SFX.pick();
+  say('ULTRA: '+activeUltra().name, 1.2, PAL.C);
+}
+function fireUltra(){
+  if(!ultraReady() || !player.alive) return;
+  const u=activeUltra(); player.ultra=0;
+  say(u.name+'!', 1.4, PAL.y); game.flash=0.4;
+  if(u.id==='storm'){
+    player.stormT=1.5; player.stormTick=0; player.inv=Math.max(player.inv,1.6);
+    SFX.heavy();
+  } else if(u.id==='rain'){
+    player.rainT=0; player.rainLeft=3; SFX.bow();
+  } else {
+    shocks.push({x:player.x, y:player.y, r:8, max:74, t:0, col:PAL.C});
+    shocks.push({x:player.x, y:player.y, r:4, max:52, t:0, col:PAL.y});
+    SFX.boom(); shake(3);
+    for(const e of enemies){
+      if(e.dead||e.spawnT>0) continue;
+      const d=dist(player.x,player.y,e.x,e.y);
+      if(d<74){
+        damageEnemy(e, player.dmg*2.4, 220, Math.atan2(e.y-player.y,e.x-player.x), true);
+        if(!e.dead){ e.st='cool'; e.t=0; e.cd=1.8; }        // kurz betaeubt
+      }
+    }
+    player.hp=Math.min(player.maxHp, player.hp+2);
+    burst(player.x, player.y-6, 34, PAL.C, 150, 0.7, 2);
+  }
+}
+function updateUltra(dt){
+  const p=player;
+  if(p.stormT>0){
+    p.stormT-=dt; p.inv=Math.max(p.inv,0.2);
+    p.stormTick-=dt;
+    if(p.stormTick<=0){
+      p.stormTick=0.17;
+      const ang=game.time*11;
+      slashes.push({x:p.x, y:p.y-8, ang, arc:2.6, reach:p.reach+12, t:0, dur:0.24, heavy:true});
+      for(const e of enemies){
+        if(e.dead||e.spawnT>0) continue;
+        if(dist(p.x,p.y-6,e.x,e.y-e.r*0.6) < 38+e.r)
+          damageEnemy(e, p.dmg*0.95, 140, Math.atan2(e.y-p.y,e.x-p.x), true);
+      }
+      SFX.swing();
+    }
+    for(let i=0;i<2;i++){ const a=rr(0,TAU), r=rr(10,26);
+      part(p.x+Math.cos(a)*r, p.y-8+Math.sin(a)*r*0.7, 0,0, 0.25, i?PAL.C:PAL.w, 1); }
+  }
+  if(p.rainLeft>0){
+    p.rainT-=dt;
+    if(p.rainT<=0){
+      p.rainT=0.2; p.rainLeft--;
+      const n=14, off=rr(0,TAU);
+      for(let i=0;i<n;i++){
+        const a=off+i/n*TAU;
+        bullets.push({ x:p.x+Math.cos(a)*7, y:p.y-7+Math.sin(a)*5,
+          vx:Math.cos(a)*p.arrowSpeed, vy:Math.sin(a)*p.arrowSpeed,
+          dmg:p.arrowDmg*1.5, t:0, col:PAL.S, own:true });
+      }
+      SFX.bow();
+    }
+  }
+}
+
 const MSGQ=[];                                  // Nachrichten laufen nacheinander durch
 function say(txt, dur=2.0, col){
   if(MSGQ.length>2) MSGQ.length=2;              // nichts aufstauen lassen
@@ -1086,6 +1175,23 @@ function endWave(){
   game.restT = 22;
   say('WELLE '+game.wave+' GESCHAFFT', 2.0, PAL.H);
   game.score += 50 + game.wave*10;
+  // Ultras freischalten
+  for(const u of ULTRAS){
+    if(game.wave >= u.wave && !game.ultras.includes(u.id)){
+      game.ultras.push(u.id);
+      player.ultraSel = game.ultras.length-1;
+      player.ultra = player.ultraMax;                 // gleich einmal voll
+      say('ULTRA FREI: '+u.name, 2.6, PAL.y);
+      say(u.hint, 2.2, PAL.C);
+      SFX.buy();
+    }
+  }
+  // Ab Welle 20 gibt es eine ordentliche Schraubenpraemie
+  if(game.wave >= 20){
+    const bonus = ri(20,30);
+    game.scrap += bonus;
+    say('PRAEMIE +'+bonus+' SCHRAUBEN', 2.0, PAL.y);
+  }
   rollCards();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
 }
@@ -1162,6 +1268,7 @@ function newGame(){
   enemies.length=0; bullets.length=0; parts.length=0; drops.length=0;
   slashes.length=0; waves.length=0; floaters.length=0;
   MSGQ.length=0;
+  game.ultras=[];
   Object.assign(game, { state:'play', phase:'rest', wave:0, restT:14, spawnList:[], spawnT:0, paused:false,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
     flash:0, redFlash:0, msg:'', msgT:0, msgCol:PAL.y, shopOpen:false, cards:[], cardSel:0, tutorial:16 });
@@ -1169,6 +1276,7 @@ function newGame(){
   Object.assign(player, { speed:64, dmg:5, reach:26, arc:1.5, atkSpeed:1, maxHp:10,
     dashCdMax:2.8, bowCdMax:0.85, arrowDmg:4, bowCd:0, shootT:0,
     healCdMax:15, healCd:0, regenT:0, regenEvery:20,
+    ultra:0, ultraSel:0, stormT:0, rainT:0, rainLeft:0,
     lifesteal:0, thorns:0, magnet:34, upg:{}, combo:0 });
   resetPlayer(); rollCards();
 }
@@ -1233,6 +1341,9 @@ function updatePlayer(dt){
   if(IN.bowEdge){ assist(150, 0.9); playerShoot(); }
   if(IN.dashEdge) playerDash();
   if(IN.healEdge) playerHeal();
+  if(IN.swapEdge) cycleUltra();
+  if(IN.ultraEdge) fireUltra();
+  updateUltra(dt);
   // langsame Selbstheilung: alle 20 Sekunden ein halbes Herz
   p.healCd=Math.max(0,p.healCd-dt);
   if(p.hp<p.maxHp){
@@ -1477,6 +1588,10 @@ let lastTap=null;
 const SHOP = { w:170, h:82 };
 function shopPanelRect(){ return { x:Math.round((VW-SHOP.w)/2), y:Math.round((VH-SHOP.h)/2)-4, w:SHOP.w, h:SHOP.h }; }
 function shopBtnRect(){ return { x:4, y:VH-30, w:42, h:15 }; }
+function ultraChipRect(){
+  const u=activeUltra(); if(!u) return null;
+  return { x:4, y:53, w:textW(u.name,1)+8, h:11 };
+}
 function cardRects(){
   if(!game.shopOpen) return [];
   const p=shopPanelRect();
@@ -1485,6 +1600,8 @@ function cardRects(){
 const hitRect=(t,r)=> t.x>=r.x && t.x<=r.x+r.w && t.y>=r.y && t.y<=r.y+r.h;
 function tryTapCards(){
   if(!lastTap || game.state!=='play') return false;
+  const uc=ultraChipRect();
+  if(uc && !game.shopOpen && hitRect(lastTap, uc)){ cycleUltra(); return true; }
   if(game.phase==='rest' && hitRect(lastTap, shopBtnRect())){
     game.shopOpen=!game.shopOpen; SFX.pick(); return true;
   }
@@ -1847,6 +1964,17 @@ function drawHUD(){
   bar(4, 15, 22, 1-player.dashCd/player.dashCdMax, player.dashCd>0?'#3a4a3a':PAL.C, 'ROLLE', player.dashCd>0);
   bar(4, 25, 22, 1-player.bowCd/player.bowCdMax,   player.bowCd>0 ?'#4a4030':PAL.O, 'BOGEN', player.bowCd>0);
   bar(4, 35, 22, 1-player.healCd/player.healCdMax, player.healCd>0?'#4a3038':PAL.R, 'HEILEN', player.healCd>0);
+  const u=activeUltra();
+  if(u){
+    const full=player.ultra>=player.ultraMax;
+    const pulse = full && Math.floor(game.time*4)%2===0;
+    bar(4, 45, 30, player.ultra/player.ultraMax, full?(pulse?'#fff3c4':PAL.y):PAL.p, 'ULTRA', !full);
+    const r=ultraChipRect();
+    panel(r.x, r.y, r.w, r.h, full?'rgba(46,40,10,.92)':'rgba(10,18,12,.9)', full?PAL.y:'#4a4a4a');
+    drawText(ctx, u.name, r.x+4, r.y+2, full?PAL.y:'#8f9a86', 1);
+    if(ownedUltras().length>1)
+      drawText(ctx, isTouch?'TIPPEN: WECHSELN':'C: WECHSELN', r.x+r.w+4, r.y+2, '#6f7f6c', 1);
+  }
 
   const left = enemies.length + game.spawnList.length;
   if(game.phase==='wave'){
@@ -1898,29 +2026,33 @@ function drawHUD(){
 
 function drawTitle(){
   ctx.globalAlpha=0.55; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
-  const w=232, h=116, x=Math.round((VW-w)/2), y=10;
+  const w=232, h=122, x=Math.round((VW-w)/2), y=4;
   panel(x,y,w,h);
-  drawTextC(ctx,'WALDWACHT', VW/2, y+9, PAL.H, 3);
-  drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+33, '#cfe8c2', 1);
+  drawTextC(ctx,'WALDWACHT', VW/2, y+6, PAL.H, 3);
+  if(game.best>0){
+    const b='BESTE '+game.best;
+    drawText(ctx, b, x+w-6-textW(b,1), y+6, PAL.y, 1);
+  }
+  drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+30, '#cfe8c2', 1);
   const rows = isTouch ? [
     'LINKER DAUMEN: LAUFEN',
     'RECHTER DAUMEN: ZIELEN',
     'TASTEN: SCHWERT, BOGEN, ROLLE',
     'HEILEN-TASTE: ALLE 15 SEKUNDEN',
+    'AB WELLE 10: ULTRA UNTEN LINKS',
     'IN DER RUHE: SHOP UNTEN LINKS'
   ] : [
     'WASD LAUFEN · MAUS ZIELEN',
     'KLICK ODER LEERTASTE: SCHWERT',
     'RECHTSKLICK ODER Q: PFEIL',
     'SHIFT: ROLLE · H: HEILEN (15 S)',
-    'B: SHOP · ENTER: WELLE'
+    'AB WELLE 10: X ULTRA · C WECHSELN',
+    'B: SHOP · ENTER: WELLE STARTEN'
   ];
-  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+47+i*10, '#9fb79a', 1));
-  drawTextC(ctx, 'ALLE 20 S HEILT EIN HALBES HERZ NACH', VW/2, y+h-22, '#7f927b', 1);
+  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+43+i*10, '#9fb79a', 1));
   drawTextC(ctx, 'HERZEN LEER ODER TOR KAPUTT = ENDE', VW/2, y+h-12, '#7f927b', 1);
   const blink = Math.floor(game.time*2)%2===0;
-  drawTextC(ctx, blink ? (isTouch?'TIPPEN ZUM START':'LEERTASTE ZUM START') : '', VW/2, y+h+6, PAL.y, 1);
-  if(game.best>0) drawTextC(ctx, 'BESTE PUNKTZAHL '+game.best, VW/2, y+h+16, PAL.y, 1);
+  drawTextC(ctx, blink ? (isTouch?'TIPPEN ZUM START':'LEERTASTE ZUM START') : '', VW/2, y+h+5, PAL.y, 1);
 }
 function drawOver(){
   ctx.globalAlpha=0.6; ctx.fillStyle='#20060a'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
@@ -1942,10 +2074,13 @@ function drawPause(){
 }
 
 const btnDash=document.getElementById('dashBtn'), btnHeal=document.getElementById('healBtn');
+const btnUltra=document.getElementById('ultraBtn');
 function render(){
   touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
   if(btnDash) btnDash.classList.toggle('cool', player.dashCd>0);
   if(btnHeal) btnHeal.classList.toggle('cool', player.healCd>0 || player.hp>=player.maxHp);
+  touchUI.classList.toggle('hasUltra', ownedUltras().length>0);
+  if(btnUltra) btnUltra.classList.toggle('cool', !ultraReady());
   ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH);
   const sh = game.shake>0.5 ? game.shake : 0;      // unter einem halben Pixel: gar nichts
   const sx = sh ? Math.round(rr(-sh,sh)) : 0;

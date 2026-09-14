@@ -18,25 +18,41 @@ entsteht beim Laden zur Laufzeit.
 | `W A S D` / Pfeile | laufen (frei, analog — kein Raster) |
 | Maus | zielen |
 | Linksklick oder `Leertaste` | Schwerthieb |
-| `Shift` oder Rechtsklick | Rolle (kurz unverwundbar) |
-| `1` `2` `3` | Karte in der Ruhephase kaufen |
-| `Enter` / `E` | nächste Welle früher starten |
+| Rechtsklick oder `Q` | Pfeil schießen |
+| `Shift` | Rolle (kurz unverwundbar, 2,8 s Wartezeit) |
+| `H` | heilen: ein ganzes Herz, alle 15 Sekunden |
+| `X` / `C` | Ultra auslösen / Ultra wechseln (ab Welle 10) |
+| `B` | Shop öffnen und schließen (in der Ruhephase) |
+| `1` `2` `3` | Karte kaufen |
+| `Enter` | nächste Welle früher starten |
 | `P` / `Esc` | Pause · `M` Ton an/aus |
 
-**Handy / Tablet** — zwei Daumensticks wie in Brawl Stars:
-links ziehen = laufen, rechts ziehen = zielen und beim Loslassen zuschlagen,
-kurzes Tippen rechts = Hieb nach vorn, `ROLLE`-Taste = ausweichen.
-Karten in der Ruhephase einfach antippen.
+**Handy / Tablet** — zwei Daumensticks wie in Brawl Stars: links ziehen = laufen,
+rechts ziehen = zielen. Rechts unten liegen die Tasten für **Schwert**, **Bogen**,
+**Rolle** und **Heilen**, links unten erscheint ab Welle 10 die **Ultra**-Taste.
+Oben rechts schaltet ⛶ auf Vollbild. In der Ruhephase öffnet der **SHOP**-Knopf
+unten links das Werkstattfenster.
 
 ## Spielregeln
 
 - **Herzen**: Du startest mit fünf Herzen (halbe Herzen zählen mit). Sie stehen
   oben links. Bei null ist Schluss.
+- **Heilen**: alle 20 Sekunden wächst ein halbes Herz von selbst nach (der feine
+  Streifen unter den Herzen zeigt den Fortschritt), dazu heilt die Heiltaste
+  alle 15 Sekunden ein ganzes Herz.
 - **Das Tor**: Die Bots rennen zur Burg und hacken auf das Tor ein. Fällt das
   Tor, ist das Spiel ebenfalls vorbei. Das Tor erkennt nur dich — du kannst
   hindurch, die Bots nicht.
 - **Ruhephase**: Nach jeder Welle bleiben 22 Sekunden. Im Burghof heilst du dich,
-  eingesammelte Schrauben gibst du in der Kartenauswahl unten aus.
+  eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
+  offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 20 gibt es nach jeder
+  Welle 20 bis 30 Schrauben Prämie obendrauf.
+- **Ultras**: Der Ultra-Balken füllt sich durch ausgeteilten Schaden. Nach
+  Welle 10 gibt es den **Klingensturm** (anderthalb Sekunden Wirbel, der alles
+  im Umkreis zerlegt), nach Welle 15 den **Pfeilregen** (drei Salven in alle
+  Richtungen), nach Welle 20 den **Donnerschlag** (Druckwelle, betäubt die
+  Bots und heilt ein Herz). Mehrere Ultras wechselst du mit `C` oder durch
+  Antippen des Namens.
 - **Kombo**: Zwei schnelle Hiebe hintereinander enden im dritten, schweren
   Schlag — mehr Schaden, mehr Wucht, weiter Bogen.
 - **Deckung**: Büsche bremsen dich und die Bots, Bäume und Felsen blockieren
@@ -55,20 +71,22 @@ Karten in der Ruhephase einfach antippen.
 
 ## Verbesserungen
 
-Zwölf Karten, immer drei zufällige zur Auswahl: schärfere Klinge, leichtere
+Vierzehn Karten, immer drei zufällige zur Auswahl: schärfere Klinge, leichtere
 Stiefel, Extra-Herz, Wirbelklinge, Torpanzer, Hetzrolle, schnelle Hiebe,
-Blutdurst, Dornenpanzer, Schraubenmagnet sowie Notreparatur und Waldtrunk
-als Sofortkauf.
+Blutdurst, Dornenpanzer, schneller Köcher, scharfe Spitzen, Schraubenmagnet
+sowie Notreparatur und Waldtrunk als Sofortkauf.
 
 ## Technik
 
-- reines HTML/CSS/JavaScript mit Canvas 2D, ~1600 Zeilen, keine Abhängigkeiten
-- interne Auflösung 384 × 216, hart hochskaliert (`image-rendering: pixelated`)
+- reines HTML/CSS/JavaScript mit Canvas 2D, ~1800 Zeilen, keine Abhängigkeiten
+- interne Auflösung 256 × 144, hart hochskaliert (`image-rendering: pixelated`)
 - feste Simulationsrate von 60 Hz (Accumulator-Loop), Rendern unabhängig davon
-- Figuren und Bots sind handgepixelte Sprites, direkt als Zeichenketten im Code
+- Figuren und Bots sind handgepixelte Sprites, direkt als Zeichenketten im Code;
+  gelaufen wird im Dreierzyklus, die Rolle ist eine gedrehte Kugelhaltung
 - Wald, Boden, Burg und Tor werden prozedural gemalt (Wertrauschen, Pixelkreise);
   der Weltboden entsteht einmalig pixelweise und wird danach nur noch geblittet
 - Tiefensortierung nach Fußlinie, damit man hinter Bäumen und Mauern verschwindet
+- Kamera pixelgerastert fest am Helden: kein Nachziehen, kein Zittern
 - eigene 5×7-Bitmapschrift für die gesamte Anzeige
 - Juice: Hitstop, Screenshake, Funken, Schockwellen, Trefferblitz, Lagerfeuer
 - alle Geräusche und die kleine Endlosmusik werden per WebAudio synthetisiert
