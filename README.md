@@ -54,9 +54,9 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
   eigener, immer klickbarer „SPEICHERN"-Knopf zuverlässig von Hand.
 - **Pause**: Deutlich abgedunkelt, damit kein HUD-Text im Hintergrund lesbar
   bleibt — nur die Umrisse der Welt schimmern noch schwach durch. Aufgerufen
-  per `P`/`Esc` oder dem Knopf oben rechts (gleiche Form wie der
-  Vollbild-Knopf, mit gelbem Pause-Symbol). „SPEICHERN" ist in der
-  Pixel-Schrift des Spiels gehalten, genau wie alle anderen Knöpfe.
+  per `P`/`Esc` oder dem gelben Pixel-Knopf direkt unter der Tor-Anzeige
+  oben rechts. „SPEICHERN" ist in der Pixel-Schrift des Spiels gehalten,
+  genau wie alle anderen Knöpfe.
 - **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 10 gibt es nach jeder

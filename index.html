@@ -58,22 +58,21 @@
     letter-spacing:.05em; cursor:pointer; }
   #codeBtn:hover{ background:#24402a; }
   #codeBtn:active{ background:#12200f; }
-  #pauseBtn{ position:absolute; right:13vmin; top:16vmin; width:9vmin; height:9vmin; border-radius:22%;
-    pointer-events:auto; user-select:none;
-    background:rgba(16,32,18,.45); border:2px solid rgba(255,224,110,.55); }
+  #pauseBtn{ position:absolute; pointer-events:auto; user-select:none; box-sizing:border-box;
+    background:#f2c53d; border:2px solid #4a3a0a;
+    box-shadow: inset 2px 2px 0 #fff2b0, inset -2px -2px 0 #b8860f, 2px 2px 0 rgba(0,0,0,.35); }
   #pauseBtn[hidden]{ display:none; }
   #pauseBtn::before, #pauseBtn::after{
-    content:''; position:absolute; top:28%; bottom:28%; width:13%;
-    background:#ffe066; }
-  #pauseBtn::before{ left:29%; }
-  #pauseBtn::after{ right:29%; }
-  #pauseBtn:active{ background:rgba(255,224,110,.25); }
+    content:''; position:absolute; top:24%; bottom:24%; width:14%;
+    background:#4a3a0a; }
+  #pauseBtn::before{ left:24%; }
+  #pauseBtn::after{ right:24%; }
+  #pauseBtn:active{ box-shadow: inset 2px 2px 0 #b8860f, inset -2px -2px 0 #fff2b0; }
   #pauseSaveBtn{ position:absolute; pointer-events:none; background:transparent; border:0; }
   #pauseSaveBtn[hidden]{ display:none; }
   #pauseSaveBtn.show{ pointer-events:auto; }
-  #fsBtn{ position:absolute; right:2vmin; top:16vmin; width:9vmin; height:9vmin; border-radius:22%;
-    pointer-events:auto; display:flex; align-items:center; justify-content:center;
-    font-size:3.4vmin; user-select:none; color:#cfe8c2;
+  #fsBtn{ position:absolute; box-sizing:border-box; pointer-events:auto; display:flex;
+    align-items:center; justify-content:center; user-select:none; color:#cfe8c2;
     background:rgba(16,32,18,.45); border:2px solid rgba(200,240,190,.35); }
   .abtn.hit{ background:rgba(140,220,255,.45); }
 </style>
@@ -90,9 +89,9 @@
       <div class="abtn" id="dashBtn">ROLLE</div>
       <div class="abtn" id="healBtn">HEILEN</div>
       <div class="abtn" id="ultraBtn">ULTRA</div>
-      <div id="pauseBtn"></div>
-      <div id="fsBtn">⛶</div>
     </div>
+    <div id="pauseBtn"></div>
+    <div id="fsBtn">⛶</div>
     <div id="pauseSaveBtn" hidden></div>
     <div id="codeBox" hidden>
       <input id="codeInput" type="text" maxlength="20" placeholder="CODE EINLÖSEN"
@@ -2294,6 +2293,15 @@ function drawRegen(){
   ctx.fillStyle=PAL.G;
   ctx.fillRect(4,10, Math.round(w*clamp(player.regenT/player.regenEvery,0,1)), 1);
 }
+function pauseBtnRect(){                 // direkt unter der Torleiste, wenig Abstand
+  const barRight=VW-4;                   // rechte Kante von Balken und "TOR"-Schrift
+  const w=34, h=20;
+  return { x:barRight-w, y:22, w, h };   // Torblock endet bei y=19 (Balken+Beschriftung)
+}
+function fsBtnRect(){                    // gleiche Reihe, direkt links vom Pause-Knopf
+  const p=pauseBtnRect(), gap=4, w=20;
+  return { x:p.x-gap-w, y:p.y, w, h:p.h };
+}
 function drawGateBar(){
   const w=54, x=VW-w-4, y=4;
   drawSpr(SPR.tower, x-9, y-1, false, false);
@@ -2527,15 +2535,23 @@ resetPlayer();
 cam.x=clamp(q(player.x-VW/2),0,WW-VW-1); cam.y=clamp(q(player.y-VH/2),0,WH-VH-1);
 rollCards();
 layoutCodeBox();
+function placePct(el,x,y,w,h){
+  el.style.left=(x/VW*100)+'%'; el.style.top=(y/VH*100)+'%';
+  el.style.width=(w/VW*100)+'%'; el.style.height=(h/VH*100)+'%';
+}
+placePct(pauseSaveBtn, pauseSaveRect().x, pauseSaveRect().y, pauseSaveRect().w, pauseSaveRect().h);
 (function(){
-  const r=pauseSaveRect(), put=pauseSaveBtn;
-  put.style.left=(r.x/VW*100)+'%'; put.style.top=(r.y/VH*100)+'%';
-  put.style.width=(r.w/VW*100)+'%'; put.style.height=(r.h/VH*100)+'%';
-  requestAnimationFrame(()=>{ const h=put.getBoundingClientRect().height;
-    if(h>0) put.style.fontSize=Math.max(8,h*0.45)+'px'; });
-  put.addEventListener('click', e=>{ e.preventDefault(); audioUnlock();
+  requestAnimationFrame(()=>{ const h=pauseSaveBtn.getBoundingClientRect().height;
+    if(h>0) pauseSaveBtn.style.fontSize=Math.max(8,h*0.45)+'px'; });
+  pauseSaveBtn.addEventListener('click', e=>{ e.preventDefault(); audioUnlock();
     saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); });
 })();
+// Pause- und Vollbild-Knopf exakt unter die Torleiste setzen - keine
+// vmin-Schaetzung mehr, die je nach Bildschirmform woanders landen konnte.
+placePct(pauseBtn, pauseBtnRect().x, pauseBtnRect().y, pauseBtnRect().w, pauseBtnRect().h);
+placePct(fsBtn, fsBtnRect().x, fsBtnRect().y, fsBtnRect().w, fsBtnRect().h);
+requestAnimationFrame(()=>{ const h=fsBtn.getBoundingClientRect().height;
+  if(h>0) fsBtn.style.fontSize=Math.max(9,h*0.55)+'px'; });
 
 let last=performance.now();
 const MAXSTEP=1/40;                       // groesster Simulationsschritt
