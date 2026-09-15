@@ -63,10 +63,10 @@
     box-shadow: inset 2px 2px 0 #fff2b0, inset -2px -2px 0 #b8860f, 2px 2px 0 rgba(0,0,0,.35); }
   #pauseBtn[hidden]{ display:none; }
   #pauseBtn::before, #pauseBtn::after{
-    content:''; position:absolute; top:24%; bottom:24%; width:14%;
+    content:''; position:absolute; top:26%; bottom:26%; width:13%;
     background:#4a3a0a; }
-  #pauseBtn::before{ left:24%; }
-  #pauseBtn::after{ right:24%; }
+  #pauseBtn::before{ left:27%; }
+  #pauseBtn::after{ right:27%; }
   #pauseBtn:active{ box-shadow: inset 2px 2px 0 #b8860f, inset -2px -2px 0 #fff2b0; }
   #pauseSaveBtn{ position:absolute; pointer-events:none; background:transparent; border:0; }
   #pauseSaveBtn[hidden]{ display:none; }
@@ -2295,7 +2295,7 @@ function drawRegen(){
 }
 function pauseBtnRect(){                 // direkt unter der Torleiste, wenig Abstand
   const barRight=VW-4;                   // rechte Kante von Balken und "TOR"-Schrift
-  const w=34, h=20;
+  const w=20, h=20;                      // quadratisch und etwas kleiner
   return { x:barRight-w, y:22, w, h };   // Torblock endet bei y=19 (Balken+Beschriftung)
 }
 function fsBtnRect(){                    // gleiche Reihe, direkt links vom Pause-Knopf
