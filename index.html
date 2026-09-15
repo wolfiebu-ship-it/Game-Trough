@@ -47,13 +47,13 @@
   #touch.rest .abtn{ display:none !important; }
   #codeBox{ position:absolute; inset:0; pointer-events:none; }
   #codeBox[hidden]{ display:none; }
-  #codeInput{ position:absolute; box-sizing:border-box; pointer-events:auto;
+  #codeInput{ position:absolute; box-sizing:border-box; pointer-events:auto; touch-action:manipulation;
     background:#0d140e; border:2px solid #ffe66d; color:#e9f5dc;
     font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; letter-spacing:.06em;
-    text-transform:uppercase; padding:0 6px; outline:none; }
+    text-transform:uppercase; padding:0 6px; outline:none; -webkit-user-select:text; user-select:text; }
   #codeInput::placeholder{ color:#c9b054; text-transform:uppercase; letter-spacing:.06em; }
   #codeInput:focus{ border-color:#fff3c4; }
-  #codeBtn{ position:absolute; box-sizing:border-box; pointer-events:auto;
+  #codeBtn{ position:absolute; box-sizing:border-box; pointer-events:auto; touch-action:manipulation;
     background:#3d3316; border:2px solid #ffe66d; color:#ffe66d; font-weight:bold;
     letter-spacing:.05em; cursor:pointer; }
   #codeBtn:hover{ background:#24402a; }
@@ -837,8 +837,13 @@ function touchEnd(e){
   }
   e.preventDefault();
 }
-// Wischen darf die Seite niemals verschieben (Capture laeuft auch ueber den Tasten)
-const lockScroll = e=>{ if(e.cancelable) e.preventDefault(); };
+// Wischen darf die Seite niemals verschieben (Capture laeuft auch ueber den Tasten) -
+// ausser ueber dem Code-Feld: dort wuerde ein abgefangenes touchmove auf manchen
+// Handys den Tipp-Gestus verwirren und die Tastatur gar nicht erst oeffnen.
+const lockScroll = e=>{
+  if(e.target===codeInput || e.target===codeBtn) return;
+  if(e.cancelable) e.preventDefault();
+};
 document.addEventListener('touchmove', lockScroll, {passive:false, capture:true});
 document.addEventListener('gesturestart', lockScroll, {passive:false});
 document.addEventListener('dblclick', lockScroll, {passive:false});
@@ -880,6 +885,13 @@ codeInput.addEventListener('keydown', e=>{
 });
 codeInput.addEventListener('keyup', e=> e.stopPropagation());
 codeBtn.addEventListener('click', e=>{ e.preventDefault(); audioUnlock(); redeemCode(); });
+// Nichts von der globalen Touch-Steuerung darf hier je dazwischenfunken -
+// eigene Stopp-Aufrufe, statt sich allein auf die elementFromPoint-Pruefung
+// in touchStart() zu verlassen. So oeffnet die Tastatur auf dem Handy sicher.
+[codeInput, codeBtn].forEach(el=>{
+  el.addEventListener('touchstart', e=> e.stopPropagation(), {passive:true});
+  el.addEventListener('touchend',   e=> e.stopPropagation(), {passive:true});
+});
 
 // --- Geheime Codes: einmal je Durchlauf einloesbar ---------------------
 const CODES = {
