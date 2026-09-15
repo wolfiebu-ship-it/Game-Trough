@@ -91,6 +91,11 @@ wieder auf die Beine).
 selbst auf anrückende Bots), Schraubenmagnet, **Schatzsucher** (mehr Beute),
 **Kampfgeist** (Ultra lädt schneller), Waldtrunk.
 
+Im Werkstattfenster gibt es außerdem ein **Code-Feld**. Bekannte Codes (Groß-
+oder Kleinschreibung egal): `FOREST` gibt 50 Schrauben, `WALDWACHT` schaltet
+sofort das nächste Ultra frei (oder füllt die Leiste und gibt Schrauben,
+wenn du schon alle hast). Jeder Code ist einmal je Durchlauf einlösbar.
+
 ## Technik
 
 - reines HTML/CSS/JavaScript mit Canvas 2D, ~1800 Zeilen, keine Abhängigkeiten

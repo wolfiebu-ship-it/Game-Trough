@@ -45,6 +45,19 @@
     background:rgba(40,34,10,.5); box-shadow:0 0 10px rgba(255,220,100,.25); }
   #touch:not(.hasUltra) #ultraBtn{ display:none; }
   #touch.rest .abtn{ display:none !important; }
+  #codeBox{ position:absolute; inset:0; pointer-events:none; }
+  #codeBox[hidden]{ display:none; }
+  #codeInput{ position:absolute; box-sizing:border-box; pointer-events:auto;
+    background:#0d140e; border:2px solid #3d6b3a; color:#e9f5dc;
+    font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; letter-spacing:.06em;
+    text-transform:uppercase; padding:0 6px; outline:none; }
+  #codeInput::placeholder{ color:#5f7a5a; text-transform:none; letter-spacing:0; }
+  #codeInput:focus{ border-color:#7fd35a; }
+  #codeBtn{ position:absolute; box-sizing:border-box; pointer-events:auto;
+    background:#1a2e1c; border:2px solid #3d6b3a; color:#ffe66d; font-weight:bold;
+    letter-spacing:.05em; cursor:pointer; }
+  #codeBtn:hover{ background:#24402a; }
+  #codeBtn:active{ background:#12200f; }
   #fsBtn{ position:absolute; right:2vmin; top:2vmin; width:9vmin; height:9vmin; border-radius:22%;
     pointer-events:auto; display:flex; align-items:center; justify-content:center;
     font-size:3.4vmin; user-select:none; color:#cfe8c2;
@@ -65,6 +78,11 @@
       <div class="abtn" id="healBtn">HEILEN</div>
       <div class="abtn" id="ultraBtn">ULTRA</div>
       <div id="fsBtn">⛶</div>
+    </div>
+    <div id="codeBox" hidden>
+      <input id="codeInput" type="text" maxlength="20" placeholder="CODE EINLÖSEN"
+        autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button id="codeBtn" type="button">OK</button>
     </div>
   </div>
 </div>
@@ -682,13 +700,18 @@ const keys = Object.create(null);
 const pressed = new Set();                 // Tastendruck-Flanken dieses Frames
 const IN = { mx:0, my:0, aim:0, aimHeld:false, attackEdge:false, dashEdge:false, mouseAim:false };
 
+const typingInCode = ()=> document.activeElement === codeInput;
 addEventListener('keydown', e=>{
+  if(typingInCode()) return;                       // Buchstaben gehoeren dem Codefeld
   const k=e.key.length===1 ? e.key.toLowerCase() : e.key;
   if(!keys[k]) pressed.add(k);
   keys[k]=true;
   if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
 }, {passive:false});
-addEventListener('keyup', e=>{ keys[e.key.length===1 ? e.key.toLowerCase() : e.key]=false; });
+addEventListener('keyup', e=>{
+  if(typingInCode()) return;
+  keys[e.key.length===1 ? e.key.toLowerCase() : e.key]=false;
+});
 addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; });
 
 let mouseWX=0, mouseWY=0, mouseInside=false;
@@ -781,6 +804,57 @@ function bindBtn(id, code){
   el.addEventListener('touchstart', go, {passive:false});
   el.addEventListener('mousedown', go);
 }
+const codeBox=document.getElementById('codeBox');
+const codeInput=document.getElementById('codeInput');
+const codeBtn=document.getElementById('codeBtn');
+function layoutCodeBox(){
+  const r=codeRowRect(), btnW=28, gap=3;
+  const put=(el,x,y,w,h)=>{
+    el.style.left=(x/VW*100)+'%';  el.style.top=(y/VH*100)+'%';
+    el.style.width=(w/VW*100)+'%'; el.style.height=(h/VH*100)+'%';
+  };
+  put(codeInput, r.x, r.y, r.w-btnW-gap, r.h);
+  put(codeBtn,   r.x+r.w-btnW, r.y, btnW, r.h);
+  sizeCodeBoxFont();
+}
+function sizeCodeBoxFont(){
+  // Nur waehrend das Feld sichtbar ist hat es eine echte Groesse (sonst 0).
+  const h=codeInput.getBoundingClientRect().height;
+  if(h>0){ codeInput.style.fontSize=Math.max(9,h*0.5)+'px'; codeBtn.style.fontSize=Math.max(8,h*0.4)+'px'; }
+}
+addEventListener('resize', layoutCodeBox);   // erster Aufruf folgt weiter unten, sobald SHOP feststeht
+codeInput.addEventListener('input', ()=>{ codeInput.value=codeInput.value.toUpperCase(); });
+codeInput.addEventListener('keydown', e=>{
+  e.stopPropagation();
+  if(e.key==='Enter'){ e.preventDefault(); redeemCode(); }
+});
+codeInput.addEventListener('keyup', e=> e.stopPropagation());
+codeBtn.addEventListener('click', e=>{ e.preventDefault(); audioUnlock(); redeemCode(); });
+
+// --- Geheime Codes: einmal je Durchlauf einloesbar ---------------------
+const CODES = {
+  FOREST: ()=>{ game.scrap += 50; return '+50 SCHRAUBEN'; },
+  WALDWACHT: ()=>{
+    const frei = ULTRAS.find(u=> !game.ultras.includes(u.id));
+    if(frei){ game.ultras.push(frei.id); player.ultraSel=game.ultras.length-1; player.ultra=player.ultraMax;
+      return 'ULTRA FREI: '+frei.name; }
+    player.ultra=player.ultraMax; game.scrap+=80;
+    return 'ULTRA VOLL + 80 SCHRAUBEN';
+  }
+};
+function redeemCode(){
+  const code=(codeInput.value||'').trim().toUpperCase();
+  codeInput.value='';
+  if(!code) return;
+  if(!game.usedCodes) game.usedCodes=new Set();
+  if(game.usedCodes.has(code)){ say('CODE SCHON VERWENDET', 1.6, PAL.O); SFX.no(); return; }
+  const geber = CODES[code];
+  if(!geber){ say('UNGÜLTIGER CODE', 1.6, PAL.R); SFX.no(); return; }
+  game.usedCodes.add(code);
+  say('CODE: '+geber(), 2.2, PAL.y); SFX.buy();
+  floater(player.x, player.y-20, code, PAL.y);
+}
+
 const fsBtn=document.getElementById('fsBtn');
 if(fsBtn){
   const wrap=document.getElementById('wrap');
@@ -1384,7 +1458,7 @@ function newGame(){
   enemies.length=0; bullets.length=0; parts.length=0; drops.length=0;
   slashes.length=0; waves.length=0; floaters.length=0;
   MSGQ.length=0;
-  game.ultras=[];
+  game.ultras=[]; game.usedCodes=new Set();
   game.turret=0; game.turretT=0;
   Object.assign(game, { state:'play', phase:'rest', wave:0, restT:6, spawnList:[], spawnT:0, paused:false,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
@@ -1747,7 +1821,7 @@ function updateFX(dt){
    12. Haupt-Aktualisierung
    ------------------------------------------------------------------ */
 let lastTap=null;
-const SHOP = { w:176, h:102 };
+const SHOP = { w:176, h:126 };
 function shopPanelRect(){ return { x:Math.round((VW-SHOP.w)/2), y:Math.round((VH-SHOP.h)/2)-4, w:SHOP.w, h:SHOP.h }; }
 function shopBtnRect(){ return { x:4, y:VH-52, w:48, h:16 }; }
 function ultraChipRect(){
@@ -1758,6 +1832,10 @@ function cardRects(){
   if(!game.shopOpen) return [];
   const p=shopPanelRect();
   return game.cards.map((c,i)=>({ x:p.x+5, y:p.y+16+i*20, w:p.w-10, h:20, i }));
+}
+function codeRowRect(){
+  const p=shopPanelRect();
+  return { x:p.x+5, y:p.y+SHOP.h-22, w:p.w-10, h:16 };
 }
 const hitRect=(t,r)=> t.x>=r.x && t.x<=r.x+r.w && t.y>=r.y && t.y<=r.y+r.h;
 function tryTapCards(){
@@ -2169,6 +2247,8 @@ function drawShopPanel(){
   const scr=String(game.scrap);
   drawText(ctx, scr, p.x+p.w-6-textW(scr,1), p.y+5, PAL.y, 1);
   drawSpr(SPR.bolt, p.x+p.w-13-textW(scr,1), p.y+5, false, false);
+  const cr=codeRowRect();
+  drawText(ctx, 'CODE', cr.x, cr.y-9, '#5f7a5a', 1);
   cardRects().forEach((r,i)=>{
     const c=game.cards[i]; if(!c) return;
     const afford = game.scrap>=c.cost && !c.bought;
@@ -2320,6 +2400,10 @@ function render(){
   ctx.setTransform(SS,0,0,SS,0,0);
   ctx.imageSmoothingEnabled=false;
   touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
+  const warVersteckt = codeBox.hidden;
+  codeBox.hidden = !(game.state==='play' && game.shopOpen);
+  if(codeBox.hidden && document.activeElement===codeInput) codeInput.blur();
+  if(warVersteckt && !codeBox.hidden) sizeCodeBoxFont();   // Groesse war beim Verstecken 0
   if(btnDash) btnDash.classList.toggle('cool', player.dashCd>0);
   if(btnHeal) btnHeal.classList.toggle('cool', player.healCd>0 || player.hp>=player.maxHp);
   touchUI.classList.toggle('hasUltra', ownedUltras().length>0);
@@ -2342,6 +2426,7 @@ function render(){
 resetPlayer();
 cam.x=clamp(q(player.x-VW/2),0,WW-VW-1); cam.y=clamp(q(player.y-VH/2),0,WH-VH-1);
 rollCards();
+layoutCodeBox();
 
 let last=performance.now();
 const MAXSTEP=1/40;                       // groesster Simulationsschritt
