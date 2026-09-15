@@ -884,13 +884,15 @@ codeBtn.addEventListener('click', e=>{ e.preventDefault(); audioUnlock(); redeem
 
 // --- Geheime Codes: einmal je Durchlauf einloesbar ---------------------
 const CODES = {
-  FOREST: ()=>{ game.scrap += 50; return '+50 SCHRAUBEN'; },
+  FOREST: ()=>{ game.scrap += 100; return '+100 SCHRAUBEN'; },
   WALDWACHT: ()=>{
-    const frei = ULTRAS.find(u=> !game.ultras.includes(u.id));
-    if(frei){ game.ultras.push(frei.id); player.ultraSel=game.ultras.length-1; player.ultra=player.ultraMax;
-      return 'ULTRA FREI: '+frei.name; }
-    player.ultra=player.ultraMax; game.scrap+=80;
-    return 'ULTRA VOLL + 80 SCHRAUBEN';
+    game.scrap += 250;
+    if(!game.ultras.includes('wrath')){
+      game.ultras.push('wrath'); player.ultraSel=game.ultras.length-1; player.ultra=player.ultraMax;
+      return '+250 SCHRAUBEN, ULTRA FREI: WALDZORN';
+    }
+    player.ultra=player.ultraMax;
+    return '+250 SCHRAUBEN, ULTRA VOLL';
   }
 };
 function redeemCode(){
@@ -1093,7 +1095,7 @@ function resetPlayer(){
   player.vx=player.vy=0; player.hp=player.maxHp; player.inv=1.2;
   player.swing=null; player.atkCd=0; player.dashT=0; player.dashCd=0; player.bowCd=0;
   player.healCd=0; player.regenT=0; player.stormT=0; player.rainT=0; player.rainLeft=0;
-  player.boltLeft=0; player.boltT=0; player.alive=true;
+  player.boltLeft=0; player.boltT=0; player.wrathT=0; player.wrathTick=0; player.alive=true;
 }
 
 const BOT = {
@@ -1282,14 +1284,15 @@ const ULTRAS = [
   { id:'bolt',  name:'DONNERBLITZ',  wave:3,  hint:'NEUN EINSCHLAEGE AUF DIE DICKSTEN BOTS' },
   { id:'storm', name:'KLINGENSTURM', wave:10, hint:'WIRBEL, DER ALLES UM DICH TRIFFT' },
   { id:'rain',  name:'PFEILREGEN',   wave:15, hint:'PFEILE IN ALLE RICHTUNGEN' },
-  { id:'quake', name:'DONNERSCHLAG', wave:20, hint:'DRUCKWELLE, BETAEUBUNG, HEILUNG' }
+  { id:'quake', name:'DONNERSCHLAG', wave:20, hint:'DRUCKWELLE, BETAEUBUNG, HEILUNG' },
+  { id:'wrath', name:'WALDZORN', wave:9999, hint:'WURZELN REISSEN ALLE FEINDE IM UMKREIS NIEDER' }
 ];
 function ownedUltras(){ return ULTRAS.filter(u=> game.ultras.includes(u.id)); }
 function activeUltra(){ const o=ownedUltras(); return o.length ? o[player.ultraSel % o.length] : null; }
 function ultraReady(){ return activeUltra() && player.ultra >= player.ultraMax; }
 function chargeUltra(v){
   if(!ownedUltras().length) return;
-  if(player.stormT>0 || player.rainLeft>0 || player.boltLeft>0) return;  // laedt sich nicht selbst
+  if(player.stormT>0 || player.rainLeft>0 || player.boltLeft>0 || player.wrathT>0) return;  // laedt sich nicht selbst
   player.ultra = Math.min(player.ultraMax, player.ultra + v*player.ultraGain);
 }
 function cycleUltra(){
@@ -1308,6 +1311,10 @@ function fireUltra(){
     SFX.heavy();
   } else if(u.id==='rain'){
     player.rainT=0; player.rainLeft=3; SFX.bow();
+  } else if(u.id==='wrath'){
+    player.wrathT=1.8; player.wrathTick=0; player.inv=Math.max(player.inv,0.3);
+    shocks.push({x:player.x, y:player.y, r:10, max:130, t:0, col:PAL.H});
+    game.white=Math.max(game.white||0,0.5); shake(4); SFX.boom();
   } else {
     shocks.push({x:player.x, y:player.y, r:8, max:74, t:0, col:PAL.C});
     shocks.push({x:player.x, y:player.y, r:4, max:52, t:0, col:PAL.y});
@@ -1383,6 +1390,24 @@ function updateUltra(dt){
           dmg:p.arrowDmg*1.5, t:0, col:PAL.S, own:true });
       }
       SFX.bow();
+    }
+  }
+  if(p.wrathT>0){
+    p.wrathT-=dt; p.inv=Math.max(p.inv,0.3);
+    p.wrathTick-=dt;
+    if(p.wrathTick<=0){
+      p.wrathTick=0.22;
+      for(const e of enemies){
+        if(e.dead||e.spawnT>0) continue;
+        const d=dist(p.x,p.y,e.x,e.y);
+        if(d<130){
+          damageEnemy(e, p.dmg*1.6, 90, Math.atan2(e.y-p.y,e.x-p.x), true);
+          if(!e.dead) e.slowT=Math.max(e.slowT||0, 0.6);
+        }
+      }
+      for(let i=0;i<7;i++){ const a=rr(0,TAU), r=rr(20,120);
+        part(p.x+Math.cos(a)*r, p.y-4+Math.sin(a)*r*0.5, 0,-40, 0.35, PAL.H, 1); }
+      SFX.swing();
     }
   }
 }

@@ -73,10 +73,12 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
   in der Nähe, mit Betäubung), nach Welle 10 den **Klingensturm** (anderthalb
   Sekunden Wirbel, der alles im Umkreis zerlegt), nach Welle 15 den
   **Pfeilregen** (drei Salven in alle Richtungen), nach Welle 20 den
-  **Donnerschlag** (Druckwelle, betäubt die Bots und heilt ein Herz). Der
-  gelbe Knopf **SUPERKRÄFTE!** öffnet eine Liste aller besessenen Ultras zum
-  Auswählen; `C` wechselt schnell durch. Sobald ein Boss auftaucht, ist der
-  Balken geschenkt voll.
+  **Donnerschlag** (Druckwelle, betäubt die Bots und heilt ein Herz). Über
+  den Code `WALDWACHT` gibt es zusätzlich exklusiv den **Waldzorn**
+  (anderthalb Sekunden lang reißen Wurzeln alles im großen Umkreis nieder
+  und verlangsamen die Bots). Der gelbe Knopf **SUPERKRÄFTE!** öffnet eine
+  Liste aller besessenen Ultras zum Auswählen; `C` wechselt schnell durch.
+  Sobald ein Boss auftaucht, ist der Balken geschenkt voll.
 - **Kombo**: Zwei schnelle Hiebe hintereinander enden im dritten, schweren
   Schlag — mehr Schaden, mehr Wucht, weiter Bogen.
 - **Deckung**: Durch Bäume läuft man hindurch — wer im Laub steckt, lässt die
@@ -114,9 +116,12 @@ selbst auf anrückende Bots), Schraubenmagnet, **Schatzsucher** (mehr Beute),
 **Kampfgeist** (Ultra lädt schneller), Waldtrunk.
 
 Im Werkstattfenster gibt es außerdem ein **Code-Feld**. Bekannte Codes (Groß-
-oder Kleinschreibung egal): `FOREST` gibt 50 Schrauben, `WALDWACHT` schaltet
-sofort das nächste Ultra frei (oder füllt die Leiste und gibt Schrauben,
-wenn du schon alle hast). Jeder Code ist einmal je Durchlauf einlösbar.
+oder Kleinschreibung egal): `FOREST` gibt 100 Schrauben, `WALDWACHT` gibt 250
+Schrauben und schaltet zusätzlich das exklusive Ultra **Waldzorn** frei
+(dicke Wurzeln reißen alles im Umkreis nieder und verlangsamen die Bots) —
+dieses Ultra gibt es sonst nirgends, nur über den Code. Wer es schon hat,
+bekommt stattdessen die volle Ultra-Leiste dazu. Jeder Code ist einmal je
+Durchlauf einlösbar.
 
 ## Technik
 
