@@ -40,7 +40,7 @@
   #healBtn { right:21vmin;  bottom:22vmin;  width:11vmin; height:11vmin;
     border:2px solid rgba(255,140,150,.6);  color:#ffc9cf; font-size:2.0vmin; }
   .abtn.cool{ opacity:.38; }
-  #ultraBtn{ left:2.5vmin; bottom:11vmin; width:15vmin; height:15vmin;
+  #ultraBtn{ right:14vmin; bottom:40vmin; width:15vmin; height:15vmin;
     border:2px solid rgba(255,230,120,.75); color:#ffe66d;
     background:rgba(40,34,10,.5); box-shadow:0 0 10px rgba(255,220,100,.25); }
   #touch:not(.hasUltra) #ultraBtn{ display:none; }
@@ -1730,12 +1730,12 @@ function strike(e, onPlayer, gd){
       if(gd.d<38) damageCastle(d.gateDmg, gd.x, gd.y);
     } else {
       // Salve aus den Schulterwerfern
-      const n = wut?7:5, weite=wut?0.95:0.6;
+      const n = wut?7:5, weite=wut?0.95:0.6, speed=wut?85:68;   // langsam genug zum Ausweichen
       const basis = Math.atan2((player.y-6)-(e.y-12), player.x-e.x);
       for(let i=0;i<n;i++){
         const a = basis + (i-(n-1)/2) * (weite/(n-1));
         bullets.push({ x:e.x+Math.cos(a)*11, y:e.y-12+Math.sin(a)*9,
-          vx:Math.cos(a)*120, vy:Math.sin(a)*120, dmg:2, t:0, col:PAL.R });
+          vx:Math.cos(a)*speed, vy:Math.sin(a)*speed, dmg:2, t:0, col:PAL.R });
       }
       SFX.shoot(); SFX.heavy(); shake(1.2);
     }
@@ -1827,7 +1827,7 @@ function updateFX(dt){
 let lastTap=null;
 const SHOP = { w:176, h:126 };
 function shopPanelRect(){ return { x:Math.round((VW-SHOP.w)/2), y:Math.round((VH-SHOP.h)/2)-4, w:SHOP.w, h:SHOP.h }; }
-function shopBtnRect(){ return { x:4, y:VH-52, w:48, h:16 }; }
+function shopBtnRect(){ return { x:VW-52, y:VH-52, w:48, h:16 }; }   // rechts, nicht in der Laufstick-Zone
 function ultraChipRect(){
   const u=activeUltra(); if(!u) return null;
   return { x:4, y:53, w:textW(u.name,1)+8, h:11 };
@@ -2330,7 +2330,7 @@ function drawHUD(){
   if(game.msgT>0){
     const a=Math.min(1,game.msgT);
     const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
-    ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 24, game.msgCol||PAL.y, sc); ctx.globalAlpha=1;
+    ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 68, game.msgCol||PAL.y, sc); ctx.globalAlpha=1;
   }
   if(game.white>0){
     ctx.globalAlpha=Math.min(0.5,game.white*0.5); ctx.fillStyle='#dff6ff'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;

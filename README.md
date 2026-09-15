@@ -49,6 +49,11 @@ unten links das Werkstattfenster.
   gehaltenen Welle eine Prämie obendrauf: 10 Schrauben ab Welle 10, 20 ab
   Welle 20, 30 ab Welle 30 — und ab Welle 50 das Doppelte der Wellenzahl
   (Welle 50 gibt 100, Welle 100 gibt 200), jeweils plus etwas Zufall.
+- **Berührungssteuerung**: linker Daumen läuft, rechter zielt. Schwert, Bogen,
+  Rolle, Heilen und Ultra liegen als Tasten unten rechts (die Ultra-Taste
+  erscheint dort, sobald du das erste Ultra hast). Der Shop-Knopf sitzt
+  unten rechts über den Kampftasten, damit er nicht in die Zone des
+  Lauf-Sticks gerät.
 - **Ultras**: Der Ultra-Balken füllt sich durch ausgeteilten Schaden. Nach
   Welle 3 gibt es den **Donnerblitz** (neun Einschläge auf die dicksten Bots
   in der Nähe, mit Betäubung), nach Welle 10 den **Klingensturm** (anderthalb
