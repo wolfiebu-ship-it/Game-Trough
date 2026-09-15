@@ -52,10 +52,11 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
   oder Tippen setzt genau da fort, `N` (bzw. Antippen der Zeile) startet
   stattdessen ein neues Spiel und ersetzt den Stand. In der Pause speichert ein
   eigener, immer klickbarer „SPEICHERN"-Knopf zuverlässig von Hand.
-- **Pause**: Der Rest des Spiels bleibt sichtbar, nur abgedunkelt und leicht
-  durchscheinend (wie beim Baum-Geist-Effekt) — der Pausentext selbst sitzt
-  in einem eigenen, gut lesbaren Kästchen. Aufgerufen per `P`/`Esc` oder dem
-  gelben Pixel-Knopf oben rechts.
+- **Pause**: Deutlich abgedunkelt, damit kein HUD-Text im Hintergrund lesbar
+  bleibt — nur die Umrisse der Welt schimmern noch schwach durch. Aufgerufen
+  per `P`/`Esc` oder dem Knopf oben rechts (gleiche Form wie der
+  Vollbild-Knopf, mit gelbem Pause-Symbol). „SPEICHERN" ist in der
+  Pixel-Schrift des Spiels gehalten, genau wie alle anderen Knöpfe.
 - **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 10 gibt es nach jeder
