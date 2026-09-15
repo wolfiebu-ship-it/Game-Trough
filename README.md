@@ -52,6 +52,9 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
   oder Tippen setzt genau da fort, `N` (bzw. Antippen der Zeile) startet
   stattdessen ein neues Spiel und ersetzt den Stand. In der Pause speichert ein
   eigener, immer klickbarer „SPEICHERN"-Knopf zuverlässig von Hand.
+- **Ultra-Name**: Wählst du per Menü oder `C` ein Ultra aus, steht sein Name
+  fünf Sekunden lang neben dem Knopf und verschwindet dann wieder, damit er
+  nicht dauerhaft im Weg steht.
 - **Pause**: Deutlich abgedunkelt, damit kein HUD-Text im Hintergrund lesbar
   bleibt — nur die Umrisse der Welt schimmern noch schwach durch. Aufgerufen
   per `P`/`Esc` oder dem gelben Pixel-Knopf direkt unter der Tor-Anzeige
@@ -115,13 +118,14 @@ wieder auf die Beine).
 selbst auf anrückende Bots), Schraubenmagnet, **Schatzsucher** (mehr Beute),
 **Kampfgeist** (Ultra lädt schneller), Waldtrunk.
 
-Im Werkstattfenster gibt es außerdem ein **Code-Feld**. Bekannte Codes (Groß-
-oder Kleinschreibung egal): `FOREST` gibt 100 Schrauben, `WALDWACHT` gibt 250
-Schrauben und schaltet zusätzlich das exklusive Ultra **Waldzorn** frei
-(dicke Wurzeln reißen alles im Umkreis nieder und verlangsamen die Bots) —
-dieses Ultra gibt es sonst nirgends, nur über den Code. Wer es schon hat,
-bekommt stattdessen die volle Ultra-Leiste dazu. Jeder Code ist einmal je
-Durchlauf einlösbar.
+Im Werkstattfenster gibt es außerdem ein gelb beschriftetes **Code-Feld**
+("CODE EINLÖSEN" in der Pixelschrift, gut sichtbar über der Eingabe).
+Bekannte Codes (Groß- oder Kleinschreibung egal): `FOREST` gibt 100
+Schrauben, `WALDWACHT` gibt 250 Schrauben und schaltet zusätzlich das
+exklusive Ultra **Waldzorn** frei (dicke Wurzeln reißen alles im Umkreis
+nieder und verlangsamen die Bots) — dieses Ultra gibt es sonst nirgends, nur
+über den Code. Wer es schon hat, bekommt stattdessen die volle Ultra-Leiste
+dazu. Jeder Code ist einmal je Durchlauf einlösbar.
 
 ## Technik
 

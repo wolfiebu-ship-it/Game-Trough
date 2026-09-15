@@ -48,13 +48,13 @@
   #codeBox{ position:absolute; inset:0; pointer-events:none; }
   #codeBox[hidden]{ display:none; }
   #codeInput{ position:absolute; box-sizing:border-box; pointer-events:auto;
-    background:#0d140e; border:2px solid #3d6b3a; color:#e9f5dc;
+    background:#0d140e; border:2px solid #ffe66d; color:#e9f5dc;
     font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; letter-spacing:.06em;
     text-transform:uppercase; padding:0 6px; outline:none; }
-  #codeInput::placeholder{ color:#5f7a5a; text-transform:none; letter-spacing:0; }
-  #codeInput:focus{ border-color:#7fd35a; }
+  #codeInput::placeholder{ color:#7a8f6f; text-transform:none; letter-spacing:0; }
+  #codeInput:focus{ border-color:#fff3c4; }
   #codeBtn{ position:absolute; box-sizing:border-box; pointer-events:auto;
-    background:#1a2e1c; border:2px solid #3d6b3a; color:#ffe66d; font-weight:bold;
+    background:#3d3316; border:2px solid #ffe66d; color:#ffe66d; font-weight:bold;
     letter-spacing:.05em; cursor:pointer; }
   #codeBtn:hover{ background:#24402a; }
   #codeBtn:active{ background:#12200f; }
@@ -94,7 +94,7 @@
     <div id="fsBtn">⛶</div>
     <div id="pauseSaveBtn" hidden></div>
     <div id="codeBox" hidden>
-      <input id="codeInput" type="text" maxlength="20" placeholder="CODE EINLÖSEN"
+      <input id="codeInput" type="text" maxlength="20" placeholder="Z.B. FOREST"
         autocomplete="off" autocapitalize="characters" spellcheck="false">
       <button id="codeBtn" type="button">OK</button>
     </div>
@@ -1046,7 +1046,7 @@ const game = {
   scrap:0, score:0, kills:0, best:0,
   castleHp:120, castleMax:120,
   shake:0, hitstop:0, slow:0, flash:0, redFlash:0,
-  msg:'', msgT:0, shopOpen:false, cards:[], cardSel:0, tutorial:0, time:0, ultras:[]
+  msg:'', msgT:0, shopOpen:false, cards:[], cardSel:0, tutorial:0, time:0, ultras:[], ultraNameT:0
 };
 try{ game.best = parseInt(localStorage.getItem('waldwacht_best')||'0',10)||0; }catch(e){}
 
@@ -1298,6 +1298,7 @@ function chargeUltra(v){
 function cycleUltra(){
   const o=ownedUltras(); if(o.length<2) return;
   player.ultraSel=(player.ultraSel+1)%o.length; SFX.pick();
+  game.ultraNameT=5;
   say('ULTRA: '+activeUltra().name, 1.2, PAL.C);
 }
 function fireUltra(){
@@ -1572,7 +1573,7 @@ function newGame(){
   slashes.length=0; waves.length=0; floaters.length=0;
   MSGQ.length=0;
   game.ultras=[]; game.usedCodes=new Set();
-  game.turret=0; game.turretT=0; game.ultraMenuOpen=false;
+  game.turret=0; game.turretT=0; game.ultraMenuOpen=false; game.ultraNameT=0;
   Object.assign(game, { state:'play', phase:'rest', wave:0, restT:6, spawnList:[], spawnT:0, paused:false,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
     flash:0, redFlash:0, msg:'', msgT:0, msgCol:PAL.y, shopOpen:false, cards:[], cardSel:0, tutorial:16 });
@@ -1985,7 +1986,7 @@ function updateFX(dt){
    12. Haupt-Aktualisierung
    ------------------------------------------------------------------ */
 let lastTap=null;
-const SHOP = { w:176, h:126 };
+const SHOP = { w:176, h:132 };
 function shopPanelRect(){ return { x:Math.round((VW-SHOP.w)/2), y:Math.round((VH-SHOP.h)/2)-4, w:SHOP.w, h:SHOP.h }; }
 function shopBtnRect(){ return { x:VW-52, y:VH-52, w:48, h:16 }; }   // rechts, nicht in der Laufstick-Zone
 const ULTRA_LABEL = 'SUPERKRÄFTE!';
@@ -2008,7 +2009,7 @@ function cardRects(){
 }
 function codeRowRect(){
   const p=shopPanelRect();
-  return { x:p.x+5, y:p.y+SHOP.h-22, w:p.w-10, h:16 };
+  return { x:p.x+5, y:p.y+SHOP.h-18, w:p.w-10, h:16 };
 }
 const hitRect=(t,r)=> t.x>=r.x && t.x<=r.x+r.w && t.y>=r.y && t.y<=r.y+r.h;
 function tryTapCards(){
@@ -2016,7 +2017,7 @@ function tryTapCards(){
   if(game.ultraMenuOpen){
     const o=ownedUltras();
     for(let i=0;i<o.length;i++) if(hitRect(lastTap, ultraMenuRowRect(i))){
-      player.ultraSel=i; game.ultraMenuOpen=false; SFX.pick(); return true;
+      player.ultraSel=i; game.ultraMenuOpen=false; game.ultraNameT=5; SFX.pick(); return true;
     }
     if(!hitRect(lastTap, ultraMenuRect()) && !hitRect(lastTap, ultraBtnRect())) game.ultraMenuOpen=false;
     return true;
@@ -2130,6 +2131,7 @@ function update(dt){
   game.msgT=Math.max(0,game.msgT-dt);
   if(game.msgT<=0 && MSGQ.length){ const m=MSGQ.shift(); game.msg=m.txt; game.msgT=m.dur; game.msgCol=m.col; }
   game.tutorial=Math.max(0,game.tutorial-dt);
+  game.ultraNameT=Math.max(0,game.ultraNameT-dt);
   musicTick();
   pressed.clear();
 }
@@ -2463,6 +2465,8 @@ function drawShopPanel(){
       drawSpr(SPR.bolt, r.x+r.w-12-textW(cs,1), r.y+7, false, false);
     }
   });
+  const cr=codeRowRect();
+  drawText(ctx, 'CODE EINLÖSEN', cr.x, cr.y-9, PAL.y, 1);
 }
 function drawUltraMenu(){
   const m=ultraMenuRect();
@@ -2493,7 +2497,7 @@ function drawHUD(){
       full||game.ultraMenuOpen?PAL.y:'#4a4a4a');
     drawSpr(SPR.bolt, r.x+3, r.y+3, false, false);
     drawText(ctx, ULTRA_LABEL, r.x+13, r.y+2, full?PAL.y:'#e9d98a', 1);
-    drawText(ctx, u.name, r.x+r.w+4, r.y+2, '#9fb79a', 1);
+    if(game.ultraNameT>0) drawText(ctx, u.name, r.x+r.w+4, r.y+2, '#9fb79a', 1);
   }
 
   const left = enemies.length + game.spawnList.length;
