@@ -73,9 +73,10 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
   in der Nähe, mit Betäubung), nach Welle 10 den **Klingensturm** (anderthalb
   Sekunden Wirbel, der alles im Umkreis zerlegt), nach Welle 15 den
   **Pfeilregen** (drei Salven in alle Richtungen), nach Welle 20 den
-  **Donnerschlag** (Druckwelle, betäubt die Bots und heilt ein Herz). Mehrere
-  Ultras wechselst du mit `C` oder durch Antippen des Namens. Sobald ein
-  Kolossus auftaucht, ist der Balken geschenkt voll.
+  **Donnerschlag** (Druckwelle, betäubt die Bots und heilt ein Herz). Der
+  gelbe Knopf **SUPERKRÄFTE!** öffnet eine Liste aller besessenen Ultras zum
+  Auswählen; `C` wechselt schnell durch. Sobald ein Boss auftaucht, ist der
+  Balken geschenkt voll.
 - **Kombo**: Zwei schnelle Hiebe hintereinander enden im dritten, schweren
   Schlag — mehr Schaden, mehr Wucht, weiter Bogen.
 - **Deckung**: Durch Bäume läuft man hindurch — wer im Laub steckt, lässt die
@@ -93,7 +94,9 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
 | **Schütze** (lila) | hält Abstand und schießt Energiebolzen |
 | **Brecher** (rot, groß) | langsam, zäh, prügelt besonders hart aufs Tor |
 | **Zünder** (gelb) | rennt heran und sprengt sich — reißt auch eigene Bots mit |
-| **Kolossus** (Boss) | alle fünf Wellen: doppelt so groß wie du, stampft Druckwellen aus dem Boden, feuert Salven aus den Schulterwerfern und ruft Späher. Unter halber Lebensanzeige geht er in **Wut**: schneller, weitere Druckwellen, größere Salven, mehr Verstärkung |
+| **Kolossus** (Boss) | Welle 5, 15, 25, … doppelt so groß wie du, stampft Druckwellen, feuert Salven aus den Schulterwerfern und ruft Späher. Unter halber Lebensanzeige **Wut**: schneller, mehr Salven, mehr Verstärkung |
+| **Glutgolem** (Boss) | Welle 10, 30, 50, … reiner Nahkämpfer mit deutlich mehr Leben als der Kolossus, ein einzelner aber sehr weitreichender Feuerstampfer, ruft Brecher statt Späher |
+| **Schattenfürst** (Boss) | Welle 20, 40, 60, … schneller und aggressiver als die anderen beiden, teleportiert sich mit einem kurzen Sprung heran und schlägt sofort mit einem Klingenwirbel zu |
 
 ## Verbesserungen
 

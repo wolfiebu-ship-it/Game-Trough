@@ -345,6 +345,39 @@ sprite([
   '.........KMMMK....KMMMK.........','........KKMMMKK..KKMMMKK........','........KwwwwwK...KwwwwwK.......',
   '........KKKKKKK...KKKKKKK.......'])];
 
+// Zwei weitere, staerkere Bosse aus demselben Umriss - nur die Farben tauschen
+// sich, damit sie auf den ersten Blick als etwas anderes als der Kolossus
+// erkennbar sind, ohne komplett neue Pixelkunst zeichnen zu muessen.
+function remapRows(rows, map){
+  return rows.map(row => row.split('').map(ch => map[ch]||ch).join(''));
+}
+const BOSS_ROWS = [
+  ['................................','.........KKKKKKKKKKKKKK.........','........KmMMMMMMMMMMMMmK........',
+  '.......KmMMMMMMMMMMMMMMmK.......','.......KMrrrrrrrrrrrrrrMK.......','.......KMrRRrrrrrrrrRRrMK.......',
+  '.......KmMMMMMMMMMMMMMMmK.......','.....KKKKMMMMMMMMMMMMMMKKKK.....','....KMMMMKMMMMMMMMMMMMKMMMMK....',
+  '....KMMMMKMiiiiiiiiiiMKMMMMK....','....KMMMMKMiicccccciiMKMMMMK....','....KMMMMKMiicCCCCciiMKMMMMK....',
+  '....KMMMMKMiicccccciiMKMMMMK....','....KwwwwKMMMMMMMMMMMMKwwwwK....','....KwwwwKKMMMMMMMMMMKKwwwwK....',
+  '.....KKKK..KMMMMMMMMK..KKKK.....','...........KMMMMMMMMK...........','..........KMiiiiiiiiMK..........',
+  '..........KMMMMMMMMMMK..........','........KKKMMMMMMMMMMKKK........','........KMMKMMMMMMMMKMMK........',
+  '.........KMMMK....KMMMK.........','.........KMMMK....KMMMK.........','.........KiiiK....KiiiK.........',
+  '.........KMMMK....KMMMK.........','........KKMMMKK..KKMMMKK........','........KwwwwwK..KwwwwwK........',
+  '........KKKKKKK..KKKKKKK........'],
+  ['................................','.........KKKKKKKKKKKKKK.........','........KmMMMMMMMMMMMMmK........',
+  '.......KmMMMMMMMMMMMMMMmK.......','.......KMrrrrrrrrrrrrrrMK.......','.......KMrRRrrrrrrrrRRrMK.......',
+  '.......KmMMMMMMMMMMMMMMmK.......','.....KKKKMMMMMMMMMMMMMMKKKK.....','....KMMMMKMMMMMMMMMMMMKMMMMK....',
+  '....KMMMMKMiiiiiiiiiiMKMMMMK....','....KMMMMKMiicCCCCciiMKMMMMK....','....KMMMMKMiicccccciiMKMMMMK....',
+  '....KwwwwKMiicccccciiMKwwwwK....','....KwwwwKMMMMMMMMMMMMKwwwwK....','.....KKKKKKMMMMMMMMMMKKKKKK.....',
+  '...........KMMMMMMMMK...........','...........KMMMMMMMMK...........','..........KMiiiiiiiiMK..........',
+  '..........KMMMMMMMMMMK..........','........KKKMMMMMMMMMMKKK........','........KMMKMMMMMMMMKMMK........',
+  '.........KMMMK....KMMMK.........','.........KMMMK....KMMMK.........','.........KiiiK....KiiiK.........',
+  '.........KMMMK....KMMMK.........','........KKMMMKK..KKMMMKK........','........KwwwwwK...KwwwwwK.......',
+  '........KKKKKKK...KKKKKKK.......']
+];
+// Gluthgolem: Feuerkern statt rotem Visier - schwerer, langsamer Brecher
+SPR.golem = BOSS_ROWS.map(rows => sprite(remapRows(rows, {r:'o',R:'O',c:'o',C:'O'})));
+// Schattenfuerst: violettes Glimmen - schneller, huepfender Klingenwirbler
+SPR.shadow = BOSS_ROWS.map(rows => sprite(remapRows(rows, {r:'p',R:'P',c:'p',C:'P'})));
+
 // --- HUD-Symbole ----------------------------------------------------
 SPR.heart  = sprite(['.KK.KK.','KRRKRRK','KRrrrRK','KRrrrRK','.KRrRK.','..KRK..','...K...']);
 SPR.heartE = sprite(['.KK.KK.','KkkKkkK','KkiiikK','KkiiikK','.KkikK.','..KkK..','...K...']);
@@ -1069,7 +1102,9 @@ const BOT = {
   archer: {name:'SCHÜTZE', spr:SPR.archer, hp:11, dmg:1, speed:31, r:6,  range:80, windup:0.55, cd:1.9,  scrap:2, score:22, kbR:1.0,  aggro:210, ranged:true},
   bruiser:{name:'BRECHER', spr:SPR.bruiser,hp:52, dmg:3, speed:23, r:9,  range:17, windup:0.7,  cd:1.5,  scrap:4, score:45, kbR:0.22, aggro:120, gateDmg:3},
   bomber: {name:'ZÜNDER',  spr:SPR.bomber, hp:9,  dmg:4, speed:58, r:5,  range:13, windup:0.9,  cd:9,    scrap:3, score:28, kbR:1.1,  aggro:230, fuse:true},
-  boss:   {name:'KOLOSSUS',spr:SPR.boss,   hp:320,dmg:5, speed:24, r:16, range:30, windup:0.8,  cd:1.8,  scrap:45, score:420, kbR:0.03, aggro:999, boss:true, gateDmg:9}
+  boss:   {name:'KOLOSSUS',   spr:SPR.boss,   hp:320,dmg:5, speed:24, r:16, range:30, windup:0.8,  cd:1.8, scrap:45, score:420, kbR:0.03, aggro:999, boss:true, bossKind:'kolossus', gateDmg:9},
+  golem:  {name:'GLUTGOLEM',  spr:SPR.golem,  hp:460,dmg:7, speed:19, r:17, range:26, windup:1.0,  cd:2.2, scrap:60, score:560, kbR:0.02, aggro:999, boss:true, bossKind:'golem',    gateDmg:13},
+  shadow: {name:'SCHATTENFÜRST', spr:SPR.shadow, hp:260,dmg:6, speed:34, r:14, range:22, windup:0.5, cd:1.2, scrap:60, score:560, kbR:0.06, aggro:999, boss:true, bossKind:'shadow',   gateDmg:8}
 };
 
 const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters=[], blitze=[];
@@ -1227,7 +1262,7 @@ function killEnemy(e){
   for(let i=0;i<n;i++) drops.push({x:e.x, y:e.y-4, vx:rr(-40,40), vy:rr(-50,10), z:0, vz:rr(20,50), t:0, type:'scrap'});
   const heartChance = e.d.boss ? 1 : 0.07;
   if(Math.random()<heartChance) drops.push({x:e.x, y:e.y-4, vx:rr(-20,20), vy:rr(-20,10), z:0, vz:40, t:0, type:'heart'});
-  if(e.d.boss){ say('KOLOSSUS ZERSCHLAGEN', 2.2, PAL.O); game.slow=0.9; }
+  if(e.d.boss){ say(e.d.name+' ZERSCHLAGEN', 2.2, PAL.O); game.slow=0.9; }
 }
 function damageCastle(dmg, x, y){
   if(game.castleHp<=0) return;
@@ -1364,7 +1399,10 @@ function buildWave(n){
   if(n>=4) add('archer',  1 + Math.round((n-3)*0.35));
   if(n>=5) add('bruiser', Math.round((n-3)*0.3));
   if(n>=7) add('bomber',  Math.round((n-5)*0.3));
-  if(n%5===0) add('boss', 1 + Math.floor(n/15));
+  if(n%10===0){
+    const kind = (Math.floor(n/10)%2===1) ? 'golem' : 'shadow';   // Welle 10/30/50.. Golem, 20/40/60.. Schattenfuerst
+    add(kind, 1 + Math.floor(n/40));
+  } else if(n%5===0) add('boss', 1 + Math.floor(n/15));
   // durchmischen, damit die Gruppen bunt anrücken
   for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
   return list;
@@ -1378,7 +1416,7 @@ function waveBonus(n){
 }
 function startWave(){
   game.wave++;
-  game.phase='wave'; game.shopOpen=false; game.spawnList=buildWave(game.wave); game.spawnT=0.4;
+  game.phase='wave'; game.shopOpen=false; game.ultraMenuOpen=false; game.spawnList=buildWave(game.wave); game.spawnT=0.4;
   say((game.wave%5===0) ? 'WELLE '+game.wave+': KOLOSSUS' : 'WELLE '+game.wave, 2.0);
   SFX.wave();
 }
@@ -1420,14 +1458,14 @@ function doSpawns(dt){
     x=clamp(x,10,WW-10); y=clamp(y,16,WH-10);
     spawnEnemy(t, x, y);
     for(let k=0;k<6;k++) part(x,y-6,rr(-20,20),rr(-20,20),0.4,PAL.C,1);
-    if(t==='boss'){
-      if(!game.ultras.length){                    // Hilfe fuer den ersten Kolossus
+    if(BOT[t].boss){
+      if(!game.ultras.length){                    // Hilfe fuer den ersten Boss ueberhaupt
         game.ultras.push('bolt'); player.ultraSel=0;
         say('ULTRA FREI: DONNERBLITZ', 2.4, PAL.y);
       }
       player.ultra = player.ultraMax;              // zum Boss ist die Ultra immer geladen
       say('ULTRA BEREIT', 1.6, PAL.C);
-      say('KOLOSSUS ERWACHT', 2.2, PAL.R);
+      say(BOT[t].name+' ERWACHT', 2.2, PAL.R);
       shake(4); SFX.boom(); burst(x, y-10, 30, PAL.R, 110, 0.7, 2);
     }
   }
@@ -1509,7 +1547,7 @@ function newGame(){
   slashes.length=0; waves.length=0; floaters.length=0;
   MSGQ.length=0;
   game.ultras=[]; game.usedCodes=new Set();
-  game.turret=0; game.turretT=0;
+  game.turret=0; game.turretT=0; game.ultraMenuOpen=false;
   Object.assign(game, { state:'play', phase:'rest', wave:0, restT:6, spawnList:[], spawnT:0, paused:false,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
     flash:0, redFlash:0, msg:'', msgT:0, msgCol:PAL.y, shopOpen:false, cards:[], cardSel:0, tutorial:16 });
@@ -1746,7 +1784,7 @@ function updateEnemies(dt){
     const reachG = !onPlayer && gd.d < (e.d.ranged ? e.d.range : e.d.range*0.8);
     if(e.st==='walk'){
       if(e.cd<=0 && (reachP || reachG || (e.d.ranged && onPlayer && dp<e.d.range)
-                     || (e.d.boss && onPlayer && dp<150))){
+                     || (e.d.bossKind==='kolossus' && onPlayer && dp<150))){
         e.st = e.d.fuse ? 'fuse' : 'windup'; e.t=0;
         e.aimX = onPlayer ? player.x : gd.x; e.aimY = onPlayer ? player.y : gd.y;
       }
@@ -1770,8 +1808,9 @@ function updateEnemies(dt){
       e.callT=(e.callT||6)-dt;
       if(e.callT<=0 && enemies.filter(x=>!x.dead).length<44){
         const wut = e.hp < e.hpMax*0.5;
+        const ruf = e.d.bossKind==='golem' ? 'bruiser' : 'scout';
         e.callT = wut ? 5 : 7;
-        for(let i=0;i<(wut?3:2);i++) spawnEnemy('scout', e.x+rr(-24,24), e.y+rr(-16,16));
+        for(let i=0;i<(wut?3:2);i++) spawnEnemy(ruf, e.x+rr(-24,24), e.y+rr(-16,16));
         burst(e.x,e.y-10,14,PAL.C,70,0.5);
       }
     }
@@ -1791,6 +1830,30 @@ function strike(e, onPlayer, gd){
   }
   if(d.boss){
     const wut = e.hp < e.hpMax*0.5;                      // zweite Phase: er dreht durch
+    if(d.bossKind==='golem'){
+      // Reiner Nahkaempfer: ein einzelner, aber schwerer und weitreichender Stampfer
+      shocks.push({x:e.x, y:e.y+2, r:10, max:wut?78:60, t:0, col:PAL.O});
+      if(wut) shocks.push({x:e.x, y:e.y+2, r:5, max:40, t:0, col:PAL.y});
+      shake(3.5); SFX.boom();
+      burst(e.x,e.y+2, wut?36:26, PAL.O, 120, 0.6);
+      const rad = wut?68:54;
+      if(player.alive && dist(e.x,e.y,player.x,player.y) < rad) hurtPlayer(e.dmg, e.x, e.y);
+      if(gd.d < rad-14) damageCastle(d.gateDmg, gd.x, gd.y);
+      return;
+    }
+    if(d.bossKind==='shadow'){
+      // Kurzer Teleportsprung aufs Ziel zu, dann ein schneller Klingenwirbel
+      const tx=onPlayer?player.x:gd.x, ty=onPlayer?player.y:gd.y;
+      const a0=Math.atan2(ty-e.y, tx-e.x);
+      e.x += Math.cos(a0)*(wut?34:24); e.y += Math.sin(a0)*(wut?34:24);
+      collideWorld(e,true);
+      burst(e.x,e.y-8,20,PAL.p,110,0.4);
+      slashes.push({x:e.x,y:e.y-8,ang:a0,arc:wut?3.0:2.3,reach:32,t:0,dur:0.2,heavy:true});
+      SFX.swing(); SFX.dash(); shake(1.6);
+      if(player.alive && dist(e.x,e.y,player.x,player.y) < 36) hurtPlayer(e.dmg, e.x, e.y);
+      if(gd.d < 34) damageCastle(d.gateDmg, gd.x, gd.y);
+      return;
+    }
     const dp = player.alive ? dist(e.x,e.y,player.x,player.y) : 1e9;
     if(dp < 52 || !onPlayer){
       // Stampfer: Druckwelle am Boden
@@ -1900,9 +1963,18 @@ let lastTap=null;
 const SHOP = { w:176, h:126 };
 function shopPanelRect(){ return { x:Math.round((VW-SHOP.w)/2), y:Math.round((VH-SHOP.h)/2)-4, w:SHOP.w, h:SHOP.h }; }
 function shopBtnRect(){ return { x:VW-52, y:VH-52, w:48, h:16 }; }   // rechts, nicht in der Laufstick-Zone
-function ultraChipRect(){
-  const u=activeUltra(); if(!u) return null;
-  return { x:4, y:53, w:textW(u.name,1)+8, h:11 };
+const ULTRA_LABEL = 'SUPERKRÄFTE!';
+function ultraBtnRect(){
+  if(!ownedUltras().length) return null;
+  return { x:4, y:53, w:textW(ULTRA_LABEL,1)+14, h:11 };   // +14 fuer das Blitzsymbol
+}
+function ultraMenuRect(){
+  const p=ultraBtnRect(), n=ownedUltras().length;
+  return { x:p.x, y:p.y+p.h+2, w:118, h:n*12+4 };
+}
+function ultraMenuRowRect(i){
+  const m=ultraMenuRect();
+  return { x:m.x+2, y:m.y+2+i*12, w:m.w-4, h:11 };
 }
 function cardRects(){
   if(!game.shopOpen) return [];
@@ -1916,10 +1988,20 @@ function codeRowRect(){
 const hitRect=(t,r)=> t.x>=r.x && t.x<=r.x+r.w && t.y>=r.y && t.y<=r.y+r.h;
 function tryTapCards(){
   if(!lastTap || game.state!=='play') return false;
-  const uc=ultraChipRect();
-  if(uc && !game.shopOpen && hitRect(lastTap, uc)){ cycleUltra(); return true; }
+  if(game.ultraMenuOpen){
+    const o=ownedUltras();
+    for(let i=0;i<o.length;i++) if(hitRect(lastTap, ultraMenuRowRect(i))){
+      player.ultraSel=i; game.ultraMenuOpen=false; SFX.pick(); return true;
+    }
+    if(!hitRect(lastTap, ultraMenuRect()) && !hitRect(lastTap, ultraBtnRect())) game.ultraMenuOpen=false;
+    return true;
+  }
+  const ub=ultraBtnRect();
+  if(ub && !game.shopOpen && hitRect(lastTap, ub)){
+    game.ultraMenuOpen=!game.ultraMenuOpen; SFX.pick(); return true;
+  }
   if(game.phase==='rest' && hitRect(lastTap, shopBtnRect())){
-    game.shopOpen=!game.shopOpen; SFX.pick(); return true;
+    game.shopOpen=!game.shopOpen; game.ultraMenuOpen=false; SFX.pick(); return true;
   }
   if(game.shopOpen){
     for(const r of cardRects()) if(hitRect(lastTap,r)){ buyCard(r.i); return true; }
@@ -1983,8 +2065,10 @@ function update(dt){
   if(game.turret>0){
     game.turretT-=sim;
     if(game.turretT<=0){
-      game.turretT = 2.4/game.turret;
-      let ziel=null, bd=140*140;
+      // Bescheidene Unterstuetzung, kein Ersatz fuer die eigene Klinge:
+      // Stufe 1 etwa alle 2,6s, Stufe 3 (Maximum) etwa zweimal in zwei Sekunden.
+      game.turretT = 3.4 - game.turret*0.8;
+      let ziel=null, bd=90*90;
       for(const e of enemies){
         if(e.dead||e.spawnT>0) continue;
         const d2=dist2(CAS.gatePost.x, CAS.gatePost.y, e.x, e.y);
@@ -1994,7 +2078,7 @@ function update(dt){
         const a=Math.atan2(ziel.y-CAS.gatePost.y, ziel.x-CAS.gatePost.x);
         bullets.push({ x:CAS.gatePost.x, y:CAS.gatePost.y-8,
           vx:Math.cos(a)*170, vy:Math.sin(a)*170,
-          dmg:4+game.turret*2, t:0, col:PAL.S, own:true });
+          dmg:1+game.turret, t:0, col:PAL.S, own:true });
         SFX.bow();
       }
     }
@@ -2355,6 +2439,16 @@ function drawShopPanel(){
     }
   });
 }
+function drawUltraMenu(){
+  const m=ultraMenuRect();
+  panel(m.x, m.y, m.w, m.h, 'rgba(10,18,12,.96)', PAL.H);
+  ownedUltras().forEach((u,i)=>{
+    const r=ultraMenuRowRect(i);
+    const active=i===player.ultraSel;
+    if(active){ ctx.fillStyle='rgba(255,230,90,.16)'; ctx.fillRect(r.x,r.y,r.w,r.h); }
+    drawText(ctx, (active?'>':' ')+u.name, r.x+3, r.y+2, active?PAL.y:'#cfe0c8', 1);
+  });
+}
 function drawHUD(){
   drawHearts();
   drawSchild();
@@ -2369,11 +2463,12 @@ function drawHUD(){
     const full=player.ultra>=player.ultraMax;
     const pulse = full && Math.floor(game.time*4)%2===0;
     bar(4, 45, 30, player.ultra/player.ultraMax, full?(pulse?'#fff3c4':PAL.y):PAL.p, 'ULTRA', !full);
-    const r=ultraChipRect();
-    panel(r.x, r.y, r.w, r.h, full?'rgba(46,40,10,.92)':'rgba(10,18,12,.9)', full?PAL.y:'#4a4a4a');
-    drawText(ctx, u.name, r.x+4, r.y+2, full?PAL.y:'#8f9a86', 1);
-    if(ownedUltras().length>1)
-      drawText(ctx, isTouch?'TIPPEN: WECHSELN':'C: WECHSELN', r.x+r.w+4, r.y+2, '#6f7f6c', 1);
+    const r=ultraBtnRect();
+    panel(r.x, r.y, r.w, r.h, game.ultraMenuOpen?'rgba(46,40,10,.95)':(full?'rgba(46,40,10,.92)':'rgba(10,18,12,.9)'),
+      full||game.ultraMenuOpen?PAL.y:'#4a4a4a');
+    drawSpr(SPR.bolt, r.x+3, r.y+3, false, false);
+    drawText(ctx, ULTRA_LABEL, r.x+13, r.y+2, full?PAL.y:'#e9d98a', 1);
+    drawText(ctx, u.name, r.x+r.w+4, r.y+2, '#9fb79a', 1);
   }
 
   const left = enemies.length + game.spawnList.length;
@@ -2415,6 +2510,7 @@ function drawHUD(){
   if(game.redFlash>0){
     ctx.globalAlpha=game.redFlash*0.5; ctx.fillStyle='#8c1c1c'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   }
+  if(game.ultraMenuOpen) drawUltraMenu();
   if(game.shopOpen) drawShopPanel();
   if(player.hp<=2 && player.alive){
     const pulse=0.18+0.12*Math.sin(game.time*7);
