@@ -23,15 +23,19 @@ entsteht beim Laden zur Laufzeit.
 | `H` | heilen: ein ganzes Herz, alle 15 Sekunden |
 | `X` / `C` | Ultra auslösen / Ultra wechseln (ab Welle 10) |
 | `B` | Shop öffnen und schließen (in der Ruhephase) |
-| `1` `2` `3` | Karte kaufen |
+| `1` `2` `3` `4` | Karte kaufen |
 | `Enter` | nächste Welle früher starten |
-| `P` / `Esc` | Pause · `M` Ton an/aus |
+| `P` / `Esc` | Pause (auch per Knopf oben rechts) |
+| `S` (in der Pause) | von Hand speichern |
+| `N` (im Titelbild) | neues Spiel, auch wenn ein Spielstand da ist |
+| `M` | Ton an/aus |
 
 **Handy / Tablet** — zwei Daumensticks wie in Brawl Stars: links ziehen = laufen,
 rechts ziehen = zielen. Rechts unten liegen die Tasten für **Schwert**, **Bogen**,
-**Rolle** und **Heilen**, links unten erscheint ab Welle 10 die **Ultra**-Taste.
-Oben rechts schaltet ⛶ auf Vollbild. In der Ruhephase öffnet der **SHOP**-Knopf
-unten links das Werkstattfenster.
+**Rolle**, **Heilen** und (sobald freigeschaltet) **Ultra** — alle auf einer Seite,
+damit man beim Laufen nicht aus Versehen draufkommt. Oben rechts schalten zwei
+kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
+**SHOP**-Knopf unten rechts das Werkstattfenster.
 
 ## Spielregeln
 
@@ -43,6 +47,11 @@ unten links das Werkstattfenster.
 - **Das Tor**: Die Bots rennen zur Burg und hacken auf das Tor ein. Fällt das
   Tor, ist das Spiel ebenfalls vorbei. Das Tor erkennt nur dich — du kannst
   hindurch, die Bots nicht.
+- **Speicherstand**: Nach jeder gehaltenen Welle und jedem Kauf wird automatisch
+  gespeichert. Im Titelbild erscheint dann „SPIELSTAND FORTSETZEN" — Leertaste
+  oder Tippen setzt genau da fort, `N` (bzw. Antippen der Zeile) startet
+  stattdessen ein neues Spiel und ersetzt den Stand. In der Pause speichert `S`
+  (bzw. Antippen von „SPEICHERN") von Hand.
 - **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 10 gibt es nach jeder

@@ -58,6 +58,11 @@
     letter-spacing:.05em; cursor:pointer; }
   #codeBtn:hover{ background:#24402a; }
   #codeBtn:active{ background:#12200f; }
+  #pauseBtn{ position:absolute; right:13vmin; top:2vmin; width:9vmin; height:9vmin; border-radius:22%;
+    pointer-events:auto; display:flex; align-items:center; justify-content:center;
+    font-size:3.2vmin; user-select:none; color:#cfe8c2;
+    background:rgba(16,32,18,.45); border:2px solid rgba(200,240,190,.35); }
+  #pauseBtn[hidden]{ display:none; }
   #fsBtn{ position:absolute; right:2vmin; top:2vmin; width:9vmin; height:9vmin; border-radius:22%;
     pointer-events:auto; display:flex; align-items:center; justify-content:center;
     font-size:3.4vmin; user-select:none; color:#cfe8c2;
@@ -77,6 +82,7 @@
       <div class="abtn" id="dashBtn">ROLLE</div>
       <div class="abtn" id="healBtn">HEILEN</div>
       <div class="abtn" id="ultraBtn">ULTRA</div>
+      <div id="pauseBtn">II</div>
       <div id="fsBtn">⛶</div>
     </div>
     <div id="codeBox" hidden>
@@ -750,7 +756,7 @@ function setStick(s, x, y){
 function touchStart(e){
   for(const t of e.changedTouches){
     const el=document.elementFromPoint(t.clientX, t.clientY);
-    if(el===codeInput || el===codeBtn) return;      // Codefeld selbst tippen lassen
+    if(el===codeInput || el===codeBtn || el===pauseBtn || el===fsBtn) return;
   }
   isTouch=true; touchUI.classList.add('on'); audioUnlock();
   const r=touchUI.getBoundingClientRect();
@@ -859,6 +865,13 @@ function redeemCode(){
   floater(player.x, player.y-20, code, PAL.y);
 }
 
+const pauseBtn=document.getElementById('pauseBtn');
+if(pauseBtn){
+  const go=e=>{ e.preventDefault(); e.stopPropagation(); audioUnlock();
+    if(game.state==='play') game.paused=!game.paused; };
+  pauseBtn.addEventListener('touchstart', go, {passive:false});
+  pauseBtn.addEventListener('mousedown', go);
+}
 const fsBtn=document.getElementById('fsBtn');
 if(fsBtn){
   const wrap=document.getElementById('wrap');
@@ -992,6 +1005,28 @@ const game = {
   msg:'', msgT:0, shopOpen:false, cards:[], cardSel:0, tutorial:0, time:0, ultras:[]
 };
 try{ game.best = parseInt(localStorage.getItem('waldwacht_best')||'0',10)||0; }catch(e){}
+
+// --- Speicherstand: haelt fest, wo man steht (letzte ueberstandene Welle) ---
+function loadSaveRaw(){
+  try{ const raw=localStorage.getItem('waldwacht_save'); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+}
+function hasSave(){ return !!loadSaveRaw(); }
+function saveGame(){
+  try{
+    localStorage.setItem('waldwacht_save', JSON.stringify({
+      wave:game.wave, scrap:game.scrap, score:game.score, kills:game.kills,
+      castleHp:game.castleHp, castleMax:game.castleMax,
+      ultras:(game.ultras||[]).slice(), usedCodes:Array.from(game.usedCodes||[]),
+      hp:player.hp, maxHp:player.maxHp, speed:player.speed, dmg:player.dmg, reach:player.reach,
+      arc:player.arc, atkSpeed:player.atkSpeed, dashCdMax:player.dashCdMax, bowCdMax:player.bowCdMax,
+      arrowDmg:player.arrowDmg, healCdMax:player.healCdMax, regenEvery:player.regenEvery,
+      ultraMax:player.ultraMax, ultraGain:player.ultraGain, ultraSel:player.ultraSel,
+      lifesteal:player.lifesteal, thorns:player.thorns, magnet:player.magnet,
+      shieldMax:player.shieldMax, shieldEvery:player.shieldEvery, burn:player.burn, ice:player.ice,
+      extraArrows:player.extraArrows, greed:player.greed, revive:player.revive, upg:player.upg
+    }));
+  }catch(e){}
+}
 
 const cam = { x:0, y:0 };
 
@@ -1362,6 +1397,7 @@ function endWave(){
   }
   rollCards();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
+  saveGame();                       // Zwischenstand sichern - hier ist ein sicherer Punkt
 }
 function doSpawns(dt){
   if(!game.spawnList.length) return;
@@ -1451,6 +1487,7 @@ function buyCard(i){
   if(game.scrap < c.cost){ SFX.no(); say('ZU WENIG SCHRAUBEN', 1.1, PAL.R); return; }
   game.scrap -= c.cost; player.upg[c.u.id]=lvl(c.u.id)+1; c.u.apply(); c.bought=true;
   SFX.buy(); say(c.u.name, 1.4, PAL.H);
+  saveGame();
 }
 
 function gameOver(reason){
@@ -1476,6 +1513,32 @@ function newGame(){
     greed:0, ultraGain:1, revive:0,
     lifesteal:0, thorns:0, magnet:34, upg:{}, combo:0 });
   resetPlayer(); rollCards();
+}
+
+// Setzt genau da wieder ein, wo zuletzt gespeichert wurde (letzte ueberstandene
+// Welle). Faellt auf ein neues Spiel zurueck, falls kein gueltiger Stand da ist.
+function continueGame(){
+  const d = loadSaveRaw();
+  if(!d){ newGame(); return; }
+  newGame();                                    // sauberer Ausgangszustand, danach ueberschreiben
+  Object.assign(game, {
+    wave:d.wave||0, scrap:d.scrap||0, score:d.score||0, kills:d.kills||0,
+    castleHp:d.castleHp??120, castleMax:d.castleMax??120,
+    ultras:(d.ultras||[]).slice(), usedCodes:new Set(d.usedCodes||[])
+  });
+  Object.assign(player, {
+    maxHp:d.maxHp??10, speed:d.speed??64, dmg:d.dmg??5, reach:d.reach??26, arc:d.arc??1.5,
+    atkSpeed:d.atkSpeed??1, dashCdMax:d.dashCdMax??2.8, bowCdMax:d.bowCdMax??0.85, arrowDmg:d.arrowDmg??4,
+    healCdMax:d.healCdMax??15, regenEvery:d.regenEvery??5, ultraMax:d.ultraMax??100,
+    ultraGain:d.ultraGain??1, ultraSel:d.ultraSel||0,
+    lifesteal:d.lifesteal||0, thorns:d.thorns||0, magnet:d.magnet??34,
+    shieldMax:d.shieldMax||0, shieldEvery:d.shieldEvery??18, burn:d.burn||0, ice:d.ice||0,
+    extraArrows:d.extraArrows||0, greed:d.greed||0, revive:d.revive||0, upg:d.upg||{}
+  });
+  resetPlayer();                                // setzt Position und Herzen auf voll
+  player.shield = player.shieldMax;
+  player.hp = clamp(d.hp??player.maxHp, player.maxHp>0?1:0, player.maxHp);
+  say('SPIELSTAND GELADEN — WELLE '+(game.wave+1), 2.4, PAL.H);
 }
 
 /* ------------------------------------------------------------------
@@ -1863,8 +1926,11 @@ function update(dt){
   if(pressed.has('m')){ muted=!muted; if(muted&&AC){ master.gain.value=0; } else if(AC){ master.gain.value=0.5; } }
 
   if(game.state==='title'){
-    if(startEdge){ audioUnlock(); newGame(); }
-    pressed.clear(); return;
+    const ngr = newGameRowRect();
+    if(ngr && lastTap && hitRect(lastTap, ngr)){ audioUnlock(); newGame(); lastTap=null; pressed.clear(); return; }
+    if(pressed.has('n') && hasSave()){ audioUnlock(); newGame(); }
+    else if(startEdge){ audioUnlock(); hasSave() ? continueGame() : newGame(); }
+    lastTap=null; pressed.clear(); return;
   }
   if(game.state==='over'){
     game.slow=Math.max(0,game.slow-dt);
@@ -1875,7 +1941,14 @@ function update(dt){
     pressed.clear(); return;
   }
   if(pressed.has('p')||pressed.has('Escape')) game.paused=!game.paused;
-  if(game.paused){ pressed.clear(); return; }
+  if(game.paused){
+    if(pressed.has('s')){ saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
+    else if(lastTap){
+      if(hitRect(lastTap, pauseSaveRect())){ saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
+      else game.paused=false;                    // irgendwo daneben tippen/klicken: weiter
+    }
+    lastTap=null; pressed.clear(); return;
+  }
 
   // Werkstatt
   if(game.phase==='rest'){
@@ -2311,21 +2384,10 @@ function drawHUD(){
     ctx.fillStyle=PAL.r; ctx.fillRect(x,y,Math.round(w*clamp(chef.hp/chef.hpMax,0,1)),4);
     ctx.fillStyle=PAL.R; ctx.fillRect(x,y,Math.round(w*clamp(chef.hp/chef.hpMax,0,1)),1);
   }
-  let hintY = VH-26;
   if(game.phase==='rest'){
     drawShopButton();
-    if(game.shopOpen) hintY = -99;              // Fensterhinweis genuegt
-    const inHof = inRect(player.x,player.y,COURT);
-    if(!game.shopOpen && inHof) drawTextC(ctx, 'IM BURGHOF HEILST DU', VW/2, hintY, PAL.H, 1);
-    hintY -= 10;
-  }
-  if(game.tutorial>0 && game.wave<=1 && game.msgT<=0){
-    ctx.globalAlpha=Math.min(1,game.tutorial/2);
-    drawTextC(ctx, isTouch ? 'LINKS LAUFEN · RECHTS ZIELEN' : 'WASD LAUFEN · MAUS ZIELEN',
-      VW/2, hintY-10, '#cfe8c2', 1);
-    drawTextC(ctx, isTouch ? 'TASTEN: SCHWERT, BOGEN, ROLLE' : 'KLICK SCHWERT · RECHTS BOGEN',
-      VW/2, hintY, '#9fb79a', 1);
-    ctx.globalAlpha=1;
+    if(!game.shopOpen && inRect(player.x,player.y,COURT))
+      drawTextC(ctx, 'IM BURGHOF HEILST DU', VW/2, VH-26, PAL.H, 1);
   }
   if(game.msgT>0){
     const a=Math.min(1,game.msgT);
@@ -2347,9 +2409,38 @@ function drawHUD(){
   }
 }
 
+const TITLE = { w:232, h:122 };
+function titlePanelRect(){ return { x:Math.round((VW-TITLE.w)/2), y:4, w:TITLE.w, h:TITLE.h }; }
+function titleRows(){
+  const rows = isTouch ? [
+    'LINKER DAUMEN: LAUFEN',
+    'RECHTER DAUMEN: ZIELEN',
+    'TASTEN RECHTS: KAMPF UND ULTRA',
+    'HEILEN-TASTE: ALLE 15 SEKUNDEN',
+    'IN DER RUHE: SHOP UNTEN RECHTS'
+  ] : [
+    'WASD LAUFEN · MAUS ZIELEN',
+    'KLICK ODER LEERTASTE: SCHWERT',
+    'RECHTSKLICK ODER Q: PFEIL',
+    'SHIFT: ROLLE · H: HEILEN (15 S)',
+    'AB WELLE 3: X ULTRA · C WECHSELN',
+    'B: SHOP · P: PAUSE · ENTER: WELLE'
+  ];
+  let newGameRow = -1;
+  if(hasSave()){
+    newGameRow = rows.length;
+    rows.push(isTouch ? 'NEUES SPIEL ANTIPPEN (ERSETZT SPIELSTAND)' : 'N: NEUES SPIEL (ERSETZT SPIELSTAND)');
+  }
+  return { rows, gap: rows.length>6?9:10, newGameRow };
+}
+function newGameRowRect(){
+  if(!hasSave()) return null;
+  const p=titlePanelRect(), {rows,gap,newGameRow}=titleRows();
+  return { x:p.x+8, y:p.y+43+newGameRow*gap-1, w:p.w-16, h:gap };
+}
 function drawTitle(){
   ctx.globalAlpha=0.55; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
-  const w=232, h=122, x=Math.round((VW-w)/2), y=4;
+  const p=titlePanelRect(), {x,y,w,h}=p;
   panel(x,y,w,h);
   drawTextC(ctx,'WALDWACHT', VW/2, y+6, PAL.H, 3);
   if(game.best>0){
@@ -2357,25 +2448,14 @@ function drawTitle(){
     drawText(ctx, b, x+w-6-textW(b,1), y+6, PAL.y, 1);
   }
   drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+30, '#cfe8c2', 1);
-  const rows = isTouch ? [
-    'LINKER DAUMEN: LAUFEN',
-    'RECHTER DAUMEN: ZIELEN',
-    'TASTEN: SCHWERT, BOGEN, ROLLE',
-    'HEILEN-TASTE: ALLE 15 SEKUNDEN',
-    'AB WELLE 3: ULTRA UNTEN LINKS',
-    'IN DER RUHE: SHOP UNTEN LINKS'
-  ] : [
-    'WASD LAUFEN · MAUS ZIELEN',
-    'KLICK ODER LEERTASTE: SCHWERT',
-    'RECHTSKLICK ODER Q: PFEIL',
-    'SHIFT: ROLLE · H: HEILEN (15 S)',
-    'AB WELLE 3: X ULTRA · C WECHSELN',
-    'B: SHOP · ENTER: WELLE STARTEN'
-  ];
-  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+43+i*10, '#9fb79a', 1));
+  const {rows, gap, newGameRow} = titleRows();
+  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+43+i*gap, i===newGameRow?PAL.O:'#9fb79a', 1));
   drawTextC(ctx, 'HERZEN LEER ODER TOR KAPUTT = ENDE', VW/2, y+h-12, '#7f927b', 1);
   const blink = Math.floor(game.time*2)%2===0;
-  drawTextC(ctx, blink ? (isTouch?'TIPPEN ZUM START':'LEERTASTE ZUM START') : '', VW/2, y+h+5, PAL.y, 1);
+  const startTxt = hasSave()
+    ? (isTouch?'TIPPEN: SPIELSTAND FORTSETZEN':'LEERTASTE: SPIELSTAND FORTSETZEN')
+    : (isTouch?'TIPPEN ZUM START':'LEERTASTE ZUM START');
+  drawTextC(ctx, blink ? startTxt : '', VW/2, y+h+5, PAL.y, 1);
 }
 function drawOver(){
   ctx.globalAlpha=0.6; ctx.fillStyle='#20060a'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
@@ -2390,10 +2470,14 @@ function drawOver(){
   if(game.deadT>1.0 && Math.floor(game.time*2)%2===0)
     drawTextC(ctx, isTouch?'TIPPEN':'LEERTASTE', VW/2, y+h+4, '#cfe8c2', 1);
 }
+function pauseSaveRect(){ return { x:VW/2-42, y:VH/2+14, w:84, h:16 }; }
 function drawPause(){
-  ctx.globalAlpha=0.6; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
-  drawTextC(ctx,'PAUSE', VW/2, VH/2-12, PAL.H, 2);
-  drawTextC(ctx,'P ODER ESC: WEITER', VW/2, VH/2+6, '#9fb79a', 1);
+  ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH);   // voll blickdicht, sonst scheint das Wellenbanner durch
+  drawTextC(ctx,'PAUSE', VW/2, VH/2-20, PAL.H, 2);
+  drawTextC(ctx, isTouch?'TIPPEN AUSSERHALB: WEITER':'P ODER ESC: WEITER', VW/2, VH/2-2, '#9fb79a', 1);
+  const r=pauseSaveRect();
+  panel(r.x, r.y, r.w, r.h, 'rgba(16,32,18,.9)', PAL.H);
+  drawTextC(ctx, isTouch?'TIPPEN: SPEICHERN':'S: SPEICHERN', VW/2, r.y+5, PAL.y, 1);
 }
 
 const btnDash=document.getElementById('dashBtn'), btnHeal=document.getElementById('healBtn');
@@ -2404,6 +2488,7 @@ function render(){
   touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
   const warVersteckt = codeBox.hidden;
   codeBox.hidden = !(game.state==='play' && game.shopOpen);
+  pauseBtn.hidden = game.state!=='play';
   if(codeBox.hidden && document.activeElement===codeInput) codeInput.blur();
   if(warVersteckt && !codeBox.hidden) sizeCodeBoxFont();   // Groesse war beim Verstecken 0
   if(btnDash) btnDash.classList.toggle('cool', player.dashCd>0);
