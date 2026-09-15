@@ -25,8 +25,8 @@ entsteht beim Laden zur Laufzeit.
 | `B` | Shop öffnen und schließen (in der Ruhephase) |
 | `1` `2` `3` `4` | Karte kaufen |
 | `Enter` | nächste Welle früher starten |
-| `P` / `Esc` | Pause (auch per Knopf oben rechts) |
-| `S` (in der Pause) | von Hand speichern |
+| `P` / `Esc` | Pause (auch per gelbem Pixel-Knopf oben rechts) |
+| `S` oder Antippen von „SPEICHERN" (in der Pause) | von Hand speichern |
 | `N` (im Titelbild) | neues Spiel, auch wenn ein Spielstand da ist |
 | `M` | Ton an/aus |
 
@@ -50,8 +50,12 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
 - **Speicherstand**: Nach jeder gehaltenen Welle und jedem Kauf wird automatisch
   gespeichert. Im Titelbild erscheint dann „SPIELSTAND FORTSETZEN" — Leertaste
   oder Tippen setzt genau da fort, `N` (bzw. Antippen der Zeile) startet
-  stattdessen ein neues Spiel und ersetzt den Stand. In der Pause speichert `S`
-  (bzw. Antippen von „SPEICHERN") von Hand.
+  stattdessen ein neues Spiel und ersetzt den Stand. In der Pause speichert ein
+  eigener, immer klickbarer „SPEICHERN"-Knopf zuverlässig von Hand.
+- **Pause**: Der Rest des Spiels bleibt sichtbar, nur abgedunkelt und leicht
+  durchscheinend (wie beim Baum-Geist-Effekt) — der Pausentext selbst sitzt
+  in einem eigenen, gut lesbaren Kästchen. Aufgerufen per `P`/`Esc` oder dem
+  gelben Pixel-Knopf oben rechts.
 - **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 10 gibt es nach jeder

@@ -58,12 +58,27 @@
     letter-spacing:.05em; cursor:pointer; }
   #codeBtn:hover{ background:#24402a; }
   #codeBtn:active{ background:#12200f; }
-  #pauseBtn{ position:absolute; right:13vmin; top:2vmin; width:9vmin; height:9vmin; border-radius:22%;
-    pointer-events:auto; display:flex; align-items:center; justify-content:center;
-    font-size:3.2vmin; user-select:none; color:#cfe8c2;
-    background:rgba(16,32,18,.45); border:2px solid rgba(200,240,190,.35); }
+  #pauseBtn{ position:absolute; right:13vmin; top:16vmin; width:11vmin; height:11vmin;
+    pointer-events:auto; user-select:none; border-radius:0;
+    background:#f2c53d;
+    border:2px solid #4a3a0a;
+    box-shadow: inset 2px 2px 0 #fff2b0, inset -2px -2px 0 #b8860f, 2px 2px 0 rgba(0,0,0,.35); }
   #pauseBtn[hidden]{ display:none; }
-  #fsBtn{ position:absolute; right:2vmin; top:2vmin; width:9vmin; height:9vmin; border-radius:22%;
+  #pauseBtn::before, #pauseBtn::after{
+    content:''; position:absolute; top:28%; bottom:28%; width:16%;
+    background:#4a3a0a; }
+  #pauseBtn::before{ left:33%; }
+  #pauseBtn::after{ right:33%; }
+  #pauseBtn:active{ box-shadow: inset 2px 2px 0 #b8860f, inset -2px -2px 0 #fff2b0; }
+  #pauseSaveBtn{ position:absolute; pointer-events:none; box-sizing:border-box;
+    display:flex; align-items:center; justify-content:center;
+    background:#16240f; border:2px solid #7fd35a; color:#ffe66d;
+    font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; font-weight:bold;
+    letter-spacing:.06em; user-select:none; }
+  #pauseSaveBtn[hidden]{ display:none; }
+  #pauseSaveBtn.show{ pointer-events:auto; }
+  #pauseSaveBtn:active{ background:#22380f; }
+  #fsBtn{ position:absolute; right:2vmin; top:16vmin; width:9vmin; height:9vmin; border-radius:22%;
     pointer-events:auto; display:flex; align-items:center; justify-content:center;
     font-size:3.4vmin; user-select:none; color:#cfe8c2;
     background:rgba(16,32,18,.45); border:2px solid rgba(200,240,190,.35); }
@@ -82,9 +97,10 @@
       <div class="abtn" id="dashBtn">ROLLE</div>
       <div class="abtn" id="healBtn">HEILEN</div>
       <div class="abtn" id="ultraBtn">ULTRA</div>
-      <div id="pauseBtn">II</div>
+      <div id="pauseBtn"></div>
       <div id="fsBtn">⛶</div>
     </div>
+    <div id="pauseSaveBtn" hidden>SPEICHERN</div>
     <div id="codeBox" hidden>
       <input id="codeInput" type="text" maxlength="20" placeholder="CODE EINLÖSEN"
         autocomplete="off" autocapitalize="characters" spellcheck="false">
@@ -756,7 +772,7 @@ function setStick(s, x, y){
 function touchStart(e){
   for(const t of e.changedTouches){
     const el=document.elementFromPoint(t.clientX, t.clientY);
-    if(el===codeInput || el===codeBtn || el===pauseBtn || el===fsBtn) return;
+    if(el===codeInput || el===codeBtn || el===pauseBtn || el===fsBtn || el===pauseSaveBtn) return;
   }
   isTouch=true; touchUI.classList.add('on'); audioUnlock();
   const r=touchUI.getBoundingClientRect();
@@ -866,6 +882,7 @@ function redeemCode(){
 }
 
 const pauseBtn=document.getElementById('pauseBtn');
+const pauseSaveBtn=document.getElementById('pauseSaveBtn');
 if(pauseBtn){
   const go=e=>{ e.preventDefault(); e.stopPropagation(); audioUnlock();
     if(game.state==='play') game.paused=!game.paused; };
@@ -1943,10 +1960,7 @@ function update(dt){
   if(pressed.has('p')||pressed.has('Escape')) game.paused=!game.paused;
   if(game.paused){
     if(pressed.has('s')){ saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
-    else if(lastTap){
-      if(hitRect(lastTap, pauseSaveRect())){ saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
-      else game.paused=false;                    // irgendwo daneben tippen/klicken: weiter
-    }
+    else if(lastTap){ game.paused=false; }        // irgendwo im Spiel tippen/klicken: weiter
     lastTap=null; pressed.clear(); return;
   }
 
@@ -2470,14 +2484,16 @@ function drawOver(){
   if(game.deadT>1.0 && Math.floor(game.time*2)%2===0)
     drawTextC(ctx, isTouch?'TIPPEN':'LEERTASTE', VW/2, y+h+4, '#cfe8c2', 1);
 }
-function pauseSaveRect(){ return { x:VW/2-42, y:VH/2+14, w:84, h:16 }; }
+function pauseSaveRect(){ return { x:VW/2-42, y:VH/2+18, w:84, h:16 }; }
 function drawPause(){
-  ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH);   // voll blickdicht, sonst scheint das Wellenbanner durch
-  drawTextC(ctx,'PAUSE', VW/2, VH/2-20, PAL.H, 2);
-  drawTextC(ctx, isTouch?'TIPPEN AUSSERHALB: WEITER':'P ODER ESC: WEITER', VW/2, VH/2-2, '#9fb79a', 1);
-  const r=pauseSaveRect();
-  panel(r.x, r.y, r.w, r.h, 'rgba(16,32,18,.9)', PAL.H);
-  drawTextC(ctx, isTouch?'TIPPEN: SPEICHERN':'S: SPEICHERN', VW/2, r.y+5, PAL.y, 1);
+  // Durchscheinend wie beim Baum-Geist-Effekt: man erkennt das Spiel dahinter noch
+  ctx.globalAlpha=0.5; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
+  // Der eigentliche Pausentext sitzt in einem eigenen, fast blickdichten Kaestchen -
+  // sonst wuerde das Wellenbanner durch die duenne Abdunklung hindurchscheinen.
+  const w=150, h=46, x=Math.round((VW-w)/2), y=Math.round((VH-h)/2)-10;
+  panel(x,y,w,h);
+  drawTextC(ctx,'PAUSE', VW/2, y+7, PAL.H, 2);
+  drawTextC(ctx, isTouch?'TIPPEN AUSSERHALB: WEITER':'P ODER ESC: WEITER', VW/2, y+30, '#9fb79a', 1);
 }
 
 const btnDash=document.getElementById('dashBtn'), btnHeal=document.getElementById('healBtn');
@@ -2489,6 +2505,8 @@ function render(){
   const warVersteckt = codeBox.hidden;
   codeBox.hidden = !(game.state==='play' && game.shopOpen);
   pauseBtn.hidden = game.state!=='play';
+  pauseSaveBtn.hidden = !game.paused;
+  pauseSaveBtn.classList.toggle('show', game.paused);
   if(codeBox.hidden && document.activeElement===codeInput) codeInput.blur();
   if(warVersteckt && !codeBox.hidden) sizeCodeBoxFont();   // Groesse war beim Verstecken 0
   if(btnDash) btnDash.classList.toggle('cool', player.dashCd>0);
@@ -2514,6 +2532,15 @@ resetPlayer();
 cam.x=clamp(q(player.x-VW/2),0,WW-VW-1); cam.y=clamp(q(player.y-VH/2),0,WH-VH-1);
 rollCards();
 layoutCodeBox();
+(function(){
+  const r=pauseSaveRect(), put=pauseSaveBtn;
+  put.style.left=(r.x/VW*100)+'%'; put.style.top=(r.y/VH*100)+'%';
+  put.style.width=(r.w/VW*100)+'%'; put.style.height=(r.h/VH*100)+'%';
+  requestAnimationFrame(()=>{ const h=put.getBoundingClientRect().height;
+    if(h>0) put.style.fontSize=Math.max(8,h*0.45)+'px'; });
+  put.addEventListener('click', e=>{ e.preventDefault(); audioUnlock();
+    saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); });
+})();
 
 let last=performance.now();
 const MAXSTEP=1/40;                       // groesster Simulationsschritt
