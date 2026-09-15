@@ -748,6 +748,10 @@ function setStick(s, x, y){
   const n=Math.max(1,max); s.dx=dx/n; s.dy=dy/n;
 }
 function touchStart(e){
+  for(const t of e.changedTouches){
+    const el=document.elementFromPoint(t.clientX, t.clientY);
+    if(el===codeInput || el===codeBtn) return;      // Codefeld selbst tippen lassen
+  }
   isTouch=true; touchUI.classList.add('on'); audioUnlock();
   const r=touchUI.getBoundingClientRect();
   for(const t of e.changedTouches){
@@ -2247,8 +2251,6 @@ function drawShopPanel(){
   const scr=String(game.scrap);
   drawText(ctx, scr, p.x+p.w-6-textW(scr,1), p.y+5, PAL.y, 1);
   drawSpr(SPR.bolt, p.x+p.w-13-textW(scr,1), p.y+5, false, false);
-  const cr=codeRowRect();
-  drawText(ctx, 'CODE', cr.x, cr.y-9, '#5f7a5a', 1);
   cardRects().forEach((r,i)=>{
     const c=game.cards[i]; if(!c) return;
     const afford = game.scrap>=c.cost && !c.bought;
