@@ -894,6 +894,29 @@ codeBtn.addEventListener('click', e=>{ e.preventDefault(); audioUnlock(); redeem
 });
 
 // --- Geheime Codes: einmal je Durchlauf einloesbar ---------------------
+// Kleiner Helfer: schaltet eine Werkstatt-Verbesserung frei, ohne den Shop
+// zu bemuehen. Ist sie schon auf Maximalstufe, gibt es stattdessen Schrauben.
+function grantUpgrade(id, scrapFallback){
+  const u = UPGRADES.find(x=>x.id===id);
+  if(u && lvl(u.id) < u.max){ player.upg[id]=lvl(id)+1; u.apply(); return u.name; }
+  game.scrap += scrapFallback;
+  return '+'+scrapFallback+' SCHRAUBEN (SCHON MAX)';
+}
+function randomReward(){
+  const pool = [
+    ()=>{ const n=ri(20,55); game.scrap+=n; return '+'+n+' SCHRAUBEN'; },
+    ()=>{ player.hp=player.maxHp; return 'VOLL GEHEILT'; },
+    ()=>{ if(ownedUltras().length){ player.ultra=player.ultraMax; return 'ULTRA VOLL'; } const n=30; game.scrap+=n; return '+'+n+' SCHRAUBEN'; },
+    ()=>{ const n=40; game.castleHp=Math.min(game.castleMax,game.castleHp+n); return 'TOR +'+n; },
+    ()=>{ player.dmg*=1.1; return 'SCHADEN +10%'; },
+    ()=>{ player.speed*=1.08; return 'TEMPO +8%'; },
+    ()=>{ player.maxHp+=2; player.hp=player.maxHp; return '+1 HERZ'; },
+    ()=>{ player.thorns+=2; return 'DORNEN +2'; },
+    ()=>{ player.lifesteal+=0.06; return 'LEBENSRAUB +6%'; },
+    ()=>{ player.shieldMax++; player.shield=player.shieldMax; return 'SCHUTZSCHILD +1'; }
+  ];
+  return pick(pool)();
+}
 const CODES = {
   FOREST: ()=>{ game.scrap += 100; return '+100 SCHRAUBEN'; },
   WALDWACHT: ()=>{
@@ -904,7 +927,25 @@ const CODES = {
     }
     player.ultra=player.ultraMax;
     return '+250 SCHRAUBEN, ULTRA VOLL';
-  }
+  },
+  // Weitere Fundstuecke - mal ein fester Bonus, mal reiner Zufall.
+  GLUTKERN:      ()=> randomReward(),
+  MONDSCHEIN:    ()=> randomReward(),
+  SCHATTENPAKT:  ()=> randomReward(),
+  BAERENTATZE:   ()=> randomReward(),
+  WURZELWERK:    ()=> randomReward(),
+  STERNENSTAUB:  ()=> randomReward(),
+  NEBELGEIST:    ()=> randomReward(),
+  RAUCHZEICHEN:  ()=> randomReward(),
+  STURMWIND:     ()=>{ if(!ownedUltras().length){ game.scrap+=30; return '+30 SCHRAUBEN'; } player.ultra=player.ultraMax; return 'ULTRA VOLL'; },
+  EISENHAUT:     ()=> grantUpgrade('heart', 30),
+  FUNKENFLUG:    ()=> grantUpgrade('blade', 25),
+  WOLFSSPRUNG:   ()=> grantUpgrade('boots', 25),
+  RABENAUGE:     ()=> grantUpgrade('multi', 40),
+  NEBELSCHLEIER: ()=> grantUpgrade('dash', 25),
+  FEUERSTEIN:    ()=> grantUpgrade('fire', 30),
+  FROSTHAUCH:    ()=> grantUpgrade('ice', 25),
+  GOLDADER:      ()=>{ const n=ri(80,150); game.scrap+=n; return '+'+n+' SCHRAUBEN'; }
 };
 function redeemCode(){
   const code=(codeInput.value||'').trim().toUpperCase();

@@ -125,7 +125,15 @@ Schrauben, `WALDWACHT` gibt 250 Schrauben und schaltet zusätzlich das
 exklusive Ultra **Waldzorn** frei (dicke Wurzeln reißen alles im Umkreis
 nieder und verlangsamen die Bots) — dieses Ultra gibt es sonst nirgends, nur
 über den Code. Wer es schon hat, bekommt stattdessen die volle Ultra-Leiste
-dazu. Jeder Code ist einmal je Durchlauf einlösbar.
+dazu. Daneben gibt es 17 weitere Fundstück-Codes (`GLUTKERN`, `MONDSCHEIN`,
+`SCHATTENPAKT`, `BAERENTATZE`, `WURZELWERK`, `STERNENSTAUB`, `NEBELGEIST`,
+`RAUCHZEICHEN`, `STURMWIND`, `EISENHAUT`, `FUNKENFLUG`, `WOLFSSPRUNG`,
+`RABENAUGE`, `NEBELSCHLEIER`, `FEUERSTEIN`, `FROSTHAUCH`, `GOLDADER`) —
+manche schalten direkt eine Werkstatt-Verbesserung frei (oder geben
+Schrauben, wenn die schon auf Maximalstufe ist), andere würfeln eine
+zufällige Belohnung aus (Schrauben, volle Heilung, volle Ultra-Leiste,
+Tor-Reparatur oder ein kleiner permanenter Bonus). Jeder Code ist einmal je
+Durchlauf einlösbar.
 
 ## Technik
 
