@@ -51,7 +51,7 @@
     background:#0d140e; border:2px solid #ffe66d; color:#e9f5dc;
     font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; letter-spacing:.06em;
     text-transform:uppercase; padding:0 6px; outline:none; }
-  #codeInput::placeholder{ color:#7a8f6f; text-transform:none; letter-spacing:0; }
+  #codeInput::placeholder{ color:#c9b054; text-transform:uppercase; letter-spacing:.06em; }
   #codeInput:focus{ border-color:#fff3c4; }
   #codeBtn{ position:absolute; box-sizing:border-box; pointer-events:auto;
     background:#3d3316; border:2px solid #ffe66d; color:#ffe66d; font-weight:bold;
@@ -94,7 +94,7 @@
     <div id="fsBtn">⛶</div>
     <div id="pauseSaveBtn" hidden></div>
     <div id="codeBox" hidden>
-      <input id="codeInput" type="text" maxlength="20" placeholder="Z.B. FOREST"
+      <input id="codeInput" type="text" maxlength="20" placeholder="CODE EINLÖSEN"
         autocomplete="off" autocapitalize="characters" spellcheck="false">
       <button id="codeBtn" type="button">OK</button>
     </div>
@@ -874,7 +874,6 @@ function sizeCodeBoxFont(){
   if(h>0){ codeInput.style.fontSize=Math.max(9,h*0.5)+'px'; codeBtn.style.fontSize=Math.max(8,h*0.4)+'px'; }
 }
 addEventListener('resize', layoutCodeBox);   // erster Aufruf folgt weiter unten, sobald SHOP feststeht
-codeInput.addEventListener('input', ()=>{ codeInput.value=codeInput.value.toUpperCase(); });
 codeInput.addEventListener('keydown', e=>{
   e.stopPropagation();
   if(e.key==='Enter'){ e.preventDefault(); redeemCode(); }
