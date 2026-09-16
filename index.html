@@ -1123,22 +1123,28 @@ function loadSaveRaw(slot){
   try{ const raw=localStorage.getItem(slotKey(slot)); return raw?JSON.parse(raw):null; }catch(e){ return null; }
 }
 function hasSave(slot){ return !!loadSaveRaw(slot); }
+// Gibt true nur zurueck, wenn das Speichern wirklich angekommen ist - manche
+// eingebetteten Vorschau-Rahmen (Artefakt-Vorschau, htmlpreview.github.io usw.)
+// blockieren localStorage stillschweigend, ohne dass setItem() einen Fehler wirft.
 function saveGame(){
   const slot = game.slot||1;
+  const key = slotKey(slot);
+  const payload = JSON.stringify({
+    wave:game.wave, scrap:game.scrap, score:game.score, kills:game.kills,
+    castleHp:game.castleHp, castleMax:game.castleMax,
+    ultras:(game.ultras||[]).slice(), usedCodes:Array.from(game.usedCodes||[]),
+    hp:player.hp, maxHp:player.maxHp, speed:player.speed, dmg:player.dmg, reach:player.reach,
+    arc:player.arc, atkSpeed:player.atkSpeed, dashCdMax:player.dashCdMax, bowCdMax:player.bowCdMax,
+    arrowDmg:player.arrowDmg, healCdMax:player.healCdMax, regenEvery:player.regenEvery,
+    ultraMax:player.ultraMax, ultraGain:player.ultraGain, ultraSel:player.ultraSel,
+    lifesteal:player.lifesteal, thorns:player.thorns, magnet:player.magnet,
+    shieldMax:player.shieldMax, shieldEvery:player.shieldEvery, burn:player.burn, ice:player.ice,
+    extraArrows:player.extraArrows, greed:player.greed, revive:player.revive, upg:player.upg
+  });
   try{
-    localStorage.setItem(slotKey(slot), JSON.stringify({
-      wave:game.wave, scrap:game.scrap, score:game.score, kills:game.kills,
-      castleHp:game.castleHp, castleMax:game.castleMax,
-      ultras:(game.ultras||[]).slice(), usedCodes:Array.from(game.usedCodes||[]),
-      hp:player.hp, maxHp:player.maxHp, speed:player.speed, dmg:player.dmg, reach:player.reach,
-      arc:player.arc, atkSpeed:player.atkSpeed, dashCdMax:player.dashCdMax, bowCdMax:player.bowCdMax,
-      arrowDmg:player.arrowDmg, healCdMax:player.healCdMax, regenEvery:player.regenEvery,
-      ultraMax:player.ultraMax, ultraGain:player.ultraGain, ultraSel:player.ultraSel,
-      lifesteal:player.lifesteal, thorns:player.thorns, magnet:player.magnet,
-      shieldMax:player.shieldMax, shieldEvery:player.shieldEvery, burn:player.burn, ice:player.ice,
-      extraArrows:player.extraArrows, greed:player.greed, revive:player.revive, upg:player.upg
-    }));
-  }catch(e){}
+    localStorage.setItem(key, payload);
+    return localStorage.getItem(key) === payload;   // wirklich angekommen, nicht nur kein Fehler geworfen
+  }catch(e){ return false; }
 }
 
 const cam = { x:0, y:0 };
@@ -2137,7 +2143,10 @@ function update(dt){
     // Pause ist "sticky": nur P/Esc oder der Pause-Knopf setzen fort - kein
     // Tippen irgendwo im Bild, damit ein App-Wechsel oder ein Bildschirm-Aus
     // das Spiel nie versehentlich wieder loslaufen laesst.
-    if(pressed.has('s')){ saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
+    if(pressed.has('s')){
+      if(saveGame()){ say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
+      else{ say('SPEICHERN NICHT MÖGLICH', 1.8, PAL.R); SFX.no(); }
+    }
     lastTap=null; pressed.clear(); return;
   }
 
@@ -2772,7 +2781,9 @@ placePct(pauseSaveBtn, pauseSaveRect().x, pauseSaveRect().y, pauseSaveRect().w, 
     const now=performance.now();
     if(now-lastSaveT<400) return;      // ein Antippen kann mehrere Events feuern - nur einmal ausloesen
     lastSaveT=now;
-    audioUnlock(); saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick();
+    audioUnlock();
+    if(saveGame()){ say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
+    else{ say('SPEICHERN NICHT MÖGLICH', 1.8, PAL.R); SFX.no(); }
   };
   // Auf mehrere Ereignistypen gleichzeitig hoeren: je nach Browser/Geraet
   // (Handy, iPad, Desktop, eingebettete Ansichten) kommt nicht ueberall
