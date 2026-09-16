@@ -2758,8 +2758,14 @@ placePct(pauseSaveBtn, pauseSaveRect().x, pauseSaveRect().y, pauseSaveRect().w, 
 (function(){
   requestAnimationFrame(()=>{ const h=pauseSaveBtn.getBoundingClientRect().height;
     if(h>0) pauseSaveBtn.style.fontSize=Math.max(8,h*0.45)+'px'; });
-  pauseSaveBtn.addEventListener('click', e=>{ e.preventDefault(); audioUnlock();
-    saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); });
+  const doSave=e=>{ e.preventDefault(); e.stopPropagation(); audioUnlock();
+    saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); };
+  // Nicht nur auf 'click' verlassen: der globale touchend-Handler ruft
+  // immer preventDefault() auf und unterdrueckt damit auf Handy/iPad den
+  // synthetischen Klick - direkt auf touchstart reagieren wie beim
+  // Pause- und Vollbild-Knopf.
+  pauseSaveBtn.addEventListener('touchstart', doSave, {passive:false});
+  pauseSaveBtn.addEventListener('mousedown', doSave);
 })();
 // Pause- und Vollbild-Knopf exakt unter die Torleiste setzen - keine
 // vmin-Schaetzung mehr, die je nach Bildschirmform woanders landen konnte.
