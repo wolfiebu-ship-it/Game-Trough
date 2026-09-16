@@ -47,11 +47,14 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
 - **Das Tor**: Die Bots rennen zur Burg und hacken auf das Tor ein. Fällt das
   Tor, ist das Spiel ebenfalls vorbei. Das Tor erkennt nur dich — du kannst
   hindurch, die Bots nicht.
-- **Speicherstand**: Nach jeder gehaltenen Welle und jedem Kauf wird automatisch
-  gespeichert. Im Titelbild erscheint dann „SPIELSTAND FORTSETZEN" — Leertaste
-  oder Tippen setzt genau da fort, `N` (bzw. Antippen der Zeile) startet
-  stattdessen ein neues Spiel und ersetzt den Stand. In der Pause speichert ein
-  eigener, immer klickbarer „SPEICHERN"-Knopf zuverlässig von Hand.
+- **Speicherstand**: Drei Speicherplätze nebeneinander im Titelbild. Ein
+  belegter Platz zeigt „SPIELWELT 1/2/3" mit Heldenköpfchen, Schrauben,
+  Punkten und der erreichten Welle — antippen (oder `1`/`2`/`3`) setzt genau
+  dort fort. Ein leerer Platz zeigt „NEUES SPIEL ANFANGEN" und startet dort
+  ein frisches Spiel. Nach jeder gehaltenen Welle und jedem Kauf wird
+  automatisch in den aktiven Platz gespeichert; in der Pause speichert
+  zusätzlich ein eigener, immer klickbarer „SPEICHERN"-Knopf zuverlässig von
+  Hand.
 - **Ultra-Name**: Wählst du per Menü oder `C` ein Ultra aus, steht sein Name
   fünf Sekunden lang neben dem Knopf und verschwindet dann wieder, damit er
   nicht dauerhaft im Weg steht.
@@ -59,7 +62,11 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
   bleibt — nur die Umrisse der Welt schimmern noch schwach durch. Aufgerufen
   per `P`/`Esc` oder dem gelben Pixel-Knopf direkt unter der Tor-Anzeige
   oben rechts. „SPEICHERN" ist in der Pixel-Schrift des Spiels gehalten,
-  genau wie alle anderen Knöpfe.
+  genau wie alle anderen Knöpfe. Die Pause ist „klebrig": Nur `P`/`Esc` oder
+  erneutes Antippen des Pause-Knopfs setzt fort — Tippen irgendwo im Bild
+  tut nichts mehr. Wechselt man die App, verliert das Fenster den Fokus oder
+  geht der Bildschirm aus, pausiert das Spiel von selbst und bleibt es,
+  bis man es bewusst wieder freigibt.
 - **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 10 gibt es nach jeder

@@ -387,6 +387,7 @@ SPR.stand  = sprite([
   '..KMMMMMMMMK..','..KMKKKKKKMK..','..KMKyyyyKMK..','..KMKyKKyKMK..',
   '..KMKyyyyKMK..','..KMKKKKKKMK..','..KMMMMMMMMK..','..KKKKKKKKKK..']);
 SPR.tower  = sprite(['K.K.K.K','KMMMMMK','KMmMmMK','KMMMMMK','KMmMmMK','KMMMMMK','KKKKKKK']);
+SPR.head   = sprite(P_TOP_DOWN.slice(1,8).map(r=>r.slice(3,13)));  // kleines Heldenkoepfchen fuer Speicherplaetze
 
 /* ------------------------------------------------------------------
    3. Prozedurale Grafik: Wald, Felsen, Burg, Boden
@@ -759,7 +760,8 @@ addEventListener('keyup', e=>{
   if(typingInCode()) return;
   keys[e.key.length===1 ? e.key.toLowerCase() : e.key]=false;
 });
-addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; });
+addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; if(game.state==='play') game.paused=true; });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && game.state==='play') game.paused=true; });
 
 let mouseWX=0, mouseWY=0, mouseInside=false;
 function canvasPos(cx,cy){
@@ -1094,6 +1096,7 @@ function musicTick(){
 const game = {
   state:'title',          // title | play | over
   phase:'rest',           // wave | rest
+  slot:1,                 // aktiver Speicherplatz (1-3)
   wave:0, restT:0, spawnList:[], spawnT:0,
   scrap:0, score:0, kills:0, best:0,
   castleHp:120, castleMax:120,
@@ -1102,14 +1105,28 @@ const game = {
 };
 try{ game.best = parseInt(localStorage.getItem('waldwacht_best')||'0',10)||0; }catch(e){}
 
-// --- Speicherstand: haelt fest, wo man steht (letzte ueberstandene Welle) ---
-function loadSaveRaw(){
-  try{ const raw=localStorage.getItem('waldwacht_save'); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+// --- Speicherstand: drei Slots, jeder haelt fest, wo man steht ---
+const SAVE_SLOTS = 3;
+let migratedLegacySave = false;
+function slotKey(slot){ return 'waldwacht_save_'+slot; }
+function loadSaveRaw(slot){
+  if(!migratedLegacySave){
+    migratedLegacySave = true;
+    try{
+      const legacy = localStorage.getItem('waldwacht_save');
+      if(legacy && !localStorage.getItem(slotKey(1))){
+        localStorage.setItem(slotKey(1), legacy);
+        localStorage.removeItem('waldwacht_save');
+      }
+    }catch(e){}
+  }
+  try{ const raw=localStorage.getItem(slotKey(slot)); return raw?JSON.parse(raw):null; }catch(e){ return null; }
 }
-function hasSave(){ return !!loadSaveRaw(); }
+function hasSave(slot){ return !!loadSaveRaw(slot); }
 function saveGame(){
+  const slot = game.slot||1;
   try{
-    localStorage.setItem('waldwacht_save', JSON.stringify({
+    localStorage.setItem(slotKey(slot), JSON.stringify({
       wave:game.wave, scrap:game.scrap, score:game.score, kills:game.kills,
       castleHp:game.castleHp, castleMax:game.castleMax,
       ultras:(game.ultras||[]).slice(), usedCodes:Array.from(game.usedCodes||[]),
@@ -1620,13 +1637,14 @@ function gameOver(reason){
   game.state='over'; game.msg=reason; game.msgT=99; game.slow=1.2; shake(8); SFX.over();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
 }
-function newGame(){
+function newGame(slot){
   enemies.length=0; bullets.length=0; parts.length=0; drops.length=0;
   slashes.length=0; waves.length=0; floaters.length=0;
   MSGQ.length=0;
   game.ultras=[]; game.usedCodes=new Set();
   game.turret=0; game.turretT=0; game.ultraMenuOpen=false; game.ultraNameT=0;
   Object.assign(game, { state:'play', phase:'rest', wave:0, restT:6, spawnList:[], spawnT:0, paused:false,
+    slot: slot||game.slot||1,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
     flash:0, redFlash:0, msg:'', msgT:0, msgCol:PAL.y, shopOpen:false, cards:[], cardSel:0, tutorial:16 });
   say('HALTE DIE BOTS VOM TOR FERN', 2.4, PAL.H);
@@ -1642,12 +1660,12 @@ function newGame(){
 
 // Setzt genau da wieder ein, wo zuletzt gespeichert wurde (letzte ueberstandene
 // Welle). Faellt auf ein neues Spiel zurueck, falls kein gueltiger Stand da ist.
-function continueGame(){
-  const d = loadSaveRaw();
-  if(!d){ newGame(); return; }
-  newGame();                                    // sauberer Ausgangszustand, danach ueberschreiben
+function continueGame(slot){
+  const d = loadSaveRaw(slot);
+  if(!d){ newGame(slot); return; }
+  newGame(slot);                                // sauberer Ausgangszustand, danach ueberschreiben
   Object.assign(game, {
-    wave:d.wave||0, scrap:d.scrap||0, score:d.score||0, kills:d.kills||0,
+    slot, wave:d.wave||0, scrap:d.scrap||0, score:d.score||0, kills:d.kills||0,
     castleHp:d.castleHp??120, castleMax:d.castleMax??120,
     ultras:(d.ultras||[]).slice(), usedCodes:new Set(d.usedCodes||[])
   });
@@ -2095,10 +2113,15 @@ function update(dt){
   if(pressed.has('m')){ muted=!muted; if(muted&&AC){ master.gain.value=0; } else if(AC){ master.gain.value=0.5; } }
 
   if(game.state==='title'){
-    const ngr = newGameRowRect();
-    if(ngr && lastTap && hitRect(lastTap, ngr)){ audioUnlock(); newGame(); lastTap=null; pressed.clear(); return; }
-    if(pressed.has('n') && hasSave()){ audioUnlock(); newGame(); }
-    else if(startEdge){ audioUnlock(); hasSave() ? continueGame() : newGame(); }
+    if(lastTap){
+      for(const b of saveSlotRects()){
+        if(hitRect(lastTap, b)){ audioUnlock(); hasSave(b.slot) ? continueGame(b.slot) : newGame(b.slot); lastTap=null; pressed.clear(); return; }
+      }
+    }
+    for(let s=1; s<=SAVE_SLOTS; s++){
+      if(pressed.has(String(s))){ audioUnlock(); hasSave(s) ? continueGame(s) : newGame(s); lastTap=null; pressed.clear(); return; }
+    }
+    if(startEdge){ audioUnlock(); hasSave(1) ? continueGame(1) : newGame(1); }
     lastTap=null; pressed.clear(); return;
   }
   if(game.state==='over'){
@@ -2111,8 +2134,10 @@ function update(dt){
   }
   if(pressed.has('p')||pressed.has('Escape')) game.paused=!game.paused;
   if(game.paused){
+    // Pause ist "sticky": nur P/Esc oder der Pause-Knopf setzen fort - kein
+    // Tippen irgendwo im Bild, damit ein App-Wechsel oder ein Bildschirm-Aus
+    // das Spiel nie versehentlich wieder loslaufen laesst.
     if(pressed.has('s')){ saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
-    else if(lastTap){ game.paused=false; }        // irgendwo im Spiel tippen/klicken: weiter
     lastTap=null; pressed.clear(); return;
   }
 
@@ -2601,34 +2626,50 @@ function drawHUD(){
   }
 }
 
-const TITLE = { w:232, h:122 };
+const TITLE = { w:232, h:138 };
 function titlePanelRect(){ return { x:Math.round((VW-TITLE.w)/2), y:4, w:TITLE.w, h:TITLE.h }; }
 function titleRows(){
   const rows = isTouch ? [
     'LINKER DAUMEN: LAUFEN',
     'RECHTER DAUMEN: ZIELEN',
     'TASTEN RECHTS: KAMPF UND ULTRA',
-    'HEILEN-TASTE: ALLE 15 SEKUNDEN',
-    'IN DER RUHE: SHOP UNTEN RECHTS'
+    'SHOP UNTEN RECHTS (IN DER RUHE)'
   ] : [
     'WASD LAUFEN · MAUS ZIELEN',
-    'KLICK ODER LEERTASTE: SCHWERT',
-    'RECHTSKLICK ODER Q: PFEIL',
-    'SHIFT: ROLLE · H: HEILEN (15 S)',
-    'AB WELLE 3: X ULTRA · C WECHSELN',
+    'KLICK: SCHWERT · RECHTSKLICK: PFEIL',
+    'SHIFT: ROLLE · H: HEILEN · X: ULTRA',
     'B: SHOP · P: PAUSE · ENTER: WELLE'
   ];
-  let newGameRow = -1;
-  if(hasSave()){
-    newGameRow = rows.length;
-    rows.push(isTouch ? 'NEUES SPIEL ANTIPPEN (ERSETZT SPIELSTAND)' : 'N: NEUES SPIEL (ERSETZT SPIELSTAND)');
-  }
-  return { rows, gap: rows.length>6?9:10, newGameRow };
+  return { rows, gap:9 };
 }
-function newGameRowRect(){
-  if(!hasSave()) return null;
-  const p=titlePanelRect(), {rows,gap,newGameRow}=titleRows();
-  return { x:p.x+8, y:p.y+43+newGameRow*gap-1, w:p.w-16, h:gap };
+// Drei Speicherplaetze nebeneinander unten im Titelbild.
+function saveSlotRects(){
+  const p=titlePanelRect(), {rows,gap}=titleRows();
+  const rowsBottom = 41 + rows.length*gap;          // relativ zu p.y
+  const headerY = rowsBottom+4;
+  const boxY = p.y + headerY + 9;
+  const boxW=68, boxGap=6, boxH=46;
+  const totalW = boxW*3 + boxGap*2;
+  const startX = p.x + Math.round((p.w-totalW)/2);
+  const out=[];
+  for(let i=0;i<SAVE_SLOTS;i++) out.push({ slot:i+1, x:startX+i*(boxW+boxGap), y:boxY, w:boxW, h:boxH });
+  return out;
+}
+function drawSaveSlot(b){
+  const d = loadSaveRaw(b.slot);
+  const mx = b.x+b.w/2;
+  if(d){
+    panel(b.x, b.y, b.w, b.h, 'rgba(16,32,18,.92)', PAL.H);
+    drawTextC(ctx, 'SPIELWELT '+b.slot, mx, b.y+2, PAL.y, 1);
+    ctx.save(); ctx.translate(Math.round(mx-SPR.head.w), b.y+11); ctx.scale(2,2); ctx.drawImage(SPR.head.img,0,0); ctx.restore();
+    const scoreLine = 'S'+(d.scrap||0)+' P'+(d.score||0);
+    drawTextC(ctx, scoreLine, mx, b.y+29, '#cfe8c2', 1);
+    drawTextC(ctx, 'WELLE '+(d.wave||0), mx, b.y+37, '#9fb79a', 1);
+  } else {
+    panel(b.x, b.y, b.w, b.h, 'rgba(12,18,13,.8)', '#3a4a3a');
+    drawTextC(ctx, 'NEUES SPIEL', mx, b.y+16, PAL.O, 1);
+    drawTextC(ctx, 'ANFANGEN', mx, b.y+24, PAL.O, 1);
+  }
 }
 function drawTitle(){
   ctx.globalAlpha=0.55; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
@@ -2639,15 +2680,12 @@ function drawTitle(){
     const b='BESTE '+game.best;
     drawText(ctx, b, x+w-6-textW(b,1), y+6, PAL.y, 1);
   }
-  drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+30, '#cfe8c2', 1);
-  const {rows, gap, newGameRow} = titleRows();
-  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+43+i*gap, i===newGameRow?PAL.O:'#9fb79a', 1));
-  drawTextC(ctx, 'HERZEN LEER ODER TOR KAPUTT = ENDE', VW/2, y+h-12, '#7f927b', 1);
-  const blink = Math.floor(game.time*2)%2===0;
-  const startTxt = hasSave()
-    ? (isTouch?'TIPPEN: SPIELSTAND FORTSETZEN':'LEERTASTE: SPIELSTAND FORTSETZEN')
-    : (isTouch?'TIPPEN ZUM START':'LEERTASTE ZUM START');
-  drawTextC(ctx, blink ? startTxt : '', VW/2, y+h+5, PAL.y, 1);
+  drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+29, '#cfe8c2', 1);
+  const {rows, gap} = titleRows();
+  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+41+i*gap, '#9fb79a', 1));
+  const headerY = 41+rows.length*gap+4;
+  drawTextC(ctx, 'SPIELSTAND WÄHLEN', VW/2, y+headerY, PAL.y, 1);
+  for(const b of saveSlotRects()) drawSaveSlot(b);
 }
 function drawOver(){
   ctx.globalAlpha=0.6; ctx.fillStyle='#20060a'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
@@ -2670,7 +2708,7 @@ function drawPause(){
   const w=182, h=46, x=Math.round((VW-w)/2), y=Math.round((VH-h)/2)-10;
   panel(x,y,w,h);
   drawTextC(ctx,'PAUSE', VW/2, y+7, PAL.H, 2);
-  drawTextC(ctx, isTouch?'TIPPEN AUSSERHALB: WEITER':'P ODER ESC: WEITER', VW/2, y+30, '#9fb79a', 1);
+  drawTextC(ctx, isTouch?'PAUSE-KNOPF ANTIPPEN: WEITER':'P ODER ESC: WEITER', VW/2, y+30, '#9fb79a', 1);
   const r=pauseSaveRect();
   panel(r.x, r.y, r.w, r.h, 'rgba(16,32,18,.92)', PAL.H);
   drawTextC(ctx, 'SPEICHERN', VW/2, r.y+5, PAL.y, 1);
