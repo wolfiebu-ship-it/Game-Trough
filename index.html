@@ -2626,33 +2626,37 @@ function drawHUD(){
   }
 }
 
-const TITLE = { w:232, h:138 };
+const TITLE = { w:232, h:136 };
 function titlePanelRect(){ return { x:Math.round((VW-TITLE.w)/2), y:4, w:TITLE.w, h:TITLE.h }; }
 function titleRows(){
+  // Bewusst nur zwei knappe Zeilen - der Rest steckt im Spiel selbst,
+  // hier soll das Titelbild nicht mit Textzeilen vollgestopft wirken.
   const rows = isTouch ? [
-    'LINKER DAUMEN: LAUFEN',
-    'RECHTER DAUMEN: ZIELEN',
-    'TASTEN RECHTS: KAMPF UND ULTRA',
-    'SHOP UNTEN RECHTS (IN DER RUHE)'
+    'DAUMEN LINKS LAUFEN · RECHTS ZIELEN',
+    'TASTEN RECHTS: KAMPF/ULTRA'
   ] : [
     'WASD LAUFEN · MAUS ZIELEN',
-    'KLICK: SCHWERT · RECHTSKLICK: PFEIL',
-    'SHIFT: ROLLE · H: HEILEN · X: ULTRA',
-    'B: SHOP · P: PAUSE · ENTER: WELLE'
+    'KLICK: SCHWERT · B: SHOP · P: PAUSE'
   ];
-  return { rows, gap:9 };
+  return { rows, gap:10 };
+}
+// Eine gemeinsame Quelle fuer alle Y-Positionen im Titelbild, damit Text
+// und Speicherplaetze nie auseinanderlaufen koennen.
+function titleLayout(){
+  const { rows, gap } = titleRows();
+  const instrY = 45;
+  const headerY = instrY + rows.length*gap + 8;
+  const boxY = headerY + 12;
+  return { rows, gap, instrY, headerY, boxY };
 }
 // Drei Speicherplaetze nebeneinander unten im Titelbild.
 function saveSlotRects(){
-  const p=titlePanelRect(), {rows,gap}=titleRows();
-  const rowsBottom = 41 + rows.length*gap;          // relativ zu p.y
-  const headerY = rowsBottom+4;
-  const boxY = p.y + headerY + 9;
-  const boxW=68, boxGap=6, boxH=46;
+  const p=titlePanelRect(), { boxY } = titleLayout();
+  const boxW=68, boxGap=6, boxH=48;
   const totalW = boxW*3 + boxGap*2;
   const startX = p.x + Math.round((p.w-totalW)/2);
   const out=[];
-  for(let i=0;i<SAVE_SLOTS;i++) out.push({ slot:i+1, x:startX+i*(boxW+boxGap), y:boxY, w:boxW, h:boxH });
+  for(let i=0;i<SAVE_SLOTS;i++) out.push({ slot:i+1, x:startX+i*(boxW+boxGap), y:p.y+boxY, w:boxW, h:boxH });
   return out;
 }
 function drawSaveSlot(b){
@@ -2681,9 +2685,8 @@ function drawTitle(){
     drawText(ctx, b, x+w-6-textW(b,1), y+6, PAL.y, 1);
   }
   drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+29, '#cfe8c2', 1);
-  const {rows, gap} = titleRows();
-  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+41+i*gap, '#9fb79a', 1));
-  const headerY = 41+rows.length*gap+4;
+  const {rows, gap, instrY, headerY} = titleLayout();
+  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+instrY+i*gap, '#9fb79a', 1));
   drawTextC(ctx, 'SPIELSTAND WÄHLEN', VW/2, y+headerY, PAL.y, 1);
   for(const b of saveSlotRects()) drawSaveSlot(b);
 }
@@ -2719,7 +2722,11 @@ const btnUltra=document.getElementById('ultraBtn');
 function render(){
   ctx.setTransform(SS,0,0,SS,0,0);
   ctx.imageSmoothingEnabled=false;
-  touchUI.classList.toggle('rest', game.state==='play' && game.phase==='rest');
+  // Kampf-Knoepfe nur waehrend einer echten, laufenden Welle zeigen - sonst
+  // liegen sie im Titelbild, im Game-Over-Schirm oder in der Pause über
+  // allem und blockieren Taps auf Boxen/Knoepfe darunter.
+  const showCombatBtns = game.state==='play' && game.phase!=='rest' && !game.paused;
+  touchUI.classList.toggle('rest', !showCombatBtns);
   const warVersteckt = codeBox.hidden;
   codeBox.hidden = !(game.state==='play' && game.shopOpen);
   pauseBtn.hidden = game.state!=='play';
@@ -2758,14 +2765,24 @@ placePct(pauseSaveBtn, pauseSaveRect().x, pauseSaveRect().y, pauseSaveRect().w, 
 (function(){
   requestAnimationFrame(()=>{ const h=pauseSaveBtn.getBoundingClientRect().height;
     if(h>0) pauseSaveBtn.style.fontSize=Math.max(8,h*0.45)+'px'; });
-  const doSave=e=>{ e.preventDefault(); e.stopPropagation(); audioUnlock();
-    saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); };
-  // Nicht nur auf 'click' verlassen: der globale touchend-Handler ruft
-  // immer preventDefault() auf und unterdrueckt damit auf Handy/iPad den
-  // synthetischen Klick - direkt auf touchstart reagieren wie beim
-  // Pause- und Vollbild-Knopf.
+  let lastSaveT=0;
+  const doSave=e=>{
+    if(e.cancelable) e.preventDefault();
+    e.stopPropagation();
+    const now=performance.now();
+    if(now-lastSaveT<400) return;      // ein Antippen kann mehrere Events feuern - nur einmal ausloesen
+    lastSaveT=now;
+    audioUnlock(); saveGame(); say('GESPEICHERT', 1.4, PAL.H); SFX.pick();
+  };
+  // Auf mehrere Ereignistypen gleichzeitig hoeren: je nach Browser/Geraet
+  // (Handy, iPad, Desktop, eingebettete Ansichten) kommt nicht ueberall
+  // derselbe Event zuerst oder ueberhaupt an. 'pointerdown' deckt Maus,
+  // Touch und Stift einheitlich ab; touchstart/mousedown/click bleiben als
+  // Rueckfallebenen, das oben stehende Zeitfenster verhindert Doppelauslöser.
+  pauseSaveBtn.addEventListener('pointerdown', doSave, {passive:false});
   pauseSaveBtn.addEventListener('touchstart', doSave, {passive:false});
   pauseSaveBtn.addEventListener('mousedown', doSave);
+  pauseSaveBtn.addEventListener('click', doSave);
 })();
 // Pause- und Vollbild-Knopf exakt unter die Torleiste setzen - keine
 // vmin-Schaetzung mehr, die je nach Bildschirmform woanders landen konnte.
