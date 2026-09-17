@@ -1,4 +1,4 @@
-# NEON CLASH
+# WALDWACHT ARENA
 
 Ein kleines, fieses 2D-Fighting-Game im Neon-/Retrowave-Look.
 Alles steckt in **einer einzigen Datei** — kein Server, keine Installation, keine Assets.
@@ -57,5 +57,5 @@ Pfeiltasten zum Bewegen, `,` leicht, `.` schwer, `/` Special, rechte `Shift` blo
 - Figuren sind prozedural animiert (Gelenkwinkel pro Zustand), es gibt keine Sprites
 - alle Sounds werden zur Laufzeit mit der WebAudio-API synthetisiert
 
-Zum Herumprobieren liegt in der Konsole `window.NEON_CLASH` mit `Game`, `F` (beide
-Kämpfer) und `MOVES` bereit, z. B. `NEON_CLASH.F[0].meter = 100`.
+Zum Herumprobieren liegt in der Konsole `window.WALDWACHT` mit `Game`, `F` (beide
+Kämpfer) und `MOVES` bereit, z. B. `WALDWACHT.F[0].meter = 100`.
