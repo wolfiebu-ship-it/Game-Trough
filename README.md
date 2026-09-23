@@ -83,6 +83,8 @@ von vorne los — bis du jedes Hindernis im Schlaf kannst.
 ## Was drin ist
 
 - **3 Level**: *Erste Schritte* (★), *Neon-Fabrik* (★★), *Hyperraum* (★★★), je ca. 30 Sekunden
+- **Eigene Spielfigur** mit Maske, Augen und Mund — blinzelt, staucht sich beim Landen, streckt sich beim
+  Absprung und zerspringt beim Aufprall in Stücke; 5 Farbvarianten im Menü (oben links oder `↑`/`↓`)
 - Stacheln, Blöcke, Plattformen, gelbe/pinke **Sprungpads**, gelbe/pinke **Orbs** (in der Luft antippen)
   und **blaue Orbs**, die die Schwerkraft umdrehen
 - **Portale**: Schiff-Modus (halten = steigen), Würfel-Modus, Schwerkraft umdrehen, Geschwindigkeit
