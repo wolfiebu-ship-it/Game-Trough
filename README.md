@@ -59,3 +59,43 @@ Pfeiltasten zum Bewegen, `,` leicht, `.` schwer, `/` Special, rechte `Shift` blo
 
 Zum Herumprobieren liegt in der Konsole `window.NEON_CLASH` mit `Game`, `F` (beide
 Kämpfer) und `MOVES` bereit, z. B. `NEON_CLASH.F[0].meter = 100`.
+
+---
+
+# GEO RUSH
+
+Ein Rhythmus-Plattformer im Stil von *Geometry Dash* — ebenfalls in **einer einzigen Datei**:
+[`geo-rush/index.html`](geo-rush/index.html) doppelklicken und los.
+
+Der Würfel läuft von allein, du entscheidest nur, **wann** er springt. Ein Fehler, und es geht
+von vorne los — bis du jedes Hindernis im Schlaf kannst.
+
+## Steuerung
+
+| Eingabe | Aktion |
+|---|---|
+| `Leertaste` / `↑` / `W` / Klick / Tippen | springen (gedrückt halten = automatisch weiterspringen) bzw. im Schiff aufsteigen |
+| `Esc` / `P` | Pause |
+| `R` | Level neu starten |
+| `Z` / `X` | im Übungsmodus Checkpoint setzen / löschen (auf dem Handy: ◆+ / ◆−) |
+| `M` | Ton an/aus |
+
+## Was drin ist
+
+- **3 Level**: *Erste Schritte* (★), *Neon-Fabrik* (★★), *Hyperraum* (★★★), je ca. 30 Sekunden
+- Stacheln, Blöcke, Plattformen, gelbe/pinke **Sprungpads**, gelbe/pinke **Orbs** (in der Luft antippen)
+  und **blaue Orbs**, die die Schwerkraft umdrehen
+- **Portale**: Schiff-Modus (halten = steigen), Würfel-Modus, Schwerkraft umdrehen, Geschwindigkeit
+- **3 Münzen** pro Level, Bestwert in Prozent, Versuchszähler — alles wird lokal im Browser gespeichert
+- **Übungsmodus** mit Checkpoints; die Musik läuft dabei einfach weiter
+- Musik und Soundeffekte werden live mit der WebAudio-API erzeugt, der Hintergrund pulsiert im Takt
+
+## Technik
+
+- Physik mit fester Rate von 240 Hz, zwei Hitboxen wie im Vorbild: die äußere für Stacheln und
+  zum Aufsetzen, eine kleine innere, die nur bei frontalem Aufprall auf Blöcke tödlich ist
+- Level sind als kleine ASCII-Blöcke im Code notiert (Legende steht direkt darüber) und leicht erweiterbar
+- Jedes Level wurde mit einem Löser geprüft, der per Breitensuche alle Eingabefolgen mit genau dieser
+  Physik durchspielt: alle Level samt aller Münzen sind schaffbar, auch wenn man nur alle 100 ms
+  die Eingabe ändern darf
+- In der Konsole liegt `window.GEO_RUSH` (u. a. `Game`, `PARSED`, `step`) zum Herumprobieren
