@@ -31,7 +31,7 @@ const DEFAULT_SETTINGS = {
   quality: 'hoch', shadows: true, renderScale: 1.0, viewDist: 520, fov: 80,
   showFps: false, cameraShake: true, particles: true,
   // Audio
-  master: 0.8, sfx: 0.9, music: 0.45,
+  master: 0.8, sfx: 0.9,
   // HUD
   crosshairColor: '#ffffff', crosshairSize: 1.0, damageNumbers: true, minimap: true,
   minimapZoom: 1.0, hudScale: 1.0,

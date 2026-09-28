@@ -4,8 +4,8 @@
    ============================================================ */
 
 const SFX = {
-  ctx: null, master: null, sfx: null, music: null, noiseBuf: null,
-  musicTimer: null, musicMode: null, wind: null, windGain: null, stormHum: null,
+  ctx: null, master: null, sfx: null, noiseBuf: null,
+  wind: null, windGain: null, stormHum: null,
 
   init() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
@@ -15,7 +15,6 @@ const SFX = {
     this.master = this.ctx.createGain();
     this.master.connect(this.ctx.destination);
     this.sfx = this.ctx.createGain(); this.sfx.connect(this.master);
-    this.music = this.ctx.createGain(); this.music.connect(this.master);
     const len = this.ctx.sampleRate * 2;
     this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
@@ -32,13 +31,11 @@ const SFX = {
     const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180;
     this.stormGain = this.ctx.createGain(); this.stormGain.gain.value = 0;
     o.connect(lp); lp.connect(this.stormGain); this.stormGain.connect(this.sfx); o.start();
-    if (this.musicMode) this.playMusic(this.musicMode, true);
   },
   applyVolumes() {
     if (!this.ctx) return;
     this.master.gain.value = Settings.master;
     this.sfx.gain.value = Settings.sfx;
-    this.music.gain.value = Settings.music * 0.5;
   },
   get ok() { return !!this.ctx && this.ctx.state === 'running'; },
   now() { return this.ctx.currentTime; },
@@ -129,46 +126,4 @@ const SFX = {
 
   setWind(v) { if (this.windGain) this.windGain.gain.value = damp(this.windGain.gain.value, v, 6, 1 / 60); if (this.windFilter) this.windFilter.frequency.value = 350 + v * 900; },
   setStorm(v) { if (this.stormGain) this.stormGain.gain.value = damp(this.stormGain.gain.value, v, 4, 1 / 60); },
-
-  /* ---------- Musik: kleine generative Loops ---------- */
-  playMusic(mode, force) {
-    if (this.musicMode === mode && !force) return;
-    this.musicMode = mode;
-    if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
-    if (!this.ctx || !mode) return;
-    const bpm = mode === 'menu' ? 104 : mode === 'victory' ? 120 : 80;
-    const step = 60 / bpm / 2;
-    let next = this.ctx.currentTime + 0.1, n = 0;
-    const prog = mode === 'menu'
-      ? [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]
-      : mode === 'victory' ? [[60, 64, 67], [65, 69, 72], [67, 71, 74], [60, 64, 67]]
-        : [[45, 52, 57], [43, 50, 55], [41, 48, 53], [43, 50, 55]];
-    const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-    const play = (freq, t, dur, vol, type) => {
-      const o = this.ctx.createOscillator(); o.type = type; o.frequency.value = freq;
-      const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1800;
-      const g = this.ctx.createGain();
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(f); f.connect(g); g.connect(this.music); o.start(t); o.stop(t + dur + 0.05);
-    };
-    this.musicTimer = setInterval(() => {
-      if (!this.ctx) return;
-      while (next < this.ctx.currentTime + 0.3) {
-        const chord = prog[Math.floor(n / 8) % prog.length];
-        const i = n % 8;
-        if (mode === 'game') {
-          if (i === 0) chord.forEach(m => play(mtof(m), next, step * 8, 0.05, 'triangle'));
-          if (i % 4 === 2) play(mtof(chord[0] - 12), next, step * 1.5, 0.08, 'sine');
-        } else {
-          play(mtof(chord[i % 3] + 12 + (i > 3 ? 12 : 0)), next, step * 0.9, 0.06, 'square');
-          if (i % 2 === 0) play(mtof(chord[0] - 12), next, step * 1.8, 0.1, 'triangle');
-          if (i === 0) chord.forEach(m => play(mtof(m), next, step * 8, 0.035, 'sawtooth'));
-          if (i % 4 === 0) { const s = this.ctx.createBufferSource(); s.buffer = this.noiseBuf; const g = this.ctx.createGain(); g.gain.setValueAtTime(0.12, next); g.gain.exponentialRampToValueAtTime(0.001, next + 0.12); const hp = this.ctx.createBiquadFilter(); hp.type = 'lowpass'; hp.frequency.value = 180; s.connect(hp); hp.connect(g); g.connect(this.music); s.start(next); s.stop(next + 0.15); }
-          if (i % 2 === 1) { const s = this.ctx.createBufferSource(); s.buffer = this.noiseBuf; const g = this.ctx.createGain(); g.gain.setValueAtTime(0.03, next); g.gain.exponentialRampToValueAtTime(0.001, next + 0.05); const hp = this.ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000; s.connect(hp); hp.connect(g); g.connect(this.music); s.start(next); s.stop(next + 0.06); }
-        }
-        next += step; n++;
-        if (mode === 'victory' && n > 64) { this.playMusic('menu'); return; }
-      }
-    }, 80);
-  },
 };

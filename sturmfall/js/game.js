@@ -148,7 +148,6 @@ class Game {
     }
     this.camYaw = this.player.yaw;
     this.hud.banner('Los geht\'s! Finde Waffen!', '#ffd23f');
-    SFX.playMusic('game');
   }
   onPlayerLanded() {
     const p = this.player;
@@ -163,7 +162,7 @@ class Game {
     a.pos.copy(this.ship.position).add(new THREE.Vector3(0, -8, 0));
     a.vel.set(dir.x * 12, -5, dir.z * 12);
     a.yaw = Math.atan2(dir.x, dir.z);
-    if (a.isPlayer) { SFX.jumpOut(); this.state = 'play'; this.camYaw = a.yaw; this.camPitch = -0.5; SFX.playMusic('game'); }
+    if (a.isPlayer) { SFX.jumpOut(); this.state = 'play'; this.camYaw = a.yaw; this.camPitch = -0.5; }
   }
 
   /* ---------------- Beute ---------------- */
@@ -465,7 +464,7 @@ class Game {
       if (winner && winner.isPlayer) {
         this.state = 'won'; this.over = true;
         winner.emoteT = 0;
-        SFX.victory(); SFX.playMusic('victory');
+        SFX.victory();
         this.hud.victory();
         setTimeout(() => { if (!this.disposed) this.finish(true); }, 5500);
       } else {

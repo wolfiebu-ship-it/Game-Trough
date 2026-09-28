@@ -32,6 +32,8 @@ const Touch = {
       if (e.target.closest('.bmat')) Input.vhits.add('material');
     });
     document.getElementById('mats').addEventListener('click', () => Input.vhits.add('material'));
+    const hint = document.getElementById('shipHint');
+    hint.addEventListener('touchstart', e => { if (hint.classList.contains('tap')) { e.preventDefault(); Input.vhits.add('jump'); } }, { passive: false });
   },
   press(act, id) {
     this.btnIds.set(id, act);

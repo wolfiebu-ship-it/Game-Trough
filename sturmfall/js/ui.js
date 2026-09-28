@@ -99,7 +99,6 @@ const SETTINGS_UI = {
   'Audio': [
     { k: 'master', label: 'Gesamtlautstärke', type: 'range', min: 0, max: 1, step: 0.01, fmt: v => Math.round(v * 100) + ' %' },
     { k: 'sfx', label: 'Effekte', type: 'range', min: 0, max: 1, step: 0.01, fmt: v => Math.round(v * 100) + ' %' },
-    { k: 'music', label: 'Musik', type: 'range', min: 0, max: 1, step: 0.01, fmt: v => Math.round(v * 100) + ' %' },
   ],
   'HUD': [
     { k: 'crosshairColor', label: 'Fadenkreuz-Farbe', type: 'color' },

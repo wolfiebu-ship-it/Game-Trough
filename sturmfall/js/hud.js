@@ -219,9 +219,19 @@ class HUD {
     this.cstrip.style.transform = `translateX(${-((hd + 360) * 4) + this.el.compass.clientWidth / 2}px)`;
     // Luftschiff / Zuschauen
     this.el.shipHint.classList.toggle('hidden', !(p.state === 'airship'));
-    if (p.state === 'airship') this.el.shipHint.innerHTML = g.doorsT > 0 ? `Türen öffnen in <b>${Math.ceil(g.doorsT)}</b>` : `<b>[${kh('jump')}]</b> Abspringen`;
-    else if (p.state === 'skydive') { this.el.shipHint.classList.remove('hidden'); this.el.shipHint.innerHTML = `Höhe ${Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)))} m · <b>[${kh('jump')}]</b> Gleiter öffnen · <b>[${kh('forward')}]</b> Sturzflug`; }
+    let tap = false;
+    if (p.state === 'airship') {
+      tap = Input.touch && g.doorsT <= 0;
+      this.el.shipHint.innerHTML = g.doorsT > 0 ? `Türen öffnen in <b>${Math.ceil(g.doorsT)}</b>` : Input.touch ? '<b>ABSPRINGEN</b>' : `<b>[${kh('jump')}]</b> Abspringen`;
+    }
+    else if (p.state === 'skydive') {
+      this.el.shipHint.classList.remove('hidden');
+      const hgt = Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)));
+      tap = Input.touch && hgt < 110;
+      this.el.shipHint.innerHTML = Input.touch ? (tap ? `<b>GLEITER ÖFFNEN</b> · ${hgt} m` : `Höhe ${hgt} m`) : `Höhe ${hgt} m · <b>[${kh('jump')}]</b> Gleiter öffnen · <b>[${kh('forward')}]</b> Sturzflug`;
+    }
     else if (p.state === 'glide') { this.el.shipHint.classList.remove('hidden'); this.el.shipHint.innerHTML = `Höhe ${Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)))} m`; }
+    this.el.shipHint.classList.toggle('tap', tap);
     const spec = g.state === 'dead' && g.spectating && g.spectating.alive;
     this.el.spectate.classList.toggle('hidden', !spec);
     if (spec) this.el.spectate.innerHTML = `Du schaust <b>${esc(g.spectating.name)}</b> zu · ${g.spectating.kills} Elim. · Linksklick: Nächster`;

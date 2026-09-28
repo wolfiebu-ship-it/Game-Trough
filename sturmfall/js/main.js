@@ -63,7 +63,7 @@ function boot() {
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden && window.game && !window.game.paused && !window.game.endShown) pauseGame(); });
   // erste Nutzerinteraktion schaltet Audio frei
-  const unlock = () => { SFX.init(); if (!window.game) SFX.playMusic('menu'); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
+  const unlock = () => { SFX.init(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
   window.addEventListener('pointerdown', unlock); window.addEventListener('keydown', unlock);
   document.getElementById('loading').classList.add('hidden');
   Intro.run();
@@ -125,7 +125,6 @@ function quitToMenu() {
   if (window.game) { window.game.dispose(); window.game = null; }
   Input.unlock(); Input.enabled = false;
   document.getElementById('clicklock').classList.add('hidden');
-  SFX.playMusic('menu');
   UI.show('menu');
 }
 
