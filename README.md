@@ -9,6 +9,24 @@ entsteht beim Laden zur Laufzeit.
 
 `index.html` doppelklicken. Fertig. (Alternativ `npx serve .` — nötig ist es nicht.)
 
+## Als App aufs Handy
+
+WALDWACHT ist eine installierbare Web-App (PWA) mit eigenem Icon, eigenem
+Fenster ohne Browserleiste und Offline-Cache. Dafür muss die Seite über eine
+echte `http(s)`-Adresse laufen (z. B. GitHub Pages), nicht als lokal
+geöffnete Datei:
+
+- **iPhone/iPad (Safari):** Seite öffnen → Teilen-Symbol → „Zum
+  Home-Bildschirm“. Das Icon landet direkt neben den anderen Apps und
+  startet vollflächig ohne Adressleiste.
+- **Android (Chrome):** Seite öffnen → Menü (⋮) → „App installieren“ bzw.
+  „Zum Startbildschirm hinzufügen“.
+
+Technisch steckt dahinter `manifest.json` (Name, Icons, `display:
+standalone`) und `service-worker.js` (cacht die Seite fürs Offline-Spielen).
+Die Icons in `icons/` sind direkt aus dem Helden-Sprite des Spiels gerendert,
+damit sie zum Rest passen.
+
 ## Steuerung
 
 **Tastatur und Maus**

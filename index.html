@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#16241a">
 <title>WALDWACHT</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WALDWACHT">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   :root{ color-scheme: dark; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -2821,6 +2828,12 @@ requestAnimationFrame(frame);
 // Zum Herumprobieren in der Konsole
 window.WALDWACHT = { game, player, enemies, BOT, UPGRADES, spawnEnemy, startWave };
 })();
+// Installierbare App (Zum Home-Bildschirm): Service Worker nur registrieren,
+// wenn ueber http(s) geladen - bei einer lokal geoeffneten Datei (file://)
+// gibt es dafuer keine Unterstuetzung, das Spiel laeuft dann trotzdem normal.
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').catch(()=>{}); });
+}
 </script>
 </body>
 </html>
