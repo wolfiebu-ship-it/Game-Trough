@@ -9,6 +9,23 @@
 <body class="in-menu">
 <canvas id="view"></canvas>
 
+<!-- ======================= TOUCH ======================= -->
+<div id="touch">
+  <div id="tjoy"><i></i></div>
+  <button class="tb tb-pause" data-act="pause" aria-label="Pause">❚❚</button>
+  <button class="tb tb-map" data-act="map" aria-label="Karte">Karte</button>
+  <button class="tb tb-fire" data-act="fire" aria-label="Schießen">FEUER</button>
+  <button class="tb tb-aim" data-act="aim" aria-label="Zielen">◎</button>
+  <button class="tb tb-jump" data-act="jump" aria-label="Springen">⤒</button>
+  <button class="tb tb-crouch" data-act="crouch" aria-label="Ducken">⤓</button>
+  <button class="tb tb-reload" data-act="reload" aria-label="Nachladen">R</button>
+  <button class="tb tb-use" data-act="interact" aria-label="Aufheben">E</button>
+  <button class="tb tb-build" data-act="build" aria-label="Bauen">▦</button>
+  <button class="tb tb-swap" data-act="swap" aria-label="Waffe wechseln">⇄</button>
+  <button class="tb tb-emote" data-act="emote" aria-label="Tanzen">♪</button>
+</div>
+<div id="rotate"><div>↻<p>Dreh dein Gerät ins Querformat</p></div></div>
+
 <!-- ======================= HUD ======================= -->
 <div id="hud" class="hidden">
   <div id="stormTint"></div>
@@ -66,9 +83,10 @@
       <button data-go="stats">Statistik</button>
       <button data-go="help">Steuerung &amp; Hilfe</button>
     </div>
+    <p class="credit">Designed by <b>EBU</b></p>
     <div class="profile"><b id="menuName">Spieler</b> · <span id="menuOutfit"></span> · <span id="menuWins">0</span> Siege</div>
   </div>
-  <p class="footer">Ein eigenständiges Fan-Projekt im Stil von Battle-Royale-Spielen. Alle Namen, Figuren und Inhalte sind selbst erstellt.</p>
+  <p class="footer">Ein eigenständiges Fan-Projekt im Stil von Battle-Royale-Spielen. Alle Namen, Figuren und Inhalte sind selbst erstellt. Designed by Ebu.</p>
 </div>
 
 <div id="scr-setup" class="screen hidden">
@@ -144,6 +162,7 @@
 </div>
 
 <div id="clicklock" class="hidden"><div>Klicken zum Weiterspielen</div></div>
+<div id="intro" class="hidden"><canvas></canvas><button id="introSkip" type="button">Überspringen ›</button></div>
 <div id="loading"><div class="spinner"></div><p>Lade …</p></div>
 <div id="fatal" class="hidden"><h2>Ups!</h2><p>Die 3D-Bibliothek konnte nicht geladen werden.</p></div>
 
@@ -161,6 +180,8 @@
 <script src="js/actor.js"></script>
 <script src="js/bots.js"></script>
 <script src="js/hud.js"></script>
+<script src="js/touch.js"></script>
+<script src="js/intro.js"></script>
 <script src="js/game.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

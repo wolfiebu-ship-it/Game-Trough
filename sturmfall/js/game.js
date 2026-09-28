@@ -548,8 +548,12 @@ class Game {
     inp.dive = true;
     if (Settings.toggleCrouch) { if (Input.pressed('crouch')) this.crouchToggled = !this.crouchToggled; if (inp.sprint && inp.fz > 0) this.crouchToggled = false; inp.crouch = this.crouchToggled; }
     else inp.crouch = Input.held('crouch');
-    inp.fire = Input.mouse[0];
-    inp.aim = Input.mouse[2];
+    if (Input.axis.on) {
+      inp.fz = -Input.axis.y; inp.fx = Input.axis.x;
+      if (Math.hypot(Input.axis.x, Input.axis.y) > 0.92 && inp.fz > 0.6) inp.sprint = true;
+    }
+    inp.fire = Input.mouse[0] || Input.tFire;
+    inp.aim = Input.mouse[2] || Input.tAim;
     if (p.state !== 'ground') { inp.fire = false; inp.aim = false; }
 
     if (Input.pressed('reload')) p.startReload();

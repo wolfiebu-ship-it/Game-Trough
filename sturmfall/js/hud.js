@@ -23,6 +23,12 @@ const BUILD_ICONS = {
   roof: '<svg viewBox="0 0 32 32"><path d="M4 24 L16 6 L28 24 Z" fill="none" stroke="#fff" stroke-width="3"/></svg>',
 };
 
+/* Tastenhinweis – auf Touch-Geräten mit Button-Symbolen */
+function kh(action) {
+  if (Input.touch) return { jump: '⤒', forward: 'Joystick nach vorn', interact: 'E-Knopf', map: 'Karte' }[action] || keyLabel(Settings.keys[action]);
+  return keyLabel(Settings.keys[action]);
+}
+
 class HUD {
   constructor(game) {
     this.g = game;
@@ -213,8 +219,8 @@ class HUD {
     this.cstrip.style.transform = `translateX(${-((hd + 360) * 4) + this.el.compass.clientWidth / 2}px)`;
     // Luftschiff / Zuschauen
     this.el.shipHint.classList.toggle('hidden', !(p.state === 'airship'));
-    if (p.state === 'airship') this.el.shipHint.innerHTML = g.doorsT > 0 ? `Türen öffnen in <b>${Math.ceil(g.doorsT)}</b>` : `<b>[${keyLabel(Settings.keys.jump)}]</b> Abspringen`;
-    else if (p.state === 'skydive') { this.el.shipHint.classList.remove('hidden'); this.el.shipHint.innerHTML = `Höhe ${Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)))} m · <b>[${keyLabel(Settings.keys.jump)}]</b> Gleiter öffnen · <b>[${keyLabel(Settings.keys.forward)}]</b> Sturzflug`; }
+    if (p.state === 'airship') this.el.shipHint.innerHTML = g.doorsT > 0 ? `Türen öffnen in <b>${Math.ceil(g.doorsT)}</b>` : `<b>[${kh('jump')}]</b> Abspringen`;
+    else if (p.state === 'skydive') { this.el.shipHint.classList.remove('hidden'); this.el.shipHint.innerHTML = `Höhe ${Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)))} m · <b>[${kh('jump')}]</b> Gleiter öffnen · <b>[${kh('forward')}]</b> Sturzflug`; }
     else if (p.state === 'glide') { this.el.shipHint.classList.remove('hidden'); this.el.shipHint.innerHTML = `Höhe ${Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)))} m`; }
     const spec = g.state === 'dead' && g.spectating && g.spectating.alive;
     this.el.spectate.classList.toggle('hidden', !spec);
@@ -224,7 +230,7 @@ class HUD {
     if (p.alive && p.state === 'ground') {
       const t = g.playerInteractTarget();
       if (t) {
-        const k = keyLabel(Settings.keys.interact);
+        const k = kh('interact');
         if (t.isPickup) {
           const it = t.item;
           const rar = it.type === 'weapon' ? `<span style="color:${RARITIES[it.rarity].color}">${RARITIES[it.rarity].name}</span> ` : '';

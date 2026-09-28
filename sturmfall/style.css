@@ -260,3 +260,51 @@ kbd { display: inline-block; background: rgba(255,255,255,0.14); border: 1px sol
   #bottomright, #bottomleft { transform: scale(calc(var(--hud-scale) * 0.75)); }
 }
 button.armed { background: #ff5a5a !important; color: #fff !important; border-color: #ffd0d0 !important; }
+
+/* ---------------- Credit ---------------- */
+.credit { margin: -10px 0 8px; font-family: var(--head); font-size: 14px; letter-spacing: 3px; text-transform: uppercase; color: #9fe9ff; }
+.credit b { color: #fff; background: linear-gradient(90deg, #39f0ff, #ff2ea6, #ffd23f); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: 18px; letter-spacing: 4px; }
+
+/* ---------------- Intro ---------------- */
+#intro { position: fixed; inset: 0; z-index: 60; cursor: pointer; background: #070314; }
+#intro canvas { width: 100%; height: 100%; display: block; }
+#introSkip { position: absolute; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: rgba(255,255,255,0.1); color: #fff; border: 2px solid rgba(255,255,255,0.35);
+  border-radius: 10px; padding: 8px 16px; font-family: var(--head); font-size: 14px; letter-spacing: 1px; }
+#introSkip:hover, #introSkip:focus-visible { background: rgba(255,255,255,0.25); outline: none; }
+
+/* ---------------- Spielen ohne Maussperre ---------------- */
+body.playing:not(.touch) #view { cursor: crosshair; }
+
+/* ---------------- Touch ---------------- */
+#touch { position: fixed; inset: 0; z-index: 9; display: none; touch-action: none; -webkit-user-select: none; }
+body.touch.playing #touch { display: block; }
+#tjoy { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.2); display: none; pointer-events: none; }
+#tjoy.on { display: block; }
+#tjoy i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; border-radius: 50%; background: rgba(255,255,255,0.55); box-shadow: 0 0 12px rgba(0,0,0,0.4); }
+.tb { position: absolute; width: 58px; height: 58px; border-radius: 50%; background: rgba(15,8,40,0.45); border: 2px solid rgba(255,255,255,0.45); color: #fff;
+  font-family: var(--head); font-size: 20px; display: flex; align-items: center; justify-content: center; padding: 0; touch-action: none; }
+.tb.on { background: rgba(255,210,63,0.55); border-color: #ffd23f; }
+.tb-fire { width: 86px; height: 86px; right: calc(26px + env(safe-area-inset-right, 0px)); bottom: 150px; font-size: 15px; background: rgba(255,46,100,0.45); border-color: #ff8fb0; }
+.tb-aim { right: calc(126px + env(safe-area-inset-right, 0px)); bottom: 200px; font-size: 28px; }
+.tb-jump { right: calc(30px + env(safe-area-inset-right, 0px)); bottom: 250px; }
+.tb-crouch { right: calc(126px + env(safe-area-inset-right, 0px)); bottom: 128px; }
+.tb-reload { right: calc(196px + env(safe-area-inset-right, 0px)); bottom: 164px; width: 48px; height: 48px; font-size: 18px; }
+.tb-use { right: calc(100px + env(safe-area-inset-right, 0px)); bottom: 270px; width: 52px; height: 52px; background: rgba(57,240,255,0.3); }
+.tb-build { right: calc(196px + env(safe-area-inset-right, 0px)); bottom: 228px; width: 48px; height: 48px; }
+.tb-swap { right: calc(40px + env(safe-area-inset-right, 0px)); bottom: 330px; width: 46px; height: 46px; font-size: 18px; }
+.tb-emote { right: calc(196px + env(safe-area-inset-right, 0px)); bottom: 292px; width: 44px; height: 44px; font-size: 18px; }
+.tb-pause { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); width: 44px; height: 44px; font-size: 14px; border-radius: 10px; }
+.tb-map { left: calc(64px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); width: 64px; height: 44px; font-size: 13px; border-radius: 10px; }
+body.touch #bottomright { right: 50%; transform: translateX(50%) scale(calc(var(--hud-scale) * 0.72)); transform-origin: bottom center; }
+body.touch #bottomright .slot, body.touch #buildBar .bp, body.touch #buildBar .bmat, body.touch #mats { pointer-events: auto; }
+body.touch #bottomleft { transform: scale(calc(var(--hud-scale) * 0.7)); }
+body.touch #fps { left: 140px; }
+body.touch #prompt { bottom: 130px; }
+body.touch #toast { bottom: 170px; }
+#rotate { position: fixed; inset: 0; z-index: 70; display: none; background: #120a28; align-items: center; justify-content: center; text-align: center; font-family: var(--head); font-size: 64px; color: #ffd23f; }
+#rotate p { font-size: 18px; color: #fff; }
+@media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
+@media (max-height: 460px) {
+  .tb-fire { bottom: 110px; } .tb-aim { bottom: 150px; } .tb-jump { bottom: 200px; } .tb-crouch { bottom: 84px; }
+  .tb-reload { bottom: 120px; } .tb-use { bottom: 218px; } .tb-build { bottom: 176px; } .tb-swap { bottom: 262px; } .tb-emote { bottom: 232px; }
+}

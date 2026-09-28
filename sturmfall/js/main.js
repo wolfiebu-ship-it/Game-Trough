@@ -31,6 +31,7 @@ function boot() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   applyPixelRatio();
   Input.init(cv);
+  Touch.init();
   lobby = new Lobby();
   UI.init();
   window.addEventListener('resize', () => {
@@ -38,31 +39,40 @@ function boot() {
     lobby.resize(window.innerWidth, window.innerHeight);
     if (window.game) window.game.resize(window.innerWidth, window.innerHeight);
   });
-  Input.onLockChange = locked => {
+  Input.onLockChange = (locked, withoutLock) => {
     const g = window.game;
     document.getElementById('clicklock').classList.add('hidden');
     if (!g) return;
-    if (locked) { UI.hideAll(); g.paused = false; }
+    if (locked) {
+      UI.hideAll(); g.paused = false; Input.enabled = true;
+      if (withoutLock && !Input.touch && !g.freeHintShown) { g.freeHintShown = true; g.hud.toast('Maus wird ohne Sperre benutzt – zum Drehen an den Rand fahren oder ins Bild klicken', 4); }
+    }
     else if (!g.endShown || g.spectateMode) {
       if (g.endShown && g.spectateMode) { g.spectateMode = false; UI.showEnd(g.endInfo(g.state === 'won')); return; }
       pauseGame();
     }
   };
-  Input.onLockFail = () => { if (window.game && !window.game.endShown) document.getElementById('clicklock').classList.remove('hidden'); };
+  Input.onEscape = () => {
+    const g = window.game; if (!g) return;
+    if (g.endShown) { if (g.spectateMode) { g.spectateMode = false; Input.unlock(); UI.showEnd(g.endInfo(g.state === 'won')); } return; }
+    if (!g.paused) pauseGame();
+  };
   cv.addEventListener('click', () => {
     const g = window.game;
-    if (g && !Input.locked && !g.paused && (!g.endShown || g.spectateMode)) Input.lock();
+    if (g && !Input.locked && !Input.touch && !g.paused && (!g.endShown || g.spectateMode)) Input.lock();
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden && window.game && !window.game.paused && !window.game.endShown) pauseGame(); });
   // erste Nutzerinteraktion schaltet Audio frei
   const unlock = () => { SFX.init(); if (!window.game) SFX.playMusic('menu'); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
   window.addEventListener('pointerdown', unlock); window.addEventListener('keydown', unlock);
   document.getElementById('loading').classList.add('hidden');
+  if (Settings.showIntro) Intro.run();
   let last = performance.now();
   const loop = now => {
     const dt = Math.min(0.05, Math.max(0.0001, (now - last) / 1000));
     last = now;
     const g = window.game;
+    document.body.classList.toggle('playing', !!(g && !g.paused && Input.active && !UI.screen));
     if (g) { g.update(dt); g.render(); }
     else { lobby.update(dt); renderer.render(lobby.scene, lobby.camera); }
     Input.endFrame();
@@ -100,6 +110,8 @@ function pauseGame() {
   const g = window.game; if (!g) return;
   g.paused = true;
   Input.enabled = false;
+  Input.free = false; Input.tFire = false; Input.axis.on = false; Input.vheld.clear(); Touch.reset();
+  if (document.pointerLockElement) document.exitPointerLock();
   UI.show('pause');
 }
 function resumeGame() {
