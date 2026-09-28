@@ -115,6 +115,17 @@ const SETTINGS_UI = {
   ],
 };
 
+/* Bestätigung per zweitem Klick (Browser-Dialoge sind nicht überall erlaubt) */
+function confirmClick(btn, question, action) {
+  const label = btn.textContent;
+  let armed = false, timer = null;
+  btn.addEventListener('click', () => {
+    if (armed) { clearTimeout(timer); armed = false; btn.textContent = label; btn.classList.remove('armed'); action(); return; }
+    armed = true; btn.textContent = question; btn.classList.add('armed');
+    timer = setTimeout(() => { armed = false; btn.textContent = label; btn.classList.remove('armed'); }, 3000);
+  });
+}
+
 const UI = {
   screen: null, prev: null, settingsTab: 'Steuerung',
   init() {
@@ -126,17 +137,17 @@ const UI = {
     this.$('btnResume').addEventListener('click', () => resumeGame());
     this.$('btnPauseSettings').addEventListener('click', () => { this.prev = 'pause'; this.show('settings'); });
     this.$('btnPauseHelp').addEventListener('click', () => { this.prev = 'pause'; this.show('help'); });
-    this.$('btnLeave').addEventListener('click', () => { if (confirm('Match wirklich verlassen?')) quitToMenu(); });
+    confirmClick(this.$('btnLeave'), 'Wirklich verlassen?', () => quitToMenu());
     this.$('btnSettingsBack').addEventListener('click', () => this.back());
     this.$('btnHelpBack').addEventListener('click', () => this.back());
-    this.$('btnSettingsReset').addEventListener('click', () => { if (confirm('Alle Einstellungen auf Standard zurücksetzen?')) { resetSettings(); applySettingsLive(); this.renderSettings(); } });
+    confirmClick(this.$('btnSettingsReset'), 'Wirklich zurücksetzen?', () => { resetSettings(); applySettingsLive(); this.renderSettings(); });
     this.$('btnAgain').addEventListener('click', () => { startMatch(); });
     this.$('btnEndMenu').addEventListener('click', () => quitToMenu());
     this.$('btnSpectate').addEventListener('click', () => { this.hideAll(); window.game.spectateMode = true; Input.lock(); });
     this.$('btnDance').addEventListener('click', () => lobby.dance());
     this.$('btnWalk').addEventListener('click', () => { lobby.walkPreview = !lobby.walkPreview; this.$('btnWalk').textContent = lobby.walkPreview ? 'Stehen' : 'Laufen'; });
     this.$('clicklock').addEventListener('click', () => { Input.lock(); });
-    this.$('btnResetStats').addEventListener('click', () => { if (confirm('Statistik wirklich löschen?')) { for (const k in Stats) Stats[k] = 0; saveStats(); this.renderStats(); } });
+    confirmClick(this.$('btnResetStats'), 'Wirklich löschen?', () => { for (const k in Stats) Stats[k] = 0; saveStats(); this.renderStats(); });
     window.addEventListener('keydown', e => {
       if (e.code === 'Escape' && !Input.rebindCb) {
         if (this.screen === 'settings' || this.screen === 'help') this.back();
