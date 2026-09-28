@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STURMFALL</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="in-menu">
+<canvas id="view"></canvas>
+
+<!-- ======================= HUD ======================= -->
+<div id="hud" class="hidden">
+  <div id="stormTint"></div>
+  <div id="hurt"></div>
+  <div id="scope" class="hidden"><div class="lens"></div></div>
+  <div id="compass"></div>
+  <div id="topright">
+    <div class="mmwrap"><canvas id="minimap" width="200" height="200"></canvas></div>
+    <div class="storm"><span id="stormText">Sturm</span> <b id="stormTime"></b></div>
+    <div class="counters"><span title="Noch am Leben"><i class="ic ic-alive"></i><b id="alive">0</b></span><span title="Eliminierungen"><i class="ic ic-kill"></i><b id="kills">0</b></span></div>
+  </div>
+  <div id="stormWarn" class="hidden"></div>
+  <div id="killfeed"></div>
+  <div id="pickups"></div>
+  <div id="banner"></div>
+  <div id="elim"></div>
+  <div id="toast"></div>
+  <div id="shipHint" class="hidden"></div>
+  <div id="spectate" class="hidden"></div>
+  <div id="crosshair" data-mode="gun"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="d"></i><i class="c"></i></div>
+  <div id="hitmarker"></div>
+  <div id="dmgdir"></div>
+  <div id="dmgnums"></div>
+  <div id="structHp"><div id="structFill"></div><span></span></div>
+  <div id="matgain"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="progress" class="hidden"><div id="progressFill"></div><span id="progressText"></span></div>
+  <div id="bottomleft">
+    <div class="bar shield"><div id="shBar"></div><span id="shText">0</span></div>
+    <div class="bar hp"><div id="hpBar"></div><span id="hpText">100</span></div>
+  </div>
+  <div id="bottomright">
+    <div id="buildBar" class="hidden"></div>
+    <div class="row">
+      <div id="ammoBox" class="hidden"><b id="ammoMag">0</b><span id="ammoRes">0</span><small></small></div>
+      <div id="slots"></div>
+      <div id="mats"></div>
+    </div>
+  </div>
+  <div id="fps"></div>
+  <div id="bigmap" class="hidden"><div class="mapframe"><canvas width="640" height="640"></canvas><p>Karte schließen: <b>M</b> · Gestrichelt: nächste sichere Zone</p></div></div>
+  <div id="victory" class="hidden"><div>#1 SIEG!</div></div>
+</div>
+
+<!-- ======================= MENÜS ======================= -->
+<div id="scr-menu" class="screen hidden">
+  <div class="menu-left">
+    <h1 class="logo">STURM<span>FALL</span></h1>
+    <p class="tag">Abspringen. Looten. Bauen. Überleben.</p>
+    <div class="menu-buttons">
+      <button class="big primary" data-go="setup">Neues Spiel</button>
+      <button id="btnQuick" class="big">Schnellstart</button>
+      <button data-go="locker">Spind</button>
+      <button data-go="settings">Einstellungen</button>
+      <button data-go="stats">Statistik</button>
+      <button data-go="help">Steuerung &amp; Hilfe</button>
+    </div>
+    <div class="profile"><b id="menuName">Spieler</b> · <span id="menuOutfit"></span> · <span id="menuWins">0</span> Siege</div>
+  </div>
+  <p class="footer">Ein eigenständiges Fan-Projekt im Stil von Battle-Royale-Spielen. Alle Namen, Figuren und Inhalte sind selbst erstellt.</p>
+</div>
+
+<div id="scr-setup" class="screen hidden">
+  <div class="panel">
+    <h2>Neues Spiel</h2>
+    <div class="form">
+      <label>Spielername <input id="setName" maxlength="16"></label>
+      <label>Gegner (Bots) <span class="inl"><input id="setBots" type="range" min="1" max="49" step="1"><b id="setBotsVal">24</b></span></label>
+      <label>Schwierigkeit <select id="setDiff"><option value="leicht">Leicht</option><option value="normal">Normal</option><option value="schwer">Schwer</option><option value="profi">Profi</option></select></label>
+      <label>Start <select id="setStart"><option value="luftschiff">Luftschiff-Absprung</option><option value="boden">Direkt am Boden</option></select></label>
+      <label>Sturm-Tempo <select id="setStorm"><option value="langsam">Langsam</option><option value="normal">Normal</option><option value="schnell">Schnell</option><option value="turbo">Turbo</option></select></label>
+      <label>Beute-Menge <select id="setLoot"><option value="wenig">Wenig</option><option value="normal">Normal</option><option value="viel">Viel</option></select></label>
+      <label>Baumaterial <select id="setMats"><option value="normal">Normal (selbst ernten)</option><option value="viel">Viel (Startbonus)</option><option value="unbegrenzt">Unbegrenzt (Kreativ)</option></select></label>
+      <label>Karten-Seed <span class="inl"><input id="setSeed" placeholder="leer = zufällige Insel"><button id="btnRandomSeed" type="button" class="small">🎲</button></span></label>
+    </div>
+    <div class="actions"><button data-go="menu">Zurück</button><button id="btnStart" class="primary big">Match starten</button></div>
+  </div>
+</div>
+
+<div id="scr-settings" class="screen hidden">
+  <div class="panel wide">
+    <h2>Einstellungen</h2>
+    <div id="setTabs" class="tabs"></div>
+    <div id="setBody" class="setbody"></div>
+    <div class="actions"><button id="btnSettingsReset">Standard wiederherstellen</button><button id="btnSettingsBack" class="primary">Fertig</button></div>
+  </div>
+</div>
+
+<div id="scr-locker" class="screen hidden">
+  <div class="panel side">
+    <h2>Spind</h2>
+    <p class="hint">Wähle dein Outfit. Du kannst die Figur in der Vorschau mit der Maus drehen.</p>
+    <div id="outfits"></div>
+    <div class="actions"><button id="btnWalk">Laufen</button><button id="btnDance">Tanzen</button><button data-go="menu" class="primary">Fertig</button></div>
+  </div>
+</div>
+
+<div id="scr-stats" class="screen hidden">
+  <div class="panel">
+    <h2>Statistik</h2>
+    <div id="statsBody" class="stats"></div>
+    <div class="actions"><button id="btnResetStats">Zurücksetzen</button><button data-go="menu" class="primary">Zurück</button></div>
+  </div>
+</div>
+
+<div id="scr-help" class="screen hidden">
+  <div class="panel wide">
+    <h2>Steuerung &amp; Hilfe</h2>
+    <div id="helpBody"></div>
+    <div class="actions"><button id="btnHelpBack" class="primary">Zurück</button></div>
+  </div>
+</div>
+
+<div id="scr-pause" class="screen hidden dim">
+  <div class="panel narrow">
+    <h2>Pause</h2>
+    <div class="menu-buttons">
+      <button id="btnResume" class="big primary">Weiter</button>
+      <button id="btnPauseSettings">Einstellungen</button>
+      <button id="btnPauseHelp">Steuerung &amp; Hilfe</button>
+      <button id="btnLeave" class="danger">Match verlassen</button>
+    </div>
+  </div>
+</div>
+
+<div id="scr-end" class="screen hidden dim">
+  <div class="panel">
+    <h2 id="endTitle">Platz #1</h2>
+    <p id="endSub" class="endsub"></p>
+    <div id="endStats" class="stats"></div>
+    <div class="actions"><button id="btnSpectate">Zuschauen</button><button id="btnEndMenu">Hauptmenü</button><button id="btnAgain" class="primary big">Neues Spiel</button></div>
+  </div>
+</div>
+
+<div id="clicklock" class="hidden"><div>Klicken zum Weiterspielen</div></div>
+<div id="loading"><div class="spinner"></div><p>Lade …</p></div>
+<div id="fatal" class="hidden"><h2>Ups!</h2><p>Die 3D-Bibliothek konnte nicht geladen werden.</p></div>
+
+<script src="js/lib/three.min.js"></script>
+<script src="js/util.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/world.js"></script>
+<script src="js/items.js"></script>
+<script src="js/character.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/building.js"></script>
+<script src="js/storm.js"></script>
+<script src="js/actor.js"></script>
+<script src="js/bots.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

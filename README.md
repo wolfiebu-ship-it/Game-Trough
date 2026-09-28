@@ -1,3 +1,14 @@
+# Game-Trough
+
+Zwei Browser-Spiele, beide ohne Installation spielbar:
+
+| Spiel | Starten | Beschreibung |
+|---|---|---|
+| **STURMFALL** | [`sturmfall/index.html`](sturmfall/index.html) | 3D-Battle-Royale: Luftschiff, Gleiter, Looten, Bauen, Sturm, bis zu 49 Bots, Einstellungen, Spind, Statistik ([Anleitung](sturmfall/README.md)) |
+| **NEON CLASH** | [`index.html`](index.html) | 2D-Fighting-Game im Neon-Look (siehe unten) |
+
+---
+
 # NEON CLASH
 
 Ein kleines, fieses 2D-Fighting-Game im Neon-/Retrowave-Look.
