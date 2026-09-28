@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS = {
   toggleSprint: false, toggleCrouch: true, autoGlider: true, autoPickup: true,
   // Grafik
   quality: 'hoch', shadows: true, renderScale: 1.0, viewDist: 520, fov: 80,
-  showFps: false, cameraShake: true, particles: true, showIntro: true,
+  showFps: false, cameraShake: true, particles: true,
   // Audio
   master: 0.8, sfx: 0.9, music: 0.45,
   // HUD

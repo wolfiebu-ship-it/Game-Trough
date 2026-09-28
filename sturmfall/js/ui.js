@@ -95,7 +95,6 @@ const SETTINGS_UI = {
     { k: 'particles', label: 'Partikel-Effekte', type: 'toggle' },
     { k: 'cameraShake', label: 'Kamera-Wackeln', type: 'toggle' },
     { k: 'showFps', label: 'FPS anzeigen', type: 'toggle' },
-    { k: 'showIntro', label: 'Intro „Designed by Ebu“ beim Start zeigen', type: 'toggle' },
   ],
   'Audio': [
     { k: 'master', label: 'Gesamtlautstärke', type: 'range', min: 0, max: 1, step: 0.01, fmt: v => Math.round(v * 100) + ' %' },

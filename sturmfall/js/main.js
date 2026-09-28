@@ -66,7 +66,7 @@ function boot() {
   const unlock = () => { SFX.init(); if (!window.game) SFX.playMusic('menu'); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
   window.addEventListener('pointerdown', unlock); window.addEventListener('keydown', unlock);
   document.getElementById('loading').classList.add('hidden');
-  if (Settings.showIntro) Intro.run();
+  Intro.run();
   let last = performance.now();
   const loop = now => {
     const dt = Math.min(0.05, Math.max(0.0001, (now - last) / 1000));
