@@ -219,19 +219,22 @@ class HUD {
     this.cstrip.style.transform = `translateX(${-((hd + 360) * 4) + this.el.compass.clientWidth / 2}px)`;
     // Luftschiff / Zuschauen
     this.el.shipHint.classList.toggle('hidden', !(p.state === 'airship'));
-    let tap = false;
+    const hgt = Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)));
+    let phase = 'ground', drop = '';
     if (p.state === 'airship') {
-      tap = Input.touch && g.doorsT <= 0;
-      this.el.shipHint.innerHTML = g.doorsT > 0 ? `Türen öffnen in <b>${Math.ceil(g.doorsT)}</b>` : Input.touch ? '<b>ABSPRINGEN</b>' : `<b>[${kh('jump')}]</b> Abspringen`;
-    }
-    else if (p.state === 'skydive') {
+      phase = 'ship'; drop = g.doorsT > 0 ? '' : 'Abspringen';
+      this.el.shipHint.innerHTML = g.doorsT > 0 ? `Türen öffnen in <b>${Math.ceil(g.doorsT)}</b>` : Input.touch ? 'Tippe auf <b>Abspringen</b>' : `<b>[${kh('jump')}]</b> Abspringen`;
+    } else if (p.state === 'skydive') {
+      phase = 'sky'; drop = hgt < 110 ? 'Gleiter' : '';
       this.el.shipHint.classList.remove('hidden');
-      const hgt = Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)));
-      tap = Input.touch && hgt < 110;
-      this.el.shipHint.innerHTML = Input.touch ? (tap ? `<b>GLEITER ÖFFNEN</b> · ${hgt} m` : `Höhe ${hgt} m`) : `Höhe ${hgt} m · <b>[${kh('jump')}]</b> Gleiter öffnen · <b>[${kh('forward')}]</b> Sturzflug`;
+      this.el.shipHint.innerHTML = Input.touch ? `Höhe ${hgt} m · Joystick nach vorn = Sturzflug` : `Höhe ${hgt} m · <b>[${kh('jump')}]</b> Gleiter öffnen · <b>[${kh('forward')}]</b> Sturzflug`;
+    } else if (p.state === 'glide') {
+      phase = 'sky';
+      this.el.shipHint.classList.remove('hidden'); this.el.shipHint.innerHTML = `Höhe ${hgt} m`;
     }
-    else if (p.state === 'glide') { this.el.shipHint.classList.remove('hidden'); this.el.shipHint.innerHTML = `Höhe ${Math.max(0, Math.round(p.pos.y - g.world.heightAt(p.pos.x, p.pos.z)))} m`; }
-    this.el.shipHint.classList.toggle('tap', tap);
+    if (!p.alive || g.state !== 'play' && g.state !== 'airship') phase = 'none';
+    if (document.body.dataset.phase !== phase) document.body.dataset.phase = phase;
+    if (this.dropLabel !== drop) { this.dropLabel = drop; const d = document.getElementById('tdrop'); d.hidden = !drop; d.querySelector('span').textContent = drop; }
     const spec = g.state === 'dead' && g.spectating && g.spectating.alive;
     this.el.spectate.classList.toggle('hidden', !spec);
     if (spec) this.el.spectate.innerHTML = `Du schaust <b>${esc(g.spectating.name)}</b> zu · ${g.spectating.kills} Elim. · Linksklick: Nächster`;

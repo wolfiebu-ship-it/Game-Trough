@@ -209,19 +209,19 @@ class Actor {
     let wx = sy * inp.fz - cy * inp.fx, wz = cy * inp.fz + sy * inp.fx;
     if (this.state === 'skydive') {
       const dive = inp.fz > 0.5 && inp.dive;
-      this.vel.y = damp(this.vel.y, dive ? -58 : -30, 1.6, dt);
-      const hs = dive ? 26 : 17;
+      this.vel.y = damp(this.vel.y, dive ? -34 : -15, 1.4, dt);
+      const hs = dive ? 22 : 15;
       this.vel.x = damp(this.vel.x, wx * hs, 2.2, dt); this.vel.z = damp(this.vel.z, wz * hs, 2.2, dt);
       this.diving = dive;
       const auto = this.isPlayer ? Settings.autoGlider : true;
-      const openH = this.isPlayer ? 42 : (this.botOpenH || 40);
+      const openH = this.isPlayer ? 60 : (this.botOpenH || 55);
       if ((auto && above < openH) || (inp.jump && above < 110) || above < 12) {
         this.state = 'glide';
         if (this.isPlayer) SFX.glider();
       }
       inp.jump = false;
     } else {
-      this.vel.y = damp(this.vel.y, inp.fz > 0.3 ? -9 : -6.5, 2.5, dt);
+      this.vel.y = damp(this.vel.y, inp.fz > 0.3 ? -6.5 : -4.8, 2.5, dt);
       const hs = 11 + Math.max(0, inp.fz) * 6;
       this.vel.x = damp(this.vel.x, wx * hs, 2, dt); this.vel.z = damp(this.vel.z, wz * hs, 2, dt);
     }

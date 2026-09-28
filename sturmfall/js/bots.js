@@ -23,7 +23,7 @@ class BotBrain {
     this.a = actor; this.g = game; this.rng = rng;
     this.d = BOT_DIFF[diffKey] || BOT_DIFF.normal;
     actor.bot = this;
-    actor.botOpenH = rr(rng, 30, 55);
+    actor.botOpenH = rr(rng, 45, 70);
     this.target = null; this.visible = false; this.lastSeen = null; this.lastSeenT = -99;
     this.think = rr(rng, 0, 0.3);
     this.way = null; this.goal = 'roam'; this.goalObj = null;
