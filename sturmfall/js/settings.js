@@ -10,7 +10,7 @@ const ACTIONS = [
   ['build', 'Baumodus an/aus'], ['material', 'Baumaterial wechseln'], ['rotate', 'Bauteil drehen'],
   ['pickaxe', 'Erntehammer'], ['slot1', 'Slot 1'], ['slot2', 'Slot 2'], ['slot3', 'Slot 3'], ['slot4', 'Slot 4'], ['slot5', 'Slot 5'],
   ['wall', 'Bauen: Wand'], ['floor', 'Bauen: Boden'], ['ramp', 'Bauen: Rampe'], ['roof', 'Bauen: Dach'],
-  ['emote', 'Tanzen (Emote)'], ['map', 'Karte'], ['drop', 'Gegenstand fallen lassen'],
+  ['emote', 'Tanzen (Emote)'], ['power', 'Wurzelkraft (nach Geheimcode)'], ['map', 'Karte'], ['drop', 'Gegenstand fallen lassen'],
 ];
 
 const DEFAULT_KEYS = {
@@ -20,7 +20,7 @@ const DEFAULT_KEYS = {
   build: 'KeyQ', material: 'KeyG', rotate: 'KeyT',
   pickaxe: 'Digit1', slot1: 'Digit2', slot2: 'Digit3', slot3: 'Digit4', slot4: 'Digit5', slot5: 'Digit6',
   wall: 'KeyZ', floor: 'KeyX', ramp: 'KeyV', roof: 'KeyF',
-  emote: 'KeyB', map: 'KeyM', drop: 'KeyH',
+  emote: 'KeyB', map: 'KeyM', drop: 'KeyH', power: 'KeyK',
 };
 
 const DEFAULT_SETTINGS = {

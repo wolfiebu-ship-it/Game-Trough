@@ -39,7 +39,7 @@ class HUD {
     for (const id of ['hpBar', 'hpText', 'shBar', 'shText', 'slots', 'ammoMag', 'ammoRes', 'ammoBox', 'mats', 'buildBar', 'prompt', 'banner', 'toast',
       'elim', 'killfeed', 'alive', 'kills', 'stormText', 'stormTime', 'stormWarn', 'compass', 'minimap', 'crosshair', 'hitmarker', 'dmgnums',
       'dmgdir', 'progress', 'progressFill', 'progressText', 'scope', 'hurt', 'stormTint', 'fps', 'shipHint', 'spectate', 'bigmap', 'pickups',
-      'structHp', 'structFill', 'victory', 'matgain', 'streak', 'killflash']) this.el[id] = this.$(id);
+      'structHp', 'structFill', 'victory', 'matgain', 'streak', 'killflash', 'power']) this.el[id] = this.$(id);
     this.mm = this.el.minimap.getContext('2d');
     this.bigCtx = this.el.bigmap.querySelector('canvas').getContext('2d');
     this.mapOpen = false;
@@ -90,6 +90,16 @@ class HUD {
       this.el.streak.textContent = labels[streak] || 'UNAUFHALTBAR!';
       this.restartAnim(this.el.streak, 'show');
     }
+  }
+  powerUnlocked() {
+    this.el.streak.textContent = 'DEMIRCI-KRAFT!';
+    this.el.streak.classList.add('power');
+    this.restartAnim(this.el.streak, 'show');
+    setTimeout(() => this.el.streak.classList.remove('power'), 2000);
+    this.el.power.classList.remove('hidden');
+    document.body.classList.add('haspower');
+    this.$('powerKey').textContent = Input.touch ? 'Kraft' : keyLabel(Settings.keys.power);
+    this.toast(Input.touch ? 'Wurzelkraft freigeschaltet – Knopf „Kraft“' : 'Wurzelkraft freigeschaltet – Taste ' + keyLabel(Settings.keys.power), 3.5);
   }
   deathBanner(killer, storm) {
     const e = this.el.elim;
@@ -320,6 +330,13 @@ class HUD {
       n.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * W}px, ${(-v.y * 0.5 + 0.5) * H}px) translate(-50%,-50%) scale(${1 + Math.max(0, 0.3 - n.t) * 2})`;
       n.el.style.opacity = n.t > 0.6 ? (0.9 - n.t) / 0.3 : 1;
     }
+    // Wurzelkraft-Abklingzeit
+    if (p.powerUnlocked) {
+      const k = clamp(1 - p.powerCd / POWER_COOLDOWN, 0, 1);
+      this.el.power.style.setProperty('--cd', k);
+      this.el.power.classList.toggle('ready', k >= 1);
+      const tb = document.querySelector('.tb-power'); if (tb) tb.classList.toggle('cool', k < 1);
+    }
     // Namensschilder über Mitspielern (online)
     if (g.net) {
       if (!this.tags) this.tags = new Map();
@@ -433,6 +450,7 @@ class HUD {
   }
   dispose() {
     this.root.classList.add('hidden');
+    this.el.power.classList.add('hidden'); document.body.classList.remove('haspower');
     this.el.dmgnums.innerHTML = '';
     this.toggleMap(false);
   }

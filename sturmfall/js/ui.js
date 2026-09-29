@@ -314,6 +314,13 @@ const UI = {
     $('btnLeaveLobby').onclick = () => { Net.leaveLobby(); this.show('online'); };
     $('btnLobbyStart').onclick = () => { if (Net.lobby && Net.lobby.isHost) { SFX.init(); startOnlineMatch(); } };
     $('btnToLobby').onclick = () => backToLobby();
+    const code = () => {
+      const g = window.game, v = $('secretCode').value;
+      $('secretCode').value = '';
+      if (g && g.checkCode(v)) resumeGame(); else { $('secretCode').placeholder = 'Falscher Code'; setTimeout(() => $('secretCode').placeholder = 'Geheimcode', 1500); }
+    };
+    $('btnCode').onclick = code;
+    $('secretCode').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') code(); });
   },
   copy(text, btn) {
     const done = () => { const t = btn.textContent; btn.textContent = 'Kopiert!'; setTimeout(() => btn.textContent = t, 1200); };

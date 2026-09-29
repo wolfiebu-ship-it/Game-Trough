@@ -504,7 +504,7 @@ class Game {
   onElimination(victim, killer, opts) {
     this.aliveCount = this.actors.filter(a => a.alive).length;
     if (this.isHost && this.netLive) {
-      const o = { storm: !!(opts && opts.storm), fall: !!(opts && opts.fall), melee: !!(opts && opts.melee), explosion: !!(opts && opts.explosion), left: !!(opts && opts.left), w: opts && opts.weapon ? opts.weapon.id : null };
+      const o = { storm: !!(opts && opts.storm), fall: !!(opts && opts.fall), melee: !!(opts && opts.melee), explosion: !!(opts && opts.explosion), left: !!(opts && opts.left), pw: !!(opts && opts.power), w: opts && opts.weapon ? opts.weapon.id : null };
       this.netBroadcast({ t: 'el', v: this.nidOf(victim), k: killer && killer !== victim ? this.nidOf(killer) : -1, o, al: this.aliveCount });
     }
     victim.placement = this.aliveCount + 1;
@@ -663,6 +663,7 @@ class Game {
     }
     if (Input.pressed('emote') && p.state === 'ground' && p.grounded) { p.emoteT = p.emoteT >= 0 ? -1 : 0; if (p.buildMode) p.setBuildMode(false); }
     if (Input.pressed('map')) this.hud.toggleMap();
+    if (Input.pressed('power') && p.powerUnlocked) this.tryPower();
     if (Input.pressed('interact')) this.playerInteract();
     if (Input.pressed('drop')) this.dropHeld();
     if (Input.pressed('rotate') && p.buildMode) { this.hud.toast('Bauteile drehen sich automatisch mit deiner Blickrichtung'); }
@@ -735,6 +736,7 @@ class Game {
         }
       }
     }
+    this.powerUpdate(dt);
     this.updatePickups(dt);
     this.updateRockets(dt);
     this.storm.update(dt);

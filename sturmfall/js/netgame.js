@@ -25,7 +25,7 @@ function itemFromHeldKey(k) {
 }
 function netFlags(a) {
   return (a.crouch ? 1 : 0) | (a.sprint ? 2 : 0) | (a.grounded ? 4 : 0) | (a.input.aim ? 8 : 0) | (a.buildMode ? 16 : 0) |
-    (a.healT >= 0 ? 32 : 0) | (a.reloadT >= 0 ? 64 : 0) | (a.emoteT >= 0 ? 128 : 0) | (a.diving ? 256 : 0) | (a.swingT >= 0 ? 512 : 0);
+    (a.healT >= 0 ? 32 : 0) | (a.reloadT >= 0 ? 64 : 0) | (a.emoteT >= 0 ? 128 : 0) | (a.diving ? 256 : 0) | (a.swingT >= 0 ? 512 : 0) | (a.powerT >= 0 && a.powerT < 0.6 ? 1024 : 0);
 }
 function packState(a) {
   return [r2(a.pos.x), r2(a.pos.y), r2(a.pos.z), r2(a.yaw), r2(a.pitch), Math.max(0, NET_STATES.indexOf(a.state)), netFlags(a), heldKeyOf(a),
@@ -116,6 +116,7 @@ Object.assign(Game.prototype, {
       case 'hl': if (a.alive) { a.hp = clamp(+m.h || 0, 1, 100); a.shield = clamp(+m.s || 0, 0, 100); } break;
       case 'fd': if (a.alive) a.takeDamage(clamp(+m.d || 0, 0, 200), null, { fall: true }); break;
       case 'fire': this.netHostFire(a, m, from); break;
+      case 'pw': if (a.alive && (!a.powerNetCd || this.time > a.powerNetCd)) { a.powerNetCd = this.time + POWER_COOLDOWN - 1; this.castPower(a, true); } break;
       case 'hv': if (a.alive) { a.aimOrigin.set(m.o[0], m.o[1], m.o[2]); a.aimDir.set(m.d[0], m.d[1], m.d[2]).normalize(); this.harvestHit(a); } break;
       case 'tk': {
         const p = this.pickups.find(x => x.id === m.id);
@@ -252,10 +253,13 @@ Object.assign(Game.prototype, {
         if (!v || !v.alive) break;
         const opts = { storm: !!m.o.storm, fall: !!m.o.fall, melee: !!m.o.melee, explosion: !!m.o.explosion, left: !!m.o.left };
         if (m.o.w && WEAPONS[m.o.w]) opts.weapon = weaponStats(m.o.w, 0);
+        if (m.o.pw) { opts.power = true; opts.weapon = POWER_WEAPON; }
         v.die(k, opts);
         this.aliveCount = m.al;
         break;
       }
+      case 'pw1': { const a = this.actors[m.n]; if (a && a !== p) this.powerCharge(a); break; }
+      case 'pw2': this.powerBurst(new THREE.Vector3(m.c[0], m.c[1], m.c[2]), m.tg, this.actors[m.n]); break;
       case 'wn': this.netWinner(this.actors[m.n]); break;
     }
   },

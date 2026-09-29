@@ -28,6 +28,7 @@ class Actor {
     this.healT = -1; this.healSlot = -1; this.emoteT = -1; this.fireKick = 0; this.hurt = 0;
     this.firePrev = false;
     this.buildMode = false; this.buildType = 'wall'; this.buildMat = 'wood';
+    this.powerT = -1; this.powerCd = 0; this.powerUnlocked = false;
     this.kills = 0; this.damageDone = 0; this.placement = 0;
     this.lastAttacker = null; this.lastHitTime = -99;
     this.aimOrigin = new THREE.Vector3(); this.aimDir = new THREE.Vector3(0, 0, 1);
@@ -111,6 +112,7 @@ class Actor {
     if (this.state === 'dead') { this.updateDeath(dt); return; }
     if (this.netMode) { this.updateNet(dt); return; }
     this.fireCd -= dt; this.hurt = Math.max(0, this.hurt - dt * 4); this.fireKick = Math.max(0, this.fireKick - dt * 8);
+    if (this.powerT >= 0) { this.powerT += dt; if (this.powerT > 1.15) this.powerT = -1; }
     this.bloom = Math.max(0, this.bloom - dt * 0.09);
     const inp = this.input;
 
@@ -152,6 +154,7 @@ class Actor {
     if (this.pos.y < -0.6) speed *= 0.6;
     if (this.emoteT >= 0 && (Math.abs(inp.fx) + Math.abs(inp.fz) > 0.1 || inp.jump)) this.emoteT = -1;
     if (this.emoteT >= 0) speed = 0;
+    if (this.powerT >= 0 && this.powerT < 0.9) speed = 0;
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
     let wx = sy * inp.fz - cy * inp.fx, wz = cy * inp.fz + sy * inp.fx;
     const wl = Math.hypot(wx, wz);
@@ -420,6 +423,7 @@ class Actor {
     const soft = opts && (opts.storm || opts.fall);
     const power = opts && opts.explosion ? 9 : wid === 'shotgun' ? 6.5 : wid === 'sniper' ? 7 : soft ? 1.2 : 4.5;
     this.deathVel = new THREE.Vector3(dx * power, soft ? 2.5 : 6 + power * 0.35, dz * power);
+    if (opts && opts.power) this.deathVel.set(dx * 3, 15, dz * 3); // von der Wurzel hochgeschleudert
     this.deathYaw = Math.atan2(-dx, -dz);
     this.deathSpin = soft ? 1.2 : 5 + Math.random() * 3;
     this.deathTumble = 0; this.deathRest = false; this.deathBounced = false; this.dissolved = false; this.glitchT = 0;
@@ -457,6 +461,8 @@ class Actor {
       this.reloadT = f & 64 ? (g.time * 0.8) % 1 : -1;
       this.emoteT = f & 128 ? Math.max(0, n.emote) + 0 : -1;
       if (f & 512) { if (this.swingT < 0) this.swingT = 0; }
+      if (f & 1024) { if (this.powerT < 0) this.powerT = 0; }
+      if (this.powerT >= 0) { this.powerT += dt; if (this.powerT > 1.15) this.powerT = -1; }
       if (this.swingT >= 0) { this.swingT += dt / PICKAXE_TIME; if (this.swingT >= 1) this.swingT = -1; }
       if (n.held !== this.netHeldKey) {
         this.netHeldKey = n.held; this.netHeldItem = itemFromHeldKey(n.held);
@@ -544,11 +550,12 @@ class Actor {
     let state = this.state;
     if (state === 'ground' && this.emoteT >= 0) state = 'emote';
     if (state === 'dead') state = this.deathRest ? 'dead' : 'ko';
+    if (state === 'ground' && this.powerT >= 0) state = 'power';
     const st = h && h.type === 'weapon' ? weaponStats(h.id, h.rarity) : null;
     return {
       state, fwd, side: -side, grounded: this.grounded, vy: this.vel.y, crouch: this.crouch, sprint: this.sprint,
       aim: this.input.aim, pitch: this.pitch, hold, fire: this.fireKick, reload: this.reloadT >= 0 ? (st && st.perShell ? this.reloadT : this.reloadT) : -1,
-      swing: this.swingT, hurt: this.hurt, emoteT: Math.max(0, this.emoteT), dive: this.diving && this.state === 'skydive',
+      swing: this.swingT, hurt: this.hurt, emoteT: Math.max(0, this.emoteT), powerT: this.powerT, dive: this.diving && this.state === 'skydive',
     };
   }
   dispose() { this.game.scene.remove(this.rig.root); }

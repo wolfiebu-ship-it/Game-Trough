@@ -98,7 +98,20 @@ Eigener Vermittlungsserver (optional, für Fortgeschrittene): Mit URL-Parametern
 | `G` | Baumaterial wechseln (Holz → Stein → Metall) |
 | `M` | große Karte |
 | `B` | tanzen |
+| `K` | Wurzelkraft (erst nach dem Geheimcode) |
 | `Esc` | Pause (mit Einstellungen) |
+
+## Geheimcode: DEMIRCI-Wurzelkraft 🌱
+
+Tippe im Spiel einfach **D-E-M-I-R-C-I** auf der Tastatur. Am Handy kannst du den Code im Pausemenü ins Feld „Geheimcode“ schreiben.
+Danach hast du die **Wurzelkraft**:
+
+- Deine Figur reißt die Arme hoch, grüne Pixel wirbeln um sie herum und dann rammt sie die Kraft in den Boden.
+- In Ringen brechen riesige Pixel-Wurzeln mit Dornen und leuchtenden Spitzen aus der Erde. Unter jedem Gegner im Umkreis von 15 m sticht eine Riesenwurzel hoch.
+- Getroffene Gegner bekommen 75 Schaden und werden in die Luft geschleudert. Gebäude in der Nähe gehen kaputt.
+- Danach zerbröseln die Wurzeln in Pixel-Würfel.
+- Nochmal auslösen: Taste `K` oder der runde „DEMIRCI“-Knopf. Die Abklingzeit beträgt 12 Sekunden.
+- Klappt auch online, dort sehen alle Mitspieler die Wurzeln.
 
 ## Was drin ist
 

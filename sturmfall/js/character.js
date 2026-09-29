@@ -205,6 +205,18 @@ class CharacterRig {
       T.bodyRx = -1.45; T.bodyY = -0.78; T.lShZ = 1.2; T.rShZ = -1.2; T.lShX = -0.3; T.rShX = -0.3;
       T.lHipZ = 0.2; T.rHipZ = -0.2; T.lKnee = 0.3; T.headRx = -0.3; T.cape = 0.2;
       rate = 7;
+    } else if (p.state === 'power') {
+      // Wurzelkraft: Arme hoch, aufladen – dann auf den Boden schlagen
+      const t2 = p.powerT || 0;
+      if (t2 < 0.5) {
+        const k = t2 / 0.5, tr = Math.sin(t * 40) * 0.04 * k;
+        T.lShX = -2.9 * k + tr; T.rShX = -2.9 * k - tr; T.lShZ = 0.5 * k; T.rShZ = -0.5 * k; T.lElX = -0.3; T.rElX = -0.3;
+        T.bodyY = 0.12 * k; T.torsoRx = -0.25 * k; T.headRx = -0.45 * k; T.lKnee = 0.2; T.rKnee = 0.2; T.cape = 0.6 * k;
+      } else if (t2 < 0.85) {
+        T.lShX = -0.9; T.rShX = -0.9; T.lShZ = 0.15; T.rShZ = -0.15; T.lElX = -0.2; T.rElX = -0.2;
+        T.bodyY = -0.38; T.torsoRx = 0.55; T.headRx = 0.1; T.lHipX = -0.7; T.rHipX = -0.7; T.lKnee = 1.3; T.rKnee = 1.3; T.cape = -0.4;
+      }
+      rate = 24;
     } else if (p.state === 'ko') {
       // durch die Luft geschleudert: Arme und Beine rudern wild
       const f = Math.sin(t * 19), f2 = Math.cos(t * 16);
