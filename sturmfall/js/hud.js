@@ -138,6 +138,7 @@ class HUD {
   toggleMap(force) {
     this.mapOpen = force != null ? force : !this.mapOpen;
     this.el.bigmap.classList.toggle('hidden', !this.mapOpen);
+    document.body.classList.toggle('mapopen', this.mapOpen);
     if (this.mapOpen) this.drawBigMap();
   }
 

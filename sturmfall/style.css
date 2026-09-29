@@ -294,22 +294,29 @@ body.touch.playing #touch { display: block; }
 #tdrop { position: absolute; right: var(--tr); bottom: calc(var(--tbm) + 0px); width: 84px; height: 84px; font-size: 22px; background: rgba(255,190,40,0.7); border-color: #fff3b0; color: #2a1650; }
 #tdrop span { font-size: 10px; }
 body[data-phase=ship] #tpad, body[data-phase=sky] #tpad { display: none; }
-#tmenu { position: absolute; top: calc(var(--tt) + 34px); left: var(--tl); display: flex; gap: 8px; }
+#tmenu { position: absolute; top: var(--tt); left: var(--tl); display: flex; gap: 8px; }
 #tmenu .tb { width: 38px; height: 38px; font-size: 12px; }
 #tmenu .tb[data-act=map] { width: 60px; border-radius: 20px; font-size: 12px; }
-body.touch #topright { top: var(--tt); right: var(--tr); transform: scale(calc(var(--hud-scale) * 0.46)); }
-body.touch #compass { top: calc(var(--tt) - 8px); width: min(300px, 40vw); }
-body.touch #bottomleft { top: var(--tt); bottom: auto; left: var(--tl); transform: scale(calc(var(--hud-scale) * 0.55)); transform-origin: top left; }
-body.touch #bottomright { right: auto; left: 40%; bottom: var(--tbm); transform: translateX(-50%) scale(calc(var(--hud-scale) * 0.5)); transform-origin: bottom center; }
+body.touch #topright { top: var(--tt); right: var(--tr); transform: none; display: grid; grid-template-columns: auto 96px; gap: 4px 6px; justify-items: end; align-items: start; }
+body.touch .mmwrap { grid-column: 2; grid-row: 1 / span 3; width: 96px; height: 96px; border-width: 2px; border-radius: 10px; }
+body.touch .mmwrap canvas { width: 100%; height: 100%; display: block; }
+body.touch #topright .storm { grid-column: 1; grid-row: 1; font-size: 11px; padding: 4px 8px; white-space: nowrap; }
+body.touch #topright .counters { grid-column: 1; grid-row: 2; font-size: 14px; padding: 3px 10px; }
+body.touch .mapclose { display: none; }
+body.mapopen #tpad, body.mapopen #tdrop { display: none !important; }
+body.touch #compass { top: calc(var(--tt) - 8px); left: 44%; width: min(200px, 26vw); }
+body.touch #bottomleft { top: auto; bottom: var(--tbm); left: var(--tl); transform: scale(calc(var(--hud-scale) * 0.55)); transform-origin: bottom left; }
+body.touch #bottomright { right: auto; left: 47%; bottom: var(--tbm); transform: translateX(-50%) scale(calc(var(--hud-scale) * 0.45)); transform-origin: bottom center; }
 body.touch #bottomright .slot, body.touch #buildBar .bp, body.touch #buildBar .bmat, body.touch #mats { pointer-events: auto; }
-body.touch #killfeed { top: calc(var(--tt) + 84px); font-size: 11px; max-width: 34vw; }
+body.touch #killfeed { top: calc(var(--tt) + 50px); font-size: 11px; max-width: 34vw; }
 body.touch #prompt { bottom: 76px; left: 40%; font-size: 13px; }
 body.touch #toast { bottom: 118px; left: 40%; font-size: 13px; }
 body.touch #shipHint { top: calc(var(--tt) + 30px); bottom: auto; font-size: 14px; padding: 6px 14px; }
 body.touch #stormWarn { top: calc(var(--tt) + 30px); font-size: 12px; }
 body.touch #spectate { top: calc(var(--tt) + 30px); font-size: 12px; }
 body.touch #pickups { top: calc(var(--tt) + 150px); right: var(--tr); font-size: 11px; }
-@media (max-height: 380px) { #tpad { transform: scale(0.88); transform-origin: bottom right; } }
+@media (max-height: 380px) { #tpad { transform: scale(0.85); transform-origin: bottom right; } }
+@media (max-height: 340px) { #tpad { transform: scale(0.74); } }
 #rotate { position: fixed; inset: 0; z-index: 70; display: none; background: #120a28; align-items: center; justify-content: center; text-align: center; font-family: var(--head); font-size: 64px; color: #ffd23f; }
 #rotate p { font-size: 18px; color: #fff; }
 @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }

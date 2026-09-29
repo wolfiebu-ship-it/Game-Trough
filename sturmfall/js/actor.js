@@ -209,8 +209,8 @@ class Actor {
     let wx = sy * inp.fz - cy * inp.fx, wz = cy * inp.fz + sy * inp.fx;
     if (this.state === 'skydive') {
       const dive = inp.fz > 0.5 && inp.dive;
-      this.vel.y = damp(this.vel.y, dive ? -34 : -15, 1.4, dt);
-      const hs = dive ? 22 : 15;
+      this.vel.y = damp(this.vel.y, dive ? -19 : -15, 1.2, dt);
+      const hs = dive ? 18 : 15;
       this.vel.x = damp(this.vel.x, wx * hs, 2.2, dt); this.vel.z = damp(this.vel.z, wz * hs, 2.2, dt);
       this.diving = dive;
       const auto = this.isPlayer ? Settings.autoGlider : true;
