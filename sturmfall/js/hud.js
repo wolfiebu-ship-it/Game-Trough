@@ -39,7 +39,7 @@ class HUD {
     for (const id of ['hpBar', 'hpText', 'shBar', 'shText', 'slots', 'ammoMag', 'ammoRes', 'ammoBox', 'mats', 'buildBar', 'prompt', 'banner', 'toast',
       'elim', 'killfeed', 'alive', 'kills', 'stormText', 'stormTime', 'stormWarn', 'compass', 'minimap', 'crosshair', 'hitmarker', 'dmgnums',
       'dmgdir', 'progress', 'progressFill', 'progressText', 'scope', 'hurt', 'stormTint', 'fps', 'shipHint', 'spectate', 'bigmap', 'pickups',
-      'structHp', 'structFill', 'victory', 'matgain']) this.el[id] = this.$(id);
+      'structHp', 'structFill', 'victory', 'matgain', 'streak', 'killflash']) this.el[id] = this.$(id);
     this.mm = this.el.minimap.getContext('2d');
     this.bigCtx = this.el.bigmap.querySelector('canvas').getContext('2d');
     this.mapOpen = false;
@@ -76,9 +76,26 @@ class HUD {
   /* ---------- Nachrichten ---------- */
   toast(msg, dur) { this.el.toast.textContent = msg; this.el.toast.classList.add('show'); this.toastT = dur || 2.2; }
   banner(msg, color) { this.el.banner.textContent = msg; this.el.banner.style.color = color || '#fff'; this.el.banner.classList.remove('show'); void this.el.banner.offsetWidth; this.el.banner.classList.add('show'); this.bannerT = 3; }
-  elimBanner(name) {
-    this.el.elim.innerHTML = `<small>ELIMINIERT</small>${esc(name)}`;
-    this.el.elim.classList.remove('show'); void this.el.elim.offsetWidth; this.el.elim.classList.add('show'); this.elimT = 2.2;
+  restartAnim(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+  elimBanner(name, dist, streak) {
+    const e = this.el.elim;
+    e.className = '';
+    e.innerHTML = `<div class="ex">✖</div><div class="et">ELIMINIERT</div><div class="en">${esc(name)}</div>${dist != null ? `<div class="ed">${dist} m</div>` : ''}`;
+    this.restartAnim(e, 'show');
+    this.el.banner.classList.remove('show');
+    this.restartAnim(this.el.killflash, 'flash');
+    this.restartAnim(this.el.kills, 'bump');
+    const labels = { 2: 'DOPPEL-ELIMINIERUNG!', 3: 'DREIFACH!', 4: 'VIERFACH!', 5: 'FÜNFFACH!' };
+    if (streak >= 2) {
+      this.el.streak.textContent = labels[streak] || 'UNAUFHALTBAR!';
+      this.restartAnim(this.el.streak, 'show');
+    }
+  }
+  deathBanner(killer, storm) {
+    const e = this.el.elim;
+    e.className = 'dead';
+    e.innerHTML = `<div class="ex">✖</div><div class="et">DU WURDEST ELIMINIERT</div><div class="en">${killer ? 'von ' + esc(killer) : storm ? 'vom Sturm' : 'ausgeschieden'}</div>`;
+    void e.offsetWidth; e.classList.add('show');
   }
   killfeed(html, mine) {
     const d = document.createElement('div');

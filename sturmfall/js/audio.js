@@ -95,6 +95,7 @@ const SFX = {
   },
   hurt(shield) { this.noise(0.15, 0.4, 0, 'bandpass', shield ? 2400 : 800, 1.5); },
   shieldBreak() { this.tone(1600, 0.35, 0.3, 'triangle', 0, 300); this.noise(0.3, 0.3, 0, 'highpass', 3000); },
+  killBoom() { this.tone(110, 0.5, 0.45, 'sine', 0, 40); this.noise(0.5, 0.35, 0, 'bandpass', 1400, 0.6, 0.02); this.tone(1760, 0.25, 0.12, 'triangle', 0, 2640, 0.05); },
   elim() { this.tone(660, 0.12, 0.3, 'square'); this.tone(990, 0.2, 0.3, 'square', 0, null, 0.1); this.tone(1320, 0.3, 0.25, 'triangle', 0, null, 0.2); },
   pickup() { this.tone(700, 0.08, 0.25, 'triangle', 0, 1200); },
   chest(vol, pan) { const v = vol == null ? 1 : vol; [0, 0.07, 0.14, 0.21].forEach((d, i) => this.tone(880 * Math.pow(1.26, i), 0.25, 0.2 * v, 'triangle', pan, null, d)); },

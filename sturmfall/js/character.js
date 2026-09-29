@@ -205,6 +205,14 @@ class CharacterRig {
       T.bodyRx = -1.45; T.bodyY = -0.78; T.lShZ = 1.2; T.rShZ = -1.2; T.lShX = -0.3; T.rShX = -0.3;
       T.lHipZ = 0.2; T.rHipZ = -0.2; T.lKnee = 0.3; T.headRx = -0.3; T.cape = 0.2;
       rate = 7;
+    } else if (p.state === 'ko') {
+      // durch die Luft geschleudert: Arme und Beine rudern wild
+      const f = Math.sin(t * 19), f2 = Math.cos(t * 16);
+      T.lShX = -2.5 + f * 0.7; T.rShX = -2.5 - f * 0.7; T.lShZ = 0.9 + f2 * 0.3; T.rShZ = -0.9 - f2 * 0.3;
+      T.lElX = -0.3; T.rElX = -0.3;
+      T.lHipX = f2 * 0.9; T.rHipX = -f2 * 0.9; T.lKnee = 0.7 + f * 0.4; T.rKnee = 0.7 - f * 0.4;
+      T.lHipZ = 0.25; T.rHipZ = -0.25; T.headRx = -0.5; T.torsoRx = -0.35; T.cape = -1.2;
+      rate = 22;
     } else if (p.state === 'skydive') {
       const flutter = Math.sin(t * 22) * 0.05;
       T.bodyRx = p.dive ? 1.5 : 1.25; T.bodyRz = clamp(p.side * 0.03, -0.5, 0.5); T.bodyY = 0.1;

@@ -38,7 +38,7 @@ const CONSUMABLES = {
 
 function weaponStats(id, rarity) {
   const w = WEAPONS[id], r = RARITIES[rarity];
-  return Object.assign({}, w, { dmg: w.dmg * r.dmg, reload: w.reload * r.reload, rarity });
+  return Object.assign({}, w, { id, dmg: w.dmg * r.dmg, reload: w.reload * r.reload, rarity });
 }
 function itemName(it) {
   if (!it) return '';

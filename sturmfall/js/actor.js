@@ -108,12 +108,7 @@ class Actor {
   /* ---------------- Update ---------------- */
   update(dt) {
     const g = this.game, w = g.world;
-    if (this.state === 'dead') {
-      this.deadT += dt;
-      if (!this.farHidden) this.rig.update(dt, this.animParams());
-      if (this.deadT > 1.3 && this.rig.root.visible) { this.rig.root.visible = false; g.fx.dissolve(this.chest()); }
-      return;
-    }
+    if (this.state === 'dead') { this.updateDeath(dt); return; }
     this.fireCd -= dt; this.hurt = Math.max(0, this.hurt - dt * 4); this.fireKick = Math.max(0, this.fireKick - dt * 8);
     this.bloom = Math.max(0, this.bloom - dt * 0.09);
     const inp = this.input;
@@ -381,6 +376,7 @@ class Actor {
   /* ---------------- Schaden ---------------- */
   takeDamage(amount, attacker, opts) {
     if (!this.alive) return 0;
+    if (this.game.state === 'won') return 0; // nach dem Sieg ist man unverwundbar
     opts = opts || {};
     let dealt = 0, shieldHit = false;
     if (opts.storm || opts.fall) { dealt = Math.min(this.hp, amount); this.hp -= amount; }
@@ -401,6 +397,20 @@ class Actor {
     this.state = 'dead'; this.deadT = 0;
     this.buildMode = false; this.healT = -1; this.reloadT = -1;
     if (!killer && this.lastAttacker && this.game.time - this.lastHitTime < 10) killer = this.lastAttacker;
+    // Wegschleudern: weg vom Schützen, Stärke je nach Waffe
+    const k = killer && killer !== this ? killer : null;
+    let dx, dz;
+    if (k) { dx = this.pos.x - k.pos.x; dz = this.pos.z - k.pos.z; } else { const a = Math.random() * TAU; dx = Math.cos(a); dz = Math.sin(a); }
+    const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    const wid = opts && opts.weapon && opts.weapon.id;
+    const soft = opts && (opts.storm || opts.fall);
+    const power = opts && opts.explosion ? 9 : wid === 'shotgun' ? 6.5 : wid === 'sniper' ? 7 : soft ? 1.2 : 4.5;
+    this.deathVel = new THREE.Vector3(dx * power, soft ? 2.5 : 6 + power * 0.35, dz * power);
+    this.deathYaw = Math.atan2(-dx, -dz);
+    this.deathSpin = soft ? 1.2 : 5 + Math.random() * 3;
+    this.deathTumble = 0; this.deathRest = false; this.deathBounced = false; this.dissolved = false; this.glitchT = 0;
+    this.rig.root.rotation.order = 'YXZ';
+    this.killedByPlayer = !!(k && k.isPlayer);
     this.game.onElimination(this, killer, opts);
     // Beute fallen lassen
     const drops = [];
@@ -414,6 +424,51 @@ class Actor {
     this.slots = [null, null, null, null, null];
     for (const k in this.ammo) this.ammo[k] = 0;
     for (const k in this.mats) this.mats[k] = 0;
+  }
+  /* Eliminierungs-Animation: durch die Luft fliegen, überschlagen, aufprallen,
+     kurz glitchen und dann in leuchtende Würfel zerfallen */
+  updateDeath(dt) {
+    const g = this.game, w = g.world, rig = this.rig;
+    this.deadT += dt;
+    if (this.dissolved) return;
+    const v = this.deathVel;
+    if (!this.deathRest) {
+      v.y -= 22 * dt;
+      this.pos.addScaledVector(v, dt);
+      w.collideActor(this.pos, 0.35, 1.0, 0.3, v);
+      const gy = w.groundAt(this.pos.x, this.pos.z, this.pos.y + 0.6, 0.6);
+      this.deathTumble += this.deathSpin * dt;
+      if (this.pos.y <= gy) {
+        this.pos.y = gy;
+        if (!this.deathBounced && v.y < -4) {
+          this.deathBounced = true;
+          v.y = -v.y * 0.35; v.x *= 0.45; v.z *= 0.45; this.deathSpin *= 0.35;
+          if (!this.farHidden) {
+            g.fx.burst(new THREE.Vector3(this.pos.x, this.pos.y + 0.1, this.pos.z), 0xcfc2a8, 14, 4, 0.18, 0.6, 10);
+            const d = g.camera.position.distanceTo(this.pos);
+            if (d < 50) SFX.land(true);
+          }
+        } else { this.deathRest = true; this.restT = this.deadT; v.set(0, 0, 0); }
+      }
+      if (this.deadT > 3) { this.deathRest = true; this.restT = this.deadT; }
+    } else {
+      const target = Math.round(this.deathTumble / TAU) * TAU;
+      this.deathTumble = damp(this.deathTumble, target, 9, dt);
+    }
+    rig.root.position.copy(this.pos);
+    rig.root.rotation.set(-this.deathTumble, this.deathYaw, 0);
+    if (!this.farHidden) rig.update(dt, this.animParams());
+    const restFor = this.deathRest ? this.deadT - this.restT : 0;
+    if (restFor > 0.5 || this.deadT > 3.4) {
+      this.glitchT += dt;
+      rig.root.visible = !this.farHidden && Math.floor(this.glitchT * 24) % 3 !== 0;
+      if (this.glitchT > 0.42) {
+        this.dissolved = true;
+        rig.root.visible = true;
+        if (!this.farHidden && g.camera.position.distanceTo(this.pos) < 170) g.fx.eliminationFx(this, this.killedByPlayer);
+        rig.root.visible = false;
+      }
+    } else rig.root.visible = !this.farHidden;
   }
   onStep() {
     if (!this.grounded || this.state !== 'ground') return;
@@ -437,6 +492,7 @@ class Actor {
     else hold = 'none';
     let state = this.state;
     if (state === 'ground' && this.emoteT >= 0) state = 'emote';
+    if (state === 'dead') state = this.deathRest ? 'dead' : 'ko';
     const st = h && h.type === 'weapon' ? weaponStats(h.id, h.rarity) : null;
     return {
       state, fwd, side: -side, grounded: this.grounded, vy: this.vel.y, crouch: this.crouch, sprint: this.sprint,

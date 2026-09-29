@@ -70,6 +70,12 @@ Empfohlen: ein aktueller Chrome, Edge oder Firefox mit Maus und Tastatur.
 - **Insel:** Jede Insel wird aus dem Seed neu erzeugt: Hügel, Berge, Strände, Wälder, Felsen, Büsche
   und acht benannte Orte (Städte, Bauernhöfe und Industriegebiete) mit begehbaren, teils
   zweistöckigen Häusern und Treppen, dazu Autos, Container, Silos und Heuballen.
+- **Eliminierungen:** Wer eliminiert wird, fliegt vom Schützen weg durch die Luft, überschlagen und
+  wild rudernd, prallt auf, flackert kurz und zerfällt dann in leuchtende Würfel in den eigenen
+  Farben, mit Lichtsäule und Schockwellen-Ring. Bei eigenen Eliminierungen gibt es eine kurze
+  Zeitlupe, einen Kamera-Ruck, einen animierten „ELIMINIERT“-Schriftzug mit Entfernung und
+  Serien-Ansagen (Doppel, Dreifach, Vierfach …). Wird man selbst eliminiert, sieht man den eigenen
+  Flug in Zeitlupe mit entsättigten Farben.
 - **Alles ist zerstörbar** außer Böden und Fundamenten. Mit dem Erntehammer bekommst du Holz,
   Stein und Metall. Ab und zu gibt es einen Volltreffer mit doppeltem Material.
 - **Bauen:** Wände, Böden, Rampen und Dächer rasten im 4-m-Raster ein. Es gibt eine Vorschau und

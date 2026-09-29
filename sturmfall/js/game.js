@@ -57,6 +57,7 @@ class Game {
 
     this.camYaw = 0; this.camPitch = -0.1; this.camDist = Settings.camDist; this.shake = 0;
     this.recoil = 0; this.curFov = Settings.fov; this.scoped = false;
+    this.timeScale = 1; this.slowT = 0; this.slowDur = 1; this.slowMin = 1; this.fovKick = 0; this.streak = 0; this.lastKillT = -99; this.deathReal = 0;
     this.state = 'airship';
     this.spectating = null;
     this.aliveCount = this.actors.length;
@@ -445,9 +446,17 @@ class Game {
     else if (killer && killer !== victim) msg = `<b>${esc(killer.name)}</b> ${wname ? 'hat' : 'hat'} <b>${esc(victim.name)}</b> ${wname ? 'mit ' + esc(wname) + ' ' : opts && opts.melee ? 'mit dem Erntehammer ' : ''}eliminiert`;
     else msg = `<b>${esc(victim.name)}</b> hat sich selbst eliminiert`;
     this.hud.killfeed(msg, victim.isPlayer || (killer && killer.isPlayer));
+    if (this.camera.position.distanceTo(victim.pos) < 160) this.fx.killImpact(victim.chest(), !!(killer && killer.isPlayer));
     if (killer && killer !== victim) {
       killer.kills++;
-      if (killer.isPlayer) { this.hud.elimBanner(victim.name); SFX.elim(); }
+      if (killer.isPlayer) {
+        if (this.time - this.lastKillT < 7) this.streak++; else this.streak = 1;
+        this.lastKillT = this.time;
+        this.hud.elimBanner(victim.name, Math.round(killer.pos.distanceTo(victim.pos)), this.streak);
+        this.slowmo(0.6, 0.28); this.fovKick = 8;
+        if (Settings.cameraShake) this.shake = Math.min(1, this.shake + 0.45);
+        SFX.elim(); SFX.killBoom();
+      }
       // Bots: Schild auffüllen durch Eliminierung (kleiner Bonus)
     }
     if (victim.isPlayer) {
@@ -455,7 +464,11 @@ class Game {
       this.deathInfo = { killer: killer && killer !== victim ? killer.name : null, weapon: wname, storm: opts && opts.storm };
       this.player.input.fire = false;
       SFX.defeat();
-      setTimeout(() => { if (!this.disposed) this.finish(false); }, 2600);
+      this.slowmo(1.5, 0.25); this.fovKick = -6;
+      this.deathReal = performance.now();
+      document.body.classList.add('dying');
+      this.hud.deathBanner(this.deathInfo.killer, opts && opts.storm);
+      setTimeout(() => { if (!this.disposed) this.finish(false); }, 3600);
       this.spectating = killer && killer.alive && killer !== victim ? killer : null;
     }
     if (this.aliveCount <= 1 && !this.over) {
@@ -604,8 +617,16 @@ class Game {
   }
 
   /* ---------------- Update ---------------- */
+  slowmo(dur, min) { this.slowT = dur; this.slowDur = dur; this.slowMin = min; }
   update(dt) {
     if (this.paused) return;
+    // Zeitlupe (bei Eliminierungen)
+    const real = dt;
+    if (this.slowT > 0) { this.slowT -= real; const k = clamp(this.slowT / this.slowDur, 0, 1); this.timeScale = lerp(1, this.slowMin, Math.min(1, k * 1.7)); }
+    else this.timeScale = 1;
+    dt *= this.timeScale;
+    this.fovKick = damp(this.fovKick, 0, 4, real);
+    if (this.deathReal && document.body.classList.contains('dying') && performance.now() - this.deathReal > 2900) document.body.classList.remove('dying');
     this.time += dt;
     if (this.state !== 'airship') this.matchTime += dt;
     this.handleInput(dt);
@@ -707,6 +728,8 @@ class Game {
     }
   }
   focusActor() {
+    // nach dem eigenen Tod zuerst den eigenen Flug zeigen, dann zuschauen
+    if (this.state === 'dead' && performance.now() - this.deathReal < 2700) return this.player;
     if ((this.state === 'dead') && this.spectating && this.spectating.alive) return this.spectating;
     if (this.state === 'dead' && (!this.spectating || !this.spectating.alive)) { this.spectateNext(); if (this.spectating) return this.spectating; }
     return this.player;
@@ -740,6 +763,7 @@ class Game {
       if (p.emoteT >= 0 && !spectate) dist = 4.8;
     }
     this.camDist = damp(this.camDist, dist, 10, dt);
+    fov += this.fovKick;
     this.curFov = damp(this.curFov, fov, 14, dt);
     if (Math.abs(cam.fov - this.curFov) > 0.01) { cam.fov = this.curFov; cam.updateProjectionMatrix(); }
     const f = this.camForward();
@@ -770,6 +794,7 @@ class Game {
   resize(w, h) { this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
   dispose() {
     this.disposed = true;
+    document.body.classList.remove('dying');
     this.hud.dispose();
     this.scene.traverse(o => {
       if (o.geometry) o.geometry.dispose();
