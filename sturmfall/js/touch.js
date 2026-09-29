@@ -13,6 +13,8 @@ const Touch = {
     this.base = document.getElementById('tjoy');
     this.knob = this.base.querySelector('i');
     if (!Input.touch) return;
+    setInterval(() => this.fit(), 500);
+    window.addEventListener('resize', () => { this.padScale = 0; setTimeout(() => this.fit(), 50); });
     document.body.classList.add('touch');
     // Erster Start auf dem Handy: sparsame Grafik
     if (Store.get('settings', null) == null) { Object.assign(Settings, QUALITY_PRESETS.niedrig, { quality: 'niedrig' }); saveSettings(); }
@@ -95,6 +97,16 @@ const Touch = {
       if (t.identifier === this.lookId) this.lookId = null;
       this.release(t.identifier);
     }
+  },
+  /* Knopf-Bogen so skalieren, dass er nie in Minimap/Zähler ragt */
+  fit() {
+    if (!Input.touch || !document.body.classList.contains('playing')) return;
+    const pad = document.getElementById('tpad'), tr = document.getElementById('topright');
+    if (!pad || !tr || pad.offsetParent === null) return;
+    const bottom = window.innerHeight - parseFloat(getComputedStyle(pad).bottom || 0);
+    const free = bottom - tr.getBoundingClientRect().bottom - 10;
+    const s = Math.max(0.55, Math.min(1, free / 190));
+    if (Math.abs(s - (this.padScale || 0)) > 0.01) { this.padScale = s; pad.style.transform = `scale(${s})`; }
   },
   reset() {
     this.joyId = this.lookId = null; this.btnIds.clear();
