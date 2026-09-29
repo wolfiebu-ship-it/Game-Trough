@@ -84,6 +84,7 @@
     <div class="menu-buttons">
       <button class="big primary" data-go="setup">Neues Spiel</button>
       <button id="btnQuick" class="big">Schnellstart</button>
+      <button data-go="online" class="big online-btn">Online mit Freunden</button>
       <button data-go="locker">Spind</button>
       <button data-go="settings">Einstellungen</button>
       <button data-go="stats">Statistik</button>
@@ -158,12 +159,64 @@
   </div>
 </div>
 
+<div id="scr-online" class="screen hidden">
+  <div class="panel wide">
+    <h2>Online spielen</h2>
+    <div class="netbar">
+      <div class="netstatus"><i id="netDot"></i><span id="netStatusText">Verbinde …</span></div>
+      <div class="mycode">Dein Freundes-Code <b id="netMyCode">––––––</b> <button id="btnCopyCode" class="small" type="button">Kopieren</button></div>
+    </div>
+    <p id="netError" class="neterror hidden"></p>
+    <div class="netcols">
+      <section>
+        <h3>Lobby</h3>
+        <p class="hint">Erstelle eine Lobby und lade Freunde ein – oder tritt mit einem Lobby-Code bei.</p>
+        <button id="btnCreateLobby" class="primary big" type="button">Lobby erstellen</button>
+        <div class="inl joinrow"><input id="joinCode" maxlength="6" placeholder="Lobby-Code" autocomplete="off"><button id="btnJoinCode" class="small" type="button">Beitreten</button></div>
+        <label class="namerow">Dein Name <input id="netName" maxlength="16"></label>
+      </section>
+      <section>
+        <h3>Freunde</h3>
+        <div class="inl addrow"><input id="friendCode" maxlength="6" placeholder="Freundes-Code" autocomplete="off"><button id="btnAddFriend" class="small" type="button">Hinzufügen</button></div>
+        <p id="friendMsg" class="hint"></p>
+        <div id="friendList" class="flist"></div>
+      </section>
+    </div>
+    <div class="actions"><button data-go="menu">Zurück</button></div>
+  </div>
+</div>
+
+<div id="scr-lobby" class="screen hidden">
+  <div class="panel wide">
+    <h2>Lobby</h2>
+    <div class="netbar">
+      <div class="mycode">Lobby-Code <b id="lobbyCode">––––––</b> <button id="btnCopyLobby" class="small" type="button">Kopieren</button></div>
+      <div class="netstatus"><span id="lobbyCount"></span></div>
+    </div>
+    <div class="netcols">
+      <section>
+        <h3>Spieler</h3>
+        <div id="lobbyPlayers" class="plist"></div>
+        <h3>Freunde einladen</h3>
+        <div id="lobbyInvite" class="flist"></div>
+      </section>
+      <section>
+        <h3>Match</h3>
+        <div id="lobbySetup" class="form"></div>
+        <p id="lobbyWait" class="hint"></p>
+      </section>
+    </div>
+    <div class="actions"><button id="btnLeaveLobby" type="button">Lobby verlassen</button><button id="btnLobbyStart" class="primary big" type="button">Match starten</button></div>
+  </div>
+</div>
+<div id="netnotes"></div>
+
 <div id="scr-end" class="screen hidden dim">
   <div class="panel">
     <h2 id="endTitle">Platz #1</h2>
     <p id="endSub" class="endsub"></p>
     <div id="endStats" class="stats"></div>
-    <div class="actions"><button id="btnSpectate">Zuschauen</button><button id="btnEndMenu">Hauptmenü</button><button id="btnAgain" class="primary big">Neues Spiel</button></div>
+    <div class="actions"><button id="btnSpectate">Zuschauen</button><button id="btnEndMenu">Hauptmenü</button><button id="btnToLobby" class="primary big hidden">Zur Lobby</button><button id="btnAgain" class="primary big">Neues Spiel</button></div>
   </div>
 </div>
 
@@ -173,6 +226,7 @@
 <div id="fatal" class="hidden"><h2>Ups!</h2><p>Die 3D-Bibliothek konnte nicht geladen werden.</p></div>
 
 <script src="js/lib/three.min.js"></script>
+<script src="js/lib/peerjs.min.js"></script>
 <script src="js/util.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/audio.js"></script>
@@ -189,6 +243,8 @@
 <script src="js/touch.js"></script>
 <script src="js/intro.js"></script>
 <script src="js/game.js"></script>
+<script src="js/netgame.js"></script>
+<script src="js/net.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

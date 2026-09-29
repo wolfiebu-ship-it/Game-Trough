@@ -15,12 +15,52 @@ liegt bereits unter `js/lib/`.
 
 Empfohlen: ein aktueller Chrome, Edge oder Firefox mit Maus und Tastatur.
 
+## Online mit Freunden spielen
+
+Im Hauptmenü auf **Online mit Freunden** tippen:
+
+1. Jeder Spieler hat einen festen **Freundes-Code** mit 6 Zeichen, z. B. `K7Q2XM`. Tauscht die Codes
+   aus und tragt sie unter „Freunde“ ein. Der andere bekommt eine Anfrage, die er annimmt.
+2. In der Freundesliste siehst du, wer gerade **online** ist und wer eine Lobby offen hat.
+3. **Lobby erstellen** → Freunde mit **Einladen** holen, oder sie treten mit deinem Lobby-Code bei.
+   Bis zu 8 Spieler, den Rest füllen Bots auf, wenn du welche einstellst.
+4. Der Host stellt Bots, Schwierigkeit, Start, Sturm, Beute und Material ein und drückt **Match starten**.
+5. Nach dem Match geht es mit **Zur Lobby** zurück, und ihr könnt direkt die nächste Runde starten.
+
+So funktioniert es technisch: Die Spieler verbinden sich direkt miteinander (WebRTC über die freie
+Bibliothek PeerJS, MIT-Lizenz). Der öffentliche PeerJS-Dienst hilft nur beim ersten Verbinden.
+Der **Host** berechnet Bots, Sturm, Beute, Treffer und Eliminierungen. Die anderen schicken ihre
+Bewegungen und Schüsse an ihn. Es gibt keinen eigenen Server und keine Kosten.
+
+Wichtig:
+- Online-Spielen geht nur, wenn das Spiel über eine **echte Webseite** geöffnet wird (siehe unten).
+  In eingebetteten Vorschauen wie der Claude-App sind Direktverbindungen gesperrt.
+- Der Host sollte das Spiel im Vordergrund offen lassen. Schließt er es, endet das Match für alle.
+- In sehr strengen Netzwerken (manche Firmen- oder Schul-WLANs) kann die Direktverbindung
+  scheitern. Mobiles Internet oder normales Heim-WLAN funktionieren in der Regel.
+
+### Veröffentlichen mit GitHub Pages (kostenlos)
+
+1. Auf GitHub das Repository öffnen → **Settings** → **Pages**.
+2. Bei „Build and deployment“ als Source **Deploy from a branch** wählen, dann den Branch (z. B.
+   `main`, nachdem der Pull Request gemergt ist) und den Ordner `/ (root)` auswählen → **Save**.
+3. Nach ein bis zwei Minuten ist das Spiel erreichbar unter
+   `https://<dein-github-name>.github.io/Game-Trough/sturmfall/`.
+   Diesen Link schickst du deinen Freunden.
+
+GitHub Pages ist bei öffentlichen Repositories kostenlos. Für private Repositories braucht man
+einen bezahlten GitHub-Plan.
+
+Eigener Vermittlungsserver (optional, für Fortgeschrittene): Mit URL-Parametern
+`?peerhost=…&peerport=…&peerpath=/&peersecure=1` kann ein eigener PeerJS-Server benutzt werden.
+
 ## Hauptmenü
 
 | Menüpunkt | Inhalt |
 |---|---|
 | **Neues Spiel** | Match einrichten: Spielername, Anzahl Gegner (1–49 Bots), Schwierigkeit (Leicht / Normal / Schwer / Profi), Start per Luftschiff oder direkt am Boden, Sturm-Tempo, Beute-Menge, Baumaterial (normal / Startbonus / unbegrenzt), Karten-Seed für eine bestimmte Insel |
 | **Schnellstart** | startet sofort mit den zuletzt benutzten Einstellungen |
+| **Online mit Freunden** | Freundes-Code, Freundesliste mit Online-Status, Lobby, Einladungen, gemeinsame Matches |
 | **Spind** | 10 Outfits mit Live-Vorschau: Figur drehen, laufen lassen, tanzen |
 | **Einstellungen** | siehe unten |
 | **Statistik** | Siege, Eliminierungen, K/D, Top 10, beste Platzierung, Schaden … |
@@ -102,7 +142,7 @@ Empfohlen: ein aktueller Chrome, Edge oder Firefox mit Maus und Tastatur.
 sturmfall/
   index.html        Seite, HUD und Menüs
   style.css         Oberfläche
-  js/lib/           three.js r149 (MIT)
+  js/lib/           three.js r149 und PeerJS 1.5.4 (beide MIT)
   js/util.js        Mathe, Zufall, Rauschen, Speicher
   js/settings.js    Einstellungen, Tastenbelegung, Statistik
   js/audio.js       synthetische Sounds und Musik
@@ -117,6 +157,8 @@ sturmfall/
   js/bots.js        Bot-KI
   js/hud.js         HUD, Minimap, Karte
   js/game.js        Match-Ablauf
+  js/net.js         Online: Freundes-Code, Freunde, Lobby
+  js/netgame.js     Online-Match: Host-Simulation und Abgleich
   js/ui.js          Menüs und Lobby
   js/main.js        Start und Hauptschleife
 ```

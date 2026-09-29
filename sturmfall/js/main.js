@@ -44,7 +44,7 @@ function boot() {
     document.getElementById('clicklock').classList.add('hidden');
     if (!g) return;
     if (locked) {
-      UI.hideAll(); g.paused = false; Input.enabled = true;
+      UI.hideAll(); g.paused = false; g.menuOpen = false; Input.enabled = true;
       if (withoutLock && !Input.touch && !g.freeHintShown) { g.freeHintShown = true; g.hud.toast('Maus wird ohne Sperre benutzt – zum Drehen an den Rand fahren oder ins Bild klicken', 4); }
     }
     else if (!g.endShown || g.spectateMode) {
@@ -61,7 +61,15 @@ function boot() {
     const g = window.game;
     if (g && !Input.locked && !Input.touch && !g.paused && (!g.endShown || g.spectateMode)) Input.lock();
   });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && window.game && !window.game.paused && !window.game.endShown) pauseGame(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && window.game && !window.game.net && !window.game.paused && !window.game.endShown) pauseGame(); });
+  // Online-Ereignisse
+  Net.onStart = msg => { UI.hideAll(); startMatch({ role: 'client', start: msg }); };
+  Net.onBack = () => { if (window.game) { window.game.dispose(); window.game = null; } Input.unlock(); Input.enabled = false; UI.show('lobby'); };
+  Net.onHostLost = () => {
+    const g = window.game; if (!g || !g.isClient) return;
+    g.hud.banner('Verbindung zum Host verloren', '#ff8a8a');
+    setTimeout(() => { if (window.game === g) { g.dispose(); window.game = null; Input.unlock(); Input.enabled = false; UI.show('online'); } }, 2500);
+  };
   // erste Nutzerinteraktion schaltet Audio frei
   const unlock = () => { SFX.init(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
   window.addEventListener('pointerdown', unlock); window.addEventListener('keydown', unlock);
@@ -83,7 +91,7 @@ function boot() {
   window.SF = { startMatch, quitToMenu, get game() { return window.game; } };
 }
 
-function startMatch() {
+function startMatch(net) {
   if (window.game) { window.game.dispose(); window.game = null; }
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   UI.hideAll();
@@ -93,8 +101,10 @@ function startMatch() {
   setTimeout(() => {
     try {
       window.game = new Game(renderer, MatchSetup, {
-        onEnd: info => { Input.unlock(); window.game.paused = false; UI.showEnd(info); },
-      });
+        onEnd: info => { Input.unlock(); window.game.paused = false; window.game.menuOpen = false; UI.showEnd(info); },
+        onUpdateEnd: info => { if (UI.screen === 'end') UI.showEnd(info); },
+      }, net);
+      if (net && net.role === 'host') window.game.netSendStart();
     } catch (e) {
       console.error(e);
       ld.querySelector('p').textContent = 'Fehler beim Erzeugen: ' + e.message;
@@ -106,9 +116,21 @@ function startMatch() {
     Input.lock();
   }, 30);
 }
+/* Online: Host startet das Match für alle in der Lobby */
+function startOnlineMatch() {
+  const L = Net.lobby; if (!L || !L.isHost) return;
+  startMatch({ role: 'host', members: L.members.map(m => ({ code: m.code, name: m.name, outfit: m.outfit })) });
+}
+function backToLobby() {
+  const g = window.game;
+  if (g) { g.dispose(); window.game = null; }
+  Input.unlock(); Input.enabled = false;
+  if (Net.lobby && Net.lobby.isHost) { Net.lobby.inGame = false; Net.broadcast({ t: 'back' }); Net.broadcastLobby(); }
+  if (Net.lobby) UI.show('lobby'); else UI.show('online');
+}
 function pauseGame() {
   const g = window.game; if (!g) return;
-  g.paused = true;
+  if (g.net) { g.menuOpen = true; } else g.paused = true;
   Input.enabled = false;
   Input.free = false; Input.tFire = false; Input.axis.on = false; Input.vheld.clear(); Touch.reset();
   if (document.pointerLockElement) document.exitPointerLock();
@@ -122,7 +144,10 @@ function resumeGame() {
   Input.lock();
 }
 function quitToMenu() {
-  if (window.game) { window.game.dispose(); window.game = null; }
+  const g = window.game;
+  if (g && g.isHost && Net.lobby) { backToLobby(); return; }
+  if (g) { g.dispose(); window.game = null; }
+  if (g && g.isClient && Net.lobby) { Input.unlock(); Input.enabled = false; UI.show('lobby'); return; }
   Input.unlock(); Input.enabled = false;
   document.getElementById('clicklock').classList.add('hidden');
   UI.show('menu');

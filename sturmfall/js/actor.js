@@ -109,6 +109,7 @@ class Actor {
   update(dt) {
     const g = this.game, w = g.world;
     if (this.state === 'dead') { this.updateDeath(dt); return; }
+    if (this.netMode) { this.updateNet(dt); return; }
     this.fireCd -= dt; this.hurt = Math.max(0, this.hurt - dt * 4); this.fireKick = Math.max(0, this.fireKick - dt * 8);
     this.bloom = Math.max(0, this.bloom - dt * 0.09);
     const inp = this.input;
@@ -126,8 +127,8 @@ class Actor {
 
     this.updateActions(dt);
 
-    // Sturmschaden (1x pro Sekunde)
-    if (g.storm && g.storm.state !== 'idle' && !g.storm.inside(this.pos.x, this.pos.z)) {
+    // Sturmschaden (1x pro Sekunde) – online rechnet ihn der Host
+    if (!g.isClient && g.storm && g.storm.state !== 'idle' && !g.storm.inside(this.pos.x, this.pos.z)) {
       this.stormTick -= dt;
       if (this.stormTick <= 0) { this.stormTick = 1; this.takeDamage(g.storm.dmg, null, { storm: true }); if (this.isPlayer) SFX.stormTick(); }
     } else this.stormTick = 0.5;
@@ -191,7 +192,7 @@ class Actor {
     const fall = this.fallStartY - this.pos.y;
     if (fall > 9 && this.state === 'ground') {
       const dmg = Math.round((fall - 9) * 7);
-      if (dmg > 0) this.takeDamage(dmg, null, { fall: true });
+      if (dmg > 0) { if (this.game.isClient) this.game.netSend({ t: 'fd', d: dmg }); else this.takeDamage(dmg, null, { fall: true }); }
     }
     if (this.isPlayer) SFX.land(fall > 5);
   }
@@ -269,6 +270,7 @@ class Actor {
           it.count--;
           if (it.count <= 0) { this.slots[this.healSlot] = null; this.select(0); }
           if (this.isPlayer) { if (c.shield) SFX.shieldUp(); else SFX.heal(); g.hud.refreshSlots(); }
+          if (this.isPlayer && g.isClient) g.netSend({ t: 'hl', h: this.hp, s: this.shield });
         }
       }
     }
@@ -340,14 +342,25 @@ class Actor {
     const dir = this.aimDir.clone();
     muzzle.addScaledVector(dir, held.id === 'sniper' || held.id === 'rocket' ? 0.9 : 0.6);
     g.onShot(this, held, st, muzzle);
+    const dirs = [], ends = [];
     if (st.projectile) {
       const d = this.jitter(dir, spread);
       g.spawnRocket(this, muzzle.clone(), d, st);
+      dirs.push(d);
     } else {
       for (let i = 0; i < st.pellets; i++) {
         const d = this.jitter(dir, spread);
-        g.hitscan(this, this.aimOrigin, d, st, muzzle, i === 0 || i % 3 === 0);
+        dirs.push(d);
+        const e = g.hitscan(this, this.aimOrigin, d, st, muzzle, i === 0 || i % 3 === 0);
+        if (i === 0 || i % 3 === 0) ends.push([r2(e.x), r2(e.y), r2(e.z)]);
       }
+    }
+    // online: Client meldet den Schuss an den Host, der Host zeigt ihn allen anderen
+    const m3 = [r2(muzzle.x), r2(muzzle.y), r2(muzzle.z)];
+    if (g.isClient) g.netSend({ t: 'fire', w: held.id, r: held.rarity || 0, o: [r2(this.aimOrigin.x), r2(this.aimOrigin.y), r2(this.aimOrigin.z)], m: m3, d: dirs.map(d => [r2(d.x * 1000) / 1000, r2(d.y * 1000) / 1000, r2(d.z * 1000) / 1000]) });
+    else if (g.isHost && g.netLive) {
+      if (st.projectile) g.netBroadcast({ t: 'rk', n: g.nidOf(this), p: m3, d: [dirs[0].x, dirs[0].y, dirs[0].z] });
+      else g.netBroadcast({ t: 'sh', n: g.nidOf(this), w: held.id, m: m3, e: ends });
     }
     if (this.isPlayer) g.hud.refreshSlots();
   }
@@ -377,6 +390,7 @@ class Actor {
   takeDamage(amount, attacker, opts) {
     if (!this.alive) return 0;
     if (this.game.state === 'won') return 0; // nach dem Sieg ist man unverwundbar
+    if (this.game.isClient) return 0;        // online entscheidet der Host über Schaden
     opts = opts || {};
     let dealt = 0, shieldHit = false;
     if (opts.storm || opts.fall) { dealt = Math.min(this.hp, amount); this.hp -= amount; }
@@ -412,6 +426,7 @@ class Actor {
     this.rig.root.rotation.order = 'YXZ';
     this.killedByPlayer = !!(k && k.isPlayer);
     this.game.onElimination(this, killer, opts);
+    if (this.game.isClient || this.netMode === 'puppet') return; // online verteilt der Host die Beute
     // Beute fallen lassen
     const drops = [];
     for (const s of this.slots) if (s) drops.push(s);
@@ -424,6 +439,42 @@ class Actor {
     this.slots = [null, null, null, null, null];
     for (const k in this.ammo) this.ammo[k] = 0;
     for (const k in this.mats) this.mats[k] = 0;
+  }
+  /* Online: Figur eines anderen Spielers (oder Bots auf dem Client) folgt den Netzwerkdaten */
+  updateNet(dt) {
+    const g = this.game, n = this.net, rig = this.rig;
+    this.fireKick = Math.max(0, this.fireKick - dt * 8); this.hurt = Math.max(0, this.hurt - dt * 4);
+    if (n) {
+      if (this.pos.distanceTo(n.pos) > 10 || n.state !== this.state && (n.state === 'skydive' || this.state === 'airship')) this.pos.copy(n.pos);
+      else this.pos.lerp(n.pos, 1 - Math.exp(-14 * dt));
+      this.yaw = dampAngle(this.yaw, n.yaw, 16, dt); this.pitch = damp(this.pitch, n.pitch, 16, dt);
+      this.vel.copy(n.vel);
+      this.state = n.state;
+      const f = n.flags;
+      this.crouch = !!(f & 1); this.sprint = !!(f & 2); this.grounded = !!(f & 4); this.input.aim = !!(f & 8);
+      this.buildMode = !!(f & 16); this.diving = !!(f & 256);
+      this.healT = f & 32 ? 0.5 : -1;
+      this.reloadT = f & 64 ? (g.time * 0.8) % 1 : -1;
+      this.emoteT = f & 128 ? Math.max(0, n.emote) + 0 : -1;
+      if (f & 512) { if (this.swingT < 0) this.swingT = 0; }
+      if (this.swingT >= 0) { this.swingT += dt / PICKAXE_TIME; if (this.swingT >= 1) this.swingT = -1; }
+      if (n.held !== this.netHeldKey) {
+        this.netHeldKey = n.held; this.netHeldItem = itemFromHeldKey(n.held);
+        if (n.held === 'b') rig.setHeld('build', null); else rig.setHeld('net:' + n.held, makeHeldMesh(this.netHeldItem, rig.outfit));
+      }
+      if (this.emoteT >= 0) this.emoteT = (this.netEmoteT = (this.netEmoteT || 0) + dt); else this.netEmoteT = 0;
+    }
+    // Sturmschaden für Mitspieler rechnet der Host
+    if (this.netMode === 'proxy' && g.storm.state !== 'idle' && this.state !== 'airship' && !g.storm.inside(this.pos.x, this.pos.z)) {
+      this.stormTick -= dt;
+      if (this.stormTick <= 0) { this.stormTick = 1; this.takeDamage(g.storm.dmg, null, { storm: true }); }
+    } else this.stormTick = 0.5;
+    if (this.state === 'airship' || !n) { rig.root.visible = false; return; }
+    rig.root.visible = !this.farHidden;
+    if (this.farHidden) return;
+    rig.root.position.copy(this.pos);
+    rig.root.rotation.y = this.yaw;
+    rig.update(dt, this.animParams());
   }
   /* Eliminierungs-Animation: durch die Luft fliegen, überschlagen, aufprallen,
      kurz glitchen und dann in leuchtende Würfel zerfallen */
@@ -484,7 +535,7 @@ class Actor {
     const fwd = this.vel.x * sy + this.vel.z * cy;
     const side = -(this.vel.x * -cy + this.vel.z * sy); // positiv = rechts
     let hold = 'none';
-    const h = this.held;
+    const h = this.netMode ? this.netHeldItem : this.held;
     if (this.buildMode) hold = 'build';
     else if (this.healT >= 0) hold = 'heal';
     else if (!h) hold = 'pickaxe';

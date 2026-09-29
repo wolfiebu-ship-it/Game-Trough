@@ -6,12 +6,16 @@
 const LOOT_PROB = { wenig: 0.35, normal: 0.55, viel: 0.8 };
 
 class Game {
-  constructor(renderer, setup, callbacks) {
+  constructor(renderer, setup, callbacks, net) {
     this.renderer = renderer;
+    this.net = net || null;
+    this.isHost = !!(net && net.role === 'host');
+    this.isClient = !!(net && net.role === 'client');
+    if (this.isClient) setup = net.start.setup;
     this.setup = Object.assign({}, setup);
     this.cb = callbacks || {};
-    this.time = 0; this.paused = false; this.over = false;
-    this.seedText = setup.seed && String(setup.seed).trim() ? String(setup.seed).trim() : String(Math.floor(Math.random() * 1e9));
+    this.time = 0; this.paused = false; this.over = false; this.pidSeq = 0;
+    this.seedText = this.isClient ? String(net.start.seed) : setup.seed && String(setup.seed).trim() ? String(setup.seed).trim() : String(Math.floor(Math.random() * 1e9));
     const seed = hashString(this.seedText);
     this.rng = mulberry32(seed ^ 0x5bd1e995);
 
@@ -37,23 +41,12 @@ class Game {
     this.actors = [];
     this.hud = new HUD(this);
 
-    // Spieler
-    this.player = new Actor(this, { name: Settings.playerName || 'Spieler', isPlayer: true, outfit: Settings.outfit });
-    this.actors.push(this.player);
-    // Bots
-    const names = BOT_NAMES.slice();
-    for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [names[i], names[j]] = [names[j], names[i]]; }
-    const nb = clamp(setup.bots | 0, 1, 49);
-    for (let i = 0; i < nb; i++) {
-      const a = new Actor(this, { name: names[i % names.length] + (i >= names.length ? ' ' + (i + 1) : ''), outfit: Math.floor(this.rng() * OUTFITS.length) });
-      new BotBrain(a, this, setup.difficulty, mulberry32(seed + i * 7919));
-      a.mats.wood = ri(this.rng, 0, 120); a.mats.stone = ri(this.rng, 0, 40);
-      this.actors.push(a);
-    }
+    if (this.isClient) { this.netSetupClient(net.start); this.netCreateClientActors(net.start); }
+    else this.createActors(setup, seed);
     this.matsMode = setup.buildMats;
-    if (setup.buildMats === 'viel') { this.player.mats = { wood: 500, stone: 400, metal: 300 }; }
+    if (setup.buildMats === 'viel') for (const a of this.actors) if (a.human) a.mats = { wood: 500, stone: 400, metal: 300 };
     if (setup.buildMats === 'unbegrenzt') for (const a of this.actors) a.mats = { wood: 999, stone: 999, metal: 999 };
-    this.spawnFloorLoot();
+    if (!this.isClient) this.spawnFloorLoot();
 
     this.camYaw = 0; this.camPitch = -0.1; this.camDist = Settings.camDist; this.shake = 0;
     this.recoil = 0; this.curFov = Settings.fov; this.scoped = false;
@@ -65,11 +58,44 @@ class Game {
     this.sprintToggled = false; this.crouchToggled = false;
     this.matchTime = 0;
 
-    if (setup.start === 'boden') this.startOnGround();
-    else this.startAirship();
-    this.storm.start();
+    if (this.isClient) {
+      const st = net.start;
+      if (st.spawns) {
+        this.state = 'play';
+        st.spawns.forEach((s, i) => { const a = this.actors[i]; if (!a) return; a.pos.set(s[0], s[1], s[2]); a.yaw = s[3]; a.state = 'ground'; a.grounded = true; });
+        this.camYaw = this.player.yaw;
+        this.hud.banner('Los geht\'s! Finde Waffen!', '#ffd23f');
+      } else this.startAirship(st.ship);
+    } else {
+      if (this.isHost) this.netSetupHost();
+      if (setup.start === 'boden') this.startOnGround();
+      else this.startAirship();
+      this.storm.start();
+    }
     this.hud.refreshSlots();
     this.hud.setMinimap(this.world.minimapCanvas);
+  }
+  createActors(setup, seed) {
+    // Spieler
+    this.player = new Actor(this, { name: Settings.playerName || 'Spieler', isPlayer: true, outfit: Settings.outfit });
+    this.player.human = true;
+    this.actors.push(this.player);
+    // Mitspieler (online, nur beim Host)
+    if (this.isHost) for (const m of this.net.members) {
+      const a = new Actor(this, { name: m.name, outfit: m.outfit });
+      a.netMode = 'proxy'; a.owner = m.code; a.human = true;
+      this.actors.push(a);
+    }
+    // Bots
+    const names = BOT_NAMES.slice();
+    for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [names[i], names[j]] = [names[j], names[i]]; }
+    const nb = clamp(setup.bots | 0, 1, 49);
+    for (let i = 0; i < nb; i++) {
+      const a = new Actor(this, { name: names[i % names.length] + (i >= names.length ? ' ' + (i + 1) : ''), outfit: Math.floor(this.rng() * OUTFITS.length) });
+      new BotBrain(a, this, setup.difficulty, mulberry32(seed + i * 7919));
+      a.mats.wood = ri(this.rng, 0, 120); a.mats.stone = ri(this.rng, 0, 40);
+      this.actors.push(a);
+    }
   }
 
   applyShadowQuality() {
@@ -90,12 +116,13 @@ class Game {
   }
 
   /* ---------------- Start ---------------- */
-  startAirship() {
+  startAirship(route) {
     const a = this.rng() * TAU;
     const off = rr(this.rng, -70, 70);
     const nx = -Math.sin(a), nz = Math.cos(a);
     this.shipFrom = new THREE.Vector3(Math.cos(a) * 320 + nx * off, 120, Math.sin(a) * 320 + nz * off);
     this.shipTo = new THREE.Vector3(-Math.cos(a) * 320 + nx * off, 120, -Math.sin(a) * 320 + nz * off);
+    if (route) { this.shipFrom.set(route[0], route[1], route[2]); this.shipTo.set(route[3], route[4], route[5]); }
     this.shipT = 0; this.shipDur = this.shipFrom.distanceTo(this.shipTo) / 22;
     this.doorsT = 4;
     this.ship = this.makeAirship();
@@ -180,23 +207,32 @@ class Game {
       else { const id = pick(this.rng, Object.keys(AMMO).filter(k => k !== 'rockets')); this.spawnPickup({ type: 'ammo', id, count: AMMO[id].box }, s.x, s.y, s.z); }
     }
   }
-  spawnPickup(item, x, y, z, toss) {
+  spawnPickup(item, x, y, z, toss, id, vel) {
     const mesh = makePickupMesh(item);
     mesh.position.set(x, y, z);
     this.scene.add(mesh);
     const p = { item, pos: mesh.position, mesh, vel: new THREE.Vector3(), taken: false, isPickup: true, t: Math.random() * 6, settled: !toss };
-    if (toss) p.vel.set((Math.random() - 0.5) * 3, 4 + Math.random() * 2, (Math.random() - 0.5) * 3);
+    p.id = id != null ? id : ++this.pidSeq;
+    if (toss) { if (vel) p.vel.set(vel[0], vel[1], vel[2]); else p.vel.set((Math.random() - 0.5) * 3, 4 + Math.random() * 2, (Math.random() - 0.5) * 3); }
     if (!toss) { const gy = this.world.groundAt(x, z, y + 0.5, 1); mesh.position.y = gy; }
     this.pickups.push(p);
+    if (this.isHost && this.netLive) this.netBroadcast({ t: 'pa', id: p.id, it: item, x: r2(x), y: r2(y), z: r2(z), v: toss ? [r2(p.vel.x), r2(p.vel.y), r2(p.vel.z)] : null });
     return p;
   }
   removePickup(p) {
     p.taken = true;
     this.scene.remove(p.mesh);
     const i = this.pickups.indexOf(p); if (i >= 0) this.pickups.splice(i, 1);
+    if (this.isHost && this.netLive) this.netBroadcast({ t: 'pr', id: p.id });
   }
   takePickup(a, p) {
     if (p.taken) return false;
+    if (this.isClient) {
+      if (!a.isPlayer || (p.reqT && this.time - p.reqT < 1)) return false;
+      if (!a.canTake(p.item)) { this.hud.toast('Kein Platz im Inventar'); return false; }
+      p.reqT = this.time; this.netSend({ t: 'tk', id: p.id });
+      return true;
+    }
     if (!a.canTake(p.item)) { if (a.isPlayer) this.hud.toast('Kein Platz im Inventar'); return false; }
     const it = p.item;
     const left = a.give(it);
@@ -215,6 +251,8 @@ class Game {
   }
   openContainer(s, a) {
     if (s.opened || !s.alive) return;
+    if (this.isClient) { if (a.isPlayer && (!s.reqT || this.time - s.reqT > 1)) { s.reqT = this.time; this.netSend({ t: 'op', id: s.id }); } return; }
+    if (this.isHost && this.netLive && s.kind === 'chest') this.netBroadcast({ t: 'co', id: s.id });
     s.opened = true;
     const i = this.world.interactables.indexOf(s); if (i >= 0) this.world.interactables.splice(i, 1);
     const p = s.pos;
@@ -264,7 +302,8 @@ class Game {
     const it = a.slots[a.sel - 1]; if (!it) return;
     a.slots[a.sel - 1] = null;
     const f = a.forward();
-    this.spawnPickup(it, a.pos.x + f.x * 1.5, a.pos.y + 0.8, a.pos.z + f.z * 1.5, true);
+    if (this.isClient) this.netSend({ t: 'dr', it, x: a.pos.x + f.x * 1.5, y: a.pos.y + 0.8, z: a.pos.z + f.z * 1.5 });
+    else this.spawnPickup(it, a.pos.x + f.x * 1.5, a.pos.y + 0.8, a.pos.z + f.z * 1.5, true);
     a.select(0);
     this.hud.refreshSlots();
   }
@@ -288,6 +327,12 @@ class Game {
       else if (tb > 0 && tb < bestT) { bestT = tb; hitA = a; head = false; }
     }
     const end = new THREE.Vector3().copy(origin).addScaledVector(dir, bestT);
+    if (this.isClient) {
+      if (hitA) this.fx.hitSpark(end, hitA.shield > 0);
+      else if (wr.hit && bestT < range && (drawTracer || st.pellets === 1)) this.fx.impact(end, 5, wr.struct ? MAT_COLORS[wr.struct.mat] : 0x9a8a6a);
+      if (drawTracer) this.fx.tracer(muzzle, end, 0xfff2a0);
+      return end;
+    }
     if (hitA) {
       const dist = bestT;
       const fall = dist > st.range * 0.55 ? lerp(1, 0.6, clamp((dist - st.range * 0.55) / (st.range * 0.75), 0, 1)) : 1;
@@ -304,6 +349,7 @@ class Game {
       if (drawTracer || st.pellets === 1) this.fx.impact(end, 5, wr.struct ? MAT_COLORS[wr.struct.mat] : 0x9a8a6a);
     }
     if (drawTracer) this.fx.tracer(muzzle, end, shooter.isPlayer ? 0xfff2a0 : 0xffc0a0);
+    return end;
   }
   onShot(a, held, st, muzzle) {
     const d = a.isPlayer ? 0 : this.camera.position.distanceTo(a.pos);
@@ -316,13 +362,13 @@ class Game {
       if (Settings.cameraShake) this.shake = Math.min(1, this.shake + st.shake * 0.25);
     }
   }
-  spawnRocket(a, pos, dir, st) {
+  spawnRocket(a, pos, dir, st, visual) {
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8), lambert(0x556b2f)); body.rotation.x = Math.PI / 2; g.add(body);
     const tip = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.2, 8), lambert(0xd62828)); tip.rotation.x = Math.PI / 2; tip.position.z = 0.4; g.add(tip);
     g.position.copy(pos); g.lookAt(pos.clone().add(dir));
     this.scene.add(g);
-    this.rockets.push({ owner: a, pos: g.position, vel: dir.clone().multiplyScalar(58), mesh: g, st, life: 5 });
+    this.rockets.push({ owner: a, pos: g.position, vel: dir.clone().multiplyScalar(58), mesh: g, st, life: 5, visual: visual || this.isClient });
   }
   updateRockets(dt) {
     for (let i = this.rockets.length - 1; i >= 0; i--) {
@@ -339,17 +385,18 @@ class Game {
         const c = a.chest();
         if (c.distanceTo(r.pos) < 1.0) { boom = r.pos.clone(); break; }
       }
-      if (boom) { this.explode(boom, r.owner, r.st); this.scene.remove(r.mesh); this.rockets.splice(i, 1); continue; }
+      if (boom) { this.explode(boom, r.owner, r.st, r.visual); this.scene.remove(r.mesh); this.rockets.splice(i, 1); continue; }
       r.pos.addScaledVector(dir, step);
       r.mesh.lookAt(r.pos.clone().add(dir));
       if (Math.random() < 0.8) this.fx.spawn(r.pos.x, r.pos.y, r.pos.z, (Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5), Math.random() < 0.5 ? 0xffa040 : 0x777777, 0.18, 0.5, -1);
     }
   }
-  explode(p, owner, st) {
+  explode(p, owner, st, visual) {
     this.fx.explosion(p);
     const d = this.camera.position.distanceTo(p);
     SFX.explosion(clamp(1 - d / 250, 0, 1), this.panFor(p));
     if (Settings.cameraShake) this.shake = Math.min(1.5, this.shake + clamp(1 - d / 40, 0, 1) * 1.2);
+    if (visual) return;
     const R = st.splash;
     for (const a of this.actors) {
       if (!a.alive || a.state === 'airship') continue;
@@ -368,6 +415,13 @@ class Game {
   harvestHit(a) {
     const origin = a.aimOrigin.clone(), dir = a.aimDir.clone();
     if (a.isPlayer) { origin.copy(a.chest()); }
+    if (this.isClient) {
+      // nur Optik – den echten Schlag rechnet der Host
+      const rr_ = this.world.raycast(origin, dir, 3.2);
+      if (rr_.hit && rr_.struct && !rr_.struct.indestructible) { SFX.harvest(rr_.struct.mat, 1, 0); this.fx.harvestHit(rr_.point, rr_.struct.mat); }
+      this.netSend({ t: 'hv', o: [r2(origin.x), r2(origin.y), r2(origin.z)], d: [r2(dir.x), r2(dir.y), r2(dir.z)] });
+      return;
+    }
     const reach = a.isPlayer ? 3.2 : 2.8;
     // Gegner treffen?
     for (const o of this.actors) {
@@ -401,6 +455,7 @@ class Game {
       const gain = Math.round(base * (s.yieldMul || 1) * (crit ? 2 : 1));
       if (this.matsMode !== 'unbegrenzt') a.mats[s.mat] = Math.min(999, a.mats[s.mat] + gain);
       if (a.isPlayer) this.hud.matGain(s.mat, gain);
+      if (this.isHost && a.netMode === 'proxy' && this.matsMode !== 'unbegrenzt') Net.sendMember(a.owner, { t: 'mt', m: s.mat, n: gain });
     }
     this.world.damageStructure(s, dmg, a);
     if (a.isPlayer) { this.hud.structHp(s); if (crit) this.hud.toast('Volltreffer! ×2', 0.6); }
@@ -413,7 +468,8 @@ class Game {
       SFX.breakPiece(s.mat, clamp(1 - d / 80, 0, 1), this.panFor(s.center || s.mesh.position));
     }
     if (s.kind === 'tree') this.fx.burst(new THREE.Vector3(s.center.x, s.center.y + 3, s.center.z), 0x3f8f3a, 20, 5, 0.3, 1.2, 10);
-    if (s.kind === 'chest' && !s.opened) { s.opened = true; this.openContainerLootOnly(s); }
+    if (s.kind === 'chest' && !s.opened) { s.opened = true; if (!this.isClient) this.openContainerLootOnly(s); }
+    if (this.isHost && this.netLive) this.netBroadcast({ t: 'sx', id: s.id });
     // Dinge, die auf zerstörten Teilen standen, fallen (Schwerkraft macht das automatisch)
   }
   openContainerLootOnly(s) {
@@ -424,6 +480,15 @@ class Game {
   }
   onDamage(victim, attacker, dealt, opts, shieldHit) {
     if (attacker) attacker.damageDone += dealt;
+    if (this.isHost && this.netLive) {
+      // Mitspieler über Schaden informieren
+      if (victim.netMode === 'proxy') Net.sendMember(victim.owner, { t: 'hp', h: Math.max(0, Math.round(victim.hp)), s: Math.round(victim.shield), a: this.nidOf(attacker),
+        f: (opts.storm ? 1 : 0) | (opts.fall ? 2 : 0) | (opts.head ? 4 : 0) | (shieldHit ? 8 : 0) });
+      if (attacker && attacker.netMode === 'proxy' && attacker !== victim) {
+        const hp = victim.headPos();
+        Net.sendMember(attacker.owner, { t: 'hit', p: [r2(hp.x), r2(hp.y), r2(hp.z)], d: Math.round(dealt), h: !!opts.head, s: !!shieldHit, k: victim.hp <= 0 });
+      }
+    }
     if (attacker && attacker.isPlayer && victim !== attacker) {
       if (Settings.damageNumbers) this.hud.damageNumber(victim.headPos(), dealt, opts.head, shieldHit);
       this.hud.hitmarker(opts.head, victim.hp <= 0);
@@ -438,10 +503,15 @@ class Game {
   }
   onElimination(victim, killer, opts) {
     this.aliveCount = this.actors.filter(a => a.alive).length;
+    if (this.isHost && this.netLive) {
+      const o = { storm: !!(opts && opts.storm), fall: !!(opts && opts.fall), melee: !!(opts && opts.melee), explosion: !!(opts && opts.explosion), left: !!(opts && opts.left), w: opts && opts.weapon ? opts.weapon.id : null };
+      this.netBroadcast({ t: 'el', v: this.nidOf(victim), k: killer && killer !== victim ? this.nidOf(killer) : -1, o, al: this.aliveCount });
+    }
     victim.placement = this.aliveCount + 1;
     const wname = opts && opts.weapon ? opts.weapon.name : null;
     let msg;
-    if (opts && opts.storm && !killer) msg = `<b>${esc(victim.name)}</b> wurde vom Sturm erwischt`;
+    if (opts && opts.left) msg = `<b>${esc(victim.name)}</b> hat das Spiel verlassen`;
+    else if (opts && opts.storm && !killer) msg = `<b>${esc(victim.name)}</b> wurde vom Sturm erwischt`;
     else if (opts && opts.fall && !killer) msg = `<b>${esc(victim.name)}</b> ist zu tief gefallen`;
     else if (killer && killer !== victim) msg = `<b>${esc(killer.name)}</b> ${wname ? 'hat' : 'hat'} <b>${esc(victim.name)}</b> ${wname ? 'mit ' + esc(wname) + ' ' : opts && opts.melee ? 'mit dem Erntehammer ' : ''}eliminiert`;
     else msg = `<b>${esc(victim.name)}</b> hat sich selbst eliminiert`;
@@ -471,8 +541,9 @@ class Game {
       setTimeout(() => { if (!this.disposed) this.finish(false); }, 3600);
       this.spectating = killer && killer.alive && killer !== victim ? killer : null;
     }
-    if (this.aliveCount <= 1 && !this.over) {
+    if (this.aliveCount <= 1 && !this.over && !this.isClient) {
       const winner = this.actors.find(a => a.alive);
+      if (winner && this.isHost && this.netLive) this.netBroadcast({ t: 'wn', n: this.nidOf(winner) });
       if (winner) { winner.placement = 1; this.winner = winner; }
       if (winner && winner.isPlayer) {
         this.state = 'won'; this.over = true;
@@ -530,6 +601,7 @@ class Game {
   /* ---------------- Spieler-Eingabe ---------------- */
   handleInput(dt) {
     const p = this.player, inp = p.input;
+    if (this.menuOpen) { Input.takeMouse(); inp.fz = inp.fx = 0; inp.fire = false; inp.aim = false; inp.sprint = false; return; }
     const [mx, my] = Input.takeMouse();
     const w = p.heldWeapon;
     const ads = inp.aim && !p.buildMode && w && p.state === 'ground';
@@ -617,9 +689,9 @@ class Game {
   }
 
   /* ---------------- Update ---------------- */
-  slowmo(dur, min) { this.slowT = dur; this.slowDur = dur; this.slowMin = min; }
+  slowmo(dur, min) { if (this.net) return; this.slowT = dur; this.slowDur = dur; this.slowMin = min; } // online keine Zeitlupe (alle teilen eine Zeit)
   update(dt) {
-    if (this.paused) return;
+    if (this.paused && !this.net) return;
     // Zeitlupe (bei Eliminierungen)
     const real = dt;
     if (this.slowT > 0) { this.slowT -= real; const k = clamp(this.slowT / this.slowDur, 0, 1); this.timeScale = lerp(1, this.slowMin, Math.min(1, k * 1.7)); }
@@ -640,7 +712,7 @@ class Game {
       for (const a of this.actors) {
         if (a.state !== 'airship') continue;
         a.pos.copy(this.ship.position);
-        if (this.doorsT <= 0 && ((a.bot && t >= a.bot.jumpAt) || t >= 1)) this.jumpOut(a);
+        if (this.doorsT <= 0 && ((a.bot && t >= a.bot.jumpAt) || (t >= 1 && !a.netMode))) this.jumpOut(a);
       }
       if (t >= 1 && this.actors.every(a => a.state !== 'airship')) {
         this.ship.position.addScaledVector(this.shipTo.clone().sub(this.shipFrom).normalize(), dt * 22);
@@ -654,7 +726,8 @@ class Game {
     if (this.botPickT <= 0) {
       this.botPickT = 0.4;
       for (const a of this.actors) {
-        if (!a.alive || a.state !== 'ground') continue;
+        if (!a.alive || a.state !== 'ground' || a.netMode) continue;
+        if (this.isClient && !a.isPlayer) continue;
         if (a.isPlayer && !Settings.autoPickup) continue;
         for (const p of this.pickups) {
           if (p.taken || !p.settled || (p.item.type !== 'ammo' && p.item.type !== 'mat')) continue;
@@ -708,6 +781,7 @@ class Game {
       }
     }
     this.hud.update(dt);
+    this.netUpdate(real);
   }
   updatePickups(dt) {
     for (const p of this.pickups) {
@@ -794,6 +868,7 @@ class Game {
   resize(w, h) { this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
   dispose() {
     this.disposed = true;
+    if (this.net) { Net.onGameMsg = null; Net.onPeerLeft = null; }
     document.body.classList.remove('dying');
     this.hud.dispose();
     this.scene.traverse(o => {

@@ -171,6 +171,14 @@ class BuildSystem {
     const r = this.compute(actor, type, yaw, pitch);
     if (!r.valid) return null;
     actor.mats[mat] -= BUILD_COST;
+    // online: Client schickt den Bauwunsch an den Host, der baut es für alle
+    if (this.game.isClient) { this.game.netSend({ t: 'bd', r: JSON.parse(JSON.stringify(r)), m: mat }); return { pending: true }; }
+    return this.create(r, mat, actor);
+  }
+  create(r, mat, owner, forceId) {
+    const type = r.type;
+    if (this.pieces.has(r.key)) return null;
+    const wire = this.game.isHost && this.game.netLive ? JSON.parse(JSON.stringify(r)) : null;
     const mesh = new THREE.Mesh(this.geo[type], this.mats[mat]);
     mesh.position.set(r.x, r.y, r.z);
     if (type === 'ramp') this.setRampRotation(mesh, r.dir); else mesh.rotation.set(0, r.rotY, 0);
@@ -182,10 +190,11 @@ class BuildSystem {
     const maxHp = BUILD_HP[mat];
     const s = this.world.addStructure({
       kind: 'build', buildType: type, mat, hp: maxHp * 0.35, maxHp, mesh, colliders, key: r.key, base: r.base, dir: r.dir,
-      px: r.x, pz: r.z, owner: actor, center: new THREE.Vector3(r.x, r.y, r.z), grow: 0,
+      px: r.x, pz: r.z, owner, forceId, center: new THREE.Vector3(r.x, r.y, r.z), grow: 0,
     });
     this.pieces.set(r.key, s);
     this.growing.push(s);
+    if (wire) this.game.netBroadcast({ t: 'bp', id: s.id, r: wire, m: mat });
     return s;
   }
   onDestroyed(s) { if (s.key && this.pieces.get(s.key) === s) this.pieces.delete(s.key); }

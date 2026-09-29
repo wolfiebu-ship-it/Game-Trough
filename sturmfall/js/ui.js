@@ -153,6 +153,7 @@ const UI = {
         else if (['setup', 'locker', 'stats'].includes(this.screen)) this.show('menu');
       }
     });
+    this.initOnline();
     this.fillSetup();
     this.show('menu');
   },
@@ -164,12 +165,14 @@ const UI = {
     const el = this.$('scr-' + name);
     if (el) el.classList.remove('hidden');
     this.screen = name;
-    document.body.classList.toggle('in-menu', ['menu', 'setup', 'locker', 'stats'].includes(name) || (!window.game && (name === 'settings' || name === 'help')));
+    document.body.classList.toggle('in-menu', ['menu', 'setup', 'locker', 'stats', 'online', 'lobby'].includes(name) || (!window.game && (name === 'settings' || name === 'help')));
     if (name === 'settings') this.renderSettings();
     if (name === 'locker') this.renderLocker();
     if (typeof lobby !== 'undefined' && lobby) lobby.layout = name === 'locker' ? 'left' : 'right';
     if (name === 'stats') this.renderStats();
     if (name === 'help') this.renderHelp();
+    if (name === 'online') { Net.connect(); this.renderOnline(); }
+    if (name === 'lobby') this.renderLobby();
     if (name === 'menu') { this.$('menuName').textContent = Settings.playerName || 'Spieler'; this.$('menuOutfit').textContent = OUTFITS[Settings.outfit].name; this.$('menuWins').textContent = Stats.wins; }
   },
   back() { const p = this.prev || 'menu'; this.prev = null; this.show(window.game && !window.game.endShown ? 'pause' : p === 'pause' && !window.game ? 'menu' : p); },
@@ -294,6 +297,114 @@ const UI = {
       </div>`;
   },
 
+  /* ----- Online ----- */
+  initOnline() {
+    const $ = this.$;
+    Net.onChange = () => this.netRefresh();
+    $('btnCopyCode').onclick = () => this.copy(Net.code(), $('btnCopyCode'));
+    $('btnCopyLobby').onclick = () => this.copy(Net.lobby ? Net.lobby.hostCode : '', $('btnCopyLobby'));
+    $('btnCreateLobby').onclick = () => { SFX.init(); SFX.ui(); Net.createLobby(); this.show('lobby'); };
+    const join = () => { const err = Net.joinLobby($('joinCode').value); if (err) { $('friendMsg').textContent = err; return; } this.show('lobby'); };
+    $('btnJoinCode').onclick = join;
+    $('joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+    const add = () => { const err = Net.addFriend($('friendCode').value); $('friendMsg').textContent = err || 'Freund hinzugefügt – sobald er online ist, siehst du ihn hier.'; if (!err) $('friendCode').value = ''; };
+    $('btnAddFriend').onclick = add;
+    $('friendCode').addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+    $('netName').addEventListener('change', () => { Settings.playerName = ($('netName').value || 'Spieler').slice(0, 16); saveSettings(); Net.updateMe(); });
+    $('btnLeaveLobby').onclick = () => { Net.leaveLobby(); this.show('online'); };
+    $('btnLobbyStart').onclick = () => { if (Net.lobby && Net.lobby.isHost) { SFX.init(); startOnlineMatch(); } };
+    $('btnToLobby').onclick = () => backToLobby();
+  },
+  copy(text, btn) {
+    const done = () => { const t = btn.textContent; btn.textContent = 'Kopiert!'; setTimeout(() => btn.textContent = t, 1200); };
+    try { navigator.clipboard.writeText(text).then(done, () => this.selectText(text)); } catch (e) { this.selectText(text); }
+  },
+  selectText(text) { this.$('friendMsg').textContent = 'Dein Code: ' + text + ' (bitte abschreiben)'; },
+  netRefresh() {
+    this.renderNotes();
+    if (this.screen === 'online') this.renderOnline();
+    if (this.screen === 'lobby') { if (!Net.lobby) this.show('online'); else this.renderLobby(); }
+  },
+  statusLabel(s) {
+    return { online: 'Online', connecting: 'Verbinde …', offline: 'Offline', error: 'Fehler', unsupported: 'Nicht verfügbar' }[s] || s;
+  },
+  renderOnline() {
+    const $ = this.$;
+    $('netMyCode').textContent = Net.code();
+    $('netDot').className = 'dot-' + Net.status;
+    $('netStatusText').textContent = this.statusLabel(Net.status);
+    if (document.activeElement !== $('netName')) $('netName').value = Settings.playerName || 'Spieler';
+    let err = Net.error;
+    if (Net.status === 'unsupported') err = 'Online-Spielen ist hier nicht möglich. Öffne das Spiel auf der veröffentlichten Webseite (z. B. GitHub Pages) in Chrome, Edge, Firefox oder Safari.';
+    $('netError').textContent = err; $('netError').classList.toggle('hidden', !err);
+    const inLobby = Net.lobby && Net.lobby.isHost;
+    $('friendList').innerHTML = Net.friends.length ? Net.friends.map(f => {
+      const s = Net.fstate[f.code] || {};
+      const name = esc(s.name || f.name || 'Unbekannt');
+      let pill = s.online ? '<em class="pill on">Online</em>' : '<em class="pill">Offline</em>';
+      if (s.online && s.lobby) pill = `<em class="pill lob">In Lobby (${s.lobby.n}/${NET_MAX_PLAYERS})</em>`;
+      const btns = [];
+      if (s.online && s.lobby && s.lobby.open) btns.push(`<button class="small" data-join="${f.code}">Beitreten</button>`);
+      if (s.online && inLobby) btns.push(`<button class="small" data-inv="${f.code}">Einladen</button>`);
+      btns.push(`<button class="small ghost" data-del="${f.code}" title="Entfernen">✕</button>`);
+      return `<div class="fitem"><div><b>${name}</b><code>${f.code}</code></div>${pill}<div class="fbtns">${btns.join('')}</div></div>`;
+    }).join('') : '<p class="hint">Noch keine Freunde. Tauscht eure Freundes-Codes aus und tragt sie oben ein.</p>';
+    $('friendList').querySelectorAll('[data-join]').forEach(b => b.onclick = () => { if (!Net.joinLobby(b.dataset.join)) this.show('lobby'); });
+    $('friendList').querySelectorAll('[data-inv]').forEach(b => b.onclick = () => { Net.invite(b.dataset.inv); b.textContent = 'Eingeladen'; b.disabled = true; });
+    $('friendList').querySelectorAll('[data-del]').forEach(b => b.onclick = () => Net.removeFriend(b.dataset.del));
+  },
+  renderLobby() {
+    const $ = this.$, L = Net.lobby;
+    if (!L) return;
+    $('lobbyCode').textContent = L.hostCode;
+    const me = Net.me();
+    const players = L.isHost ? Net.lobbyState().players : (L.players || []);
+    $('lobbyCount').textContent = L.connecting ? 'Verbinde mit dem Host …' : `${players.length} / ${NET_MAX_PLAYERS} Spieler`;
+    const hex = n => '#' + n.toString(16).padStart(6, '0');
+    $('lobbyPlayers').innerHTML = players.map(p => {
+      const o = OUTFITS[p.outfit % OUTFITS.length];
+      return `<div class="pitem"><span class="sw" style="background:linear-gradient(135deg, ${hex(o.top)} 0 50%, ${hex(o.accent)} 50% 70%, ${hex(o.bottom)} 70%)"></span><b>${esc(p.name)}</b>${p.host ? '<em class="pill lob">Host</em>' : ''}${p.code === me.code ? '<em class="pill on">Du</em>' : ''}</div>`;
+    }).join('') || '<p class="hint">…</p>';
+    // Freunde einladen
+    const online = Net.friends.filter(f => (Net.fstate[f.code] || {}).online && !players.some(p => p.code === f.code));
+    $('lobbyInvite').innerHTML = !L.isHost ? '<p class="hint">Nur der Host kann einladen – schick Freunden einfach den Lobby-Code.</p>'
+      : online.length ? online.map(f => `<div class="fitem"><div><b>${esc((Net.fstate[f.code] || {}).name || f.name)}</b><code>${f.code}</code></div><div class="fbtns"><button class="small" data-inv="${f.code}">Einladen</button></div></div>`).join('')
+        : '<p class="hint">Gerade ist kein Freund online. Du kannst auch den Lobby-Code teilen.</p>';
+    $('lobbyInvite').querySelectorAll('[data-inv]').forEach(b => b.onclick = () => { Net.invite(b.dataset.inv); b.textContent = 'Eingeladen'; b.disabled = true; });
+    // Einstellungen
+    const s = L.isHost ? MatchSetup : (L.setup || MatchSetup);
+    const sel = (id, label, opts, val) => `<label>${label} <select data-set="${id}" ${L.isHost ? '' : 'disabled'}>${opts.map(([v, t]) => `<option value="${v}" ${String(v) === String(val) ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`;
+    if (!this.lobbySetupFocus) {
+      $('lobbySetup').innerHTML =
+        sel('bots', 'Bots', [0, 5, 10, 15, 20, 30, 40].map(n => [n, n === 0 ? 'Keine' : n]), s.bots) +
+        sel('difficulty', 'Schwierigkeit', [['leicht', 'Leicht'], ['normal', 'Normal'], ['schwer', 'Schwer'], ['profi', 'Profi']], s.difficulty) +
+        sel('start', 'Start', [['luftschiff', 'Luftschiff-Absprung'], ['boden', 'Direkt am Boden']], s.start) +
+        sel('stormSpeed', 'Sturm-Tempo', [['langsam', 'Langsam'], ['normal', 'Normal'], ['schnell', 'Schnell'], ['turbo', 'Turbo']], s.stormSpeed) +
+        sel('loot', 'Beute', [['wenig', 'Wenig'], ['normal', 'Normal'], ['viel', 'Viel']], s.loot) +
+        sel('buildMats', 'Baumaterial', [['normal', 'Normal'], ['viel', 'Viel'], ['unbegrenzt', 'Unbegrenzt']], s.buildMats);
+      $('lobbySetup').querySelectorAll('[data-set]').forEach(el => {
+        el.onfocus = () => this.lobbySetupFocus = true; el.onblur = () => this.lobbySetupFocus = false;
+        el.onchange = () => { const k = el.dataset.set; MatchSetup[k] = k === 'bots' ? parseInt(el.value, 10) : el.value; saveMatchSetup(); Net.broadcastLobby(); this.lobbySetupFocus = false; };
+      });
+    }
+    $('btnLobbyStart').classList.toggle('hidden', !L.isHost);
+    $('lobbyWait').textContent = L.isHost ? (L.inGame ? 'Match läuft …' : 'Wenn alle da sind: Match starten!') : L.inGame ? 'Das Match läuft gerade – du bist beim nächsten dabei.' : 'Warte, bis der Host das Match startet …';
+  },
+  renderNotes() {
+    const box = this.$('netnotes');
+    box.innerHTML = Net.notes.map(n => {
+      const btn = n.type === 'inv' ? `<button class="small primary" data-acc="${n.id}">Beitreten</button>` : n.type === 'freq' ? `<button class="small primary" data-acc="${n.id}">Annehmen</button>` : '';
+      return `<div class="note"><span>${esc(n.text)}</span>${btn}<button class="small ghost" data-x="${n.id}">✕</button></div>`;
+    }).join('');
+    box.querySelectorAll('[data-x]').forEach(b => b.onclick = () => Net.dismiss(b.dataset.x));
+    box.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => {
+      const n = Net.notes.find(x => x.id === b.dataset.acc); if (!n) return;
+      Net.dismiss(n.id);
+      if (n.type === 'freq') { Net.addFriend(n.code, n.name); if (this.screen !== 'online' && !window.game) this.show('online'); }
+      if (n.type === 'inv') { if (window.game) quitToMenu(); if (!Net.joinLobby(n.code)) this.show('lobby'); }
+    });
+  },
+
   /* ----- Pause & Ende ----- */
   showEnd(info) {
     const t = this.$('endTitle');
@@ -311,6 +422,9 @@ const UI = {
       .map(([a, b]) => `<div class="stat"><b>${b}</b><span>${a}</span></div>`).join('') + `<p class="seed">Karten-Seed: <code>${esc(info.seed)}</code></p>`;
     const canSpec = !info.won && window.game && window.game.actors.some(a => a.alive) && !window.game.over;
     this.$('btnSpectate').classList.toggle('hidden', !canSpec);
+    const online = !!(window.game && window.game.net && Net.lobby);
+    this.$('btnToLobby').classList.toggle('hidden', !online);
+    this.$('btnAgain').classList.toggle('hidden', online);
     this.show('end');
   },
 };

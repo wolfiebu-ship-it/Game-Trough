@@ -320,6 +320,21 @@ class HUD {
       n.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * W}px, ${(-v.y * 0.5 + 0.5) * H}px) translate(-50%,-50%) scale(${1 + Math.max(0, 0.3 - n.t) * 2})`;
       n.el.style.opacity = n.t > 0.6 ? (0.9 - n.t) / 0.3 : 1;
     }
+    // Namensschilder über Mitspielern (online)
+    if (g.net) {
+      if (!this.tags) this.tags = new Map();
+      const W = window.innerWidth, H = window.innerHeight, tv = new THREE.Vector3();
+      for (const a of g.actors) {
+        let el = this.tags.get(a);
+        const show = a.human && a !== p && a.alive && a.state !== 'airship' && a.rig.root.visible && a.pos.distanceTo(cam.position) < 90;
+        if (!show) { if (el) el.style.display = 'none'; continue; }
+        if (!el) { el = document.createElement('div'); el.className = 'ntag'; el.textContent = a.name; this.el.dmgnums.appendChild(el); this.tags.set(a, el); }
+        tv.copy(a.pos); tv.y += 2.25; tv.project(cam);
+        if (tv.z > 1 || Math.abs(tv.x) > 1.1 || Math.abs(tv.y) > 1.1) { el.style.display = 'none'; continue; }
+        el.style.display = '';
+        el.style.transform = `translate(${(tv.x * 0.5 + 0.5) * W}px, ${(-tv.y * 0.5 + 0.5) * H}px) translate(-50%, -100%)`;
+      }
+    }
     // Minimap
     this.mmT -= dt;
     if (this.mmT <= 0 && Settings.minimap) { this.mmT = 1 / 30; this.drawMinimap(); }

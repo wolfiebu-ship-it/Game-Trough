@@ -67,6 +67,7 @@ class Storm {
   }
   update(dt) {
     this.mat.uniforms.time.value += dt;
+    if (this.remote) { this.apply(); return; } // online: Werte kommen vom Host
     if (this.state === 'idle' || this.state === 'done') { this.apply(); return; }
     this.timer -= dt;
     const ph = STORM_PHASES[this.phase];

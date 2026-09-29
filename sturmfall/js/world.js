@@ -88,7 +88,7 @@ class World {
     this.pois = [];
     this.houses = [];
     this.wobbling = [];
-    this.nextId = 1;
+    this.nextId = 1; this.byId = new Map(); this.onStructureDamaged = null;
     this.time = 0;
     this.onStructureDestroyed = null;
     this.tmpArr = [];
@@ -431,7 +431,9 @@ class World {
 
   /* ---------------- Strukturen ---------------- */
   addStructure(s) {
-    s.id = this.nextId++;
+    s.id = s.forceId != null ? s.forceId : this.nextId++;
+    if (s.forceId != null && s.forceId >= this.nextId) this.nextId = s.forceId + 1;
+    this.byId.set(s.id, s);
     s.alive = true;
     s.maxHp = s.maxHp || s.hp;
     s.colliders = s.colliders || [];
@@ -466,6 +468,7 @@ class World {
     if (!s || !s.alive || s.indestructible) return 0;
     s.hp -= amount;
     s.shake = 0.25;
+    if (this.onStructureDamaged && s.hp > 0) this.onStructureDamaged(s);
     if (this.wobbling.indexOf(s) < 0) this.wobbling.push(s);
     if (s.hp <= 0) { this.destroyStructure(s, by); return amount; }
     if (s.onDamage) s.onDamage(s);
