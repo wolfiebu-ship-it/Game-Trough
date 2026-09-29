@@ -115,6 +115,28 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
   bremsen, Felsen und Mauern blockieren. Auf den Lichtungen kämpft es sich am
   freiesten.
 
+## Level-Modus
+
+Neben dem Endlos-Modus (drei Spielstände, unendlich viele Wellen) gibt es fünf
+feste Level zum Durchspielen. Der gelbe **LVL**-Knopf oben links im Titelbild
+öffnet — genau wie **SUPERKRÄFTE!** im Spiel — eine antippbare Liste: Level 1
+ist von Anfang an frei, jedes weitere schaltet sich erst frei, sobald das
+vorherige geschafft ist. Gesperrte Level sind grau mit „GESPERRT"
+beschriftet, geschaffte grün umrandet.
+
+- **Level 1–4**: normale Wellen bis zum jeweiligen Boss (Kolossus, Glutgolem,
+  Schattenfürst, Kolossus) — wie im Endlos-Modus, endet aber automatisch mit
+  „LEVEL GESCHAFFT!", sobald der Boss fällt.
+- **Level 5 — Endlevel**: kein Wellen-Marathon, sondern direkt der
+  **Ultra-Kolossus**, eine dunkel gepanzerte, sichtbar größere Fassung des
+  Kolossus mit glühendem Kern, spürbar mehr Leben und drei rotierenden
+  Angriffsmustern (Stampf-Druckwelle, Schulter-Salven, Teleport-Klingenwirbel).
+  Er wird bereits ab 65 % Leben wütend (statt 50 %) und ruft schneller
+  Verstärkung — der schwerste Kampf im Spiel.
+
+Level-Durchläufe nutzen einen eigenen Fortschrittsspeicher (höchstes
+freigeschaltetes Level) und rühren die drei Endlos-Spielstände nicht an.
+
 ## Die Bots
 
 | Bot | Verhalten |
