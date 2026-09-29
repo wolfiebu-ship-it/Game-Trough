@@ -104,7 +104,10 @@ kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
   **Donnerschlag** (Druckwelle, betäubt die Bots und heilt ein Herz). Über
   den Code `WALDWACHT` gibt es zusätzlich exklusiv den **Waldzorn**
   (anderthalb Sekunden lang reißen Wurzeln alles im großen Umkreis nieder
-  und verlangsamen die Bots). Der gelbe Knopf **SUPERKRÄFTE!** öffnet eine
+  und verlangsamen die Bots). Über den Code `DEMIRCI` gibt es exklusiv den
+  **Wurzelstich**: drei Ringe aus Wurzeln schießen zeitversetzt in Wellen
+  aus dem Boden und durchbohren alles ringsum — die krasseste Superkraft
+  im Spiel. Der gelbe Knopf **SUPERKRÄFTE!** öffnet eine
   Liste aller besessenen Ultras zum Auswählen; `C` wechselt schnell durch.
   Sobald ein Boss auftaucht, ist der Balken geschenkt voll.
 - **Kombo**: Zwei schnelle Hiebe hintereinander enden im dritten, schweren
@@ -170,9 +173,12 @@ Im Werkstattfenster gibt es außerdem ein gelb beschriftetes **Code-Feld**
 Bekannte Codes (Groß- oder Kleinschreibung egal): `FOREST` gibt 100
 Schrauben, `WALDWACHT` gibt 250 Schrauben und schaltet zusätzlich das
 exklusive Ultra **Waldzorn** frei (dicke Wurzeln reißen alles im Umkreis
-nieder und verlangsamen die Bots) — dieses Ultra gibt es sonst nirgends, nur
-über den Code. Wer es schon hat, bekommt stattdessen die volle Ultra-Leiste
-dazu. Daneben gibt es 17 weitere Fundstück-Codes (`GLUTKERN`, `MONDSCHEIN`,
+nieder und verlangsamen die Bots), `DEMIRCI` gibt 300 Schrauben und schaltet
+das exklusive Ultra **Wurzelstich** frei (drei zeitversetzte Ringe aus
+Wurzeln durchbohren ringsum alles, was in Reichweite steht) — beide Ultras
+gibt es sonst nirgends, nur über den jeweiligen Code. Wer sie schon hat,
+bekommt stattdessen die volle Ultra-Leiste dazu. Daneben gibt es 17 weitere
+Fundstück-Codes (`GLUTKERN`, `MONDSCHEIN`,
 `SCHATTENPAKT`, `BAERENTATZE`, `WURZELWERK`, `STERNENSTAUB`, `NEBELGEIST`,
 `RAUCHZEICHEN`, `STURMWIND`, `EISENHAUT`, `FUNKENFLUG`, `WOLFSSPRUNG`,
 `RABENAUGE`, `NEBELSCHLEIER`, `FEUERSTEIN`, `FROSTHAUCH`, `GOLDADER`) —

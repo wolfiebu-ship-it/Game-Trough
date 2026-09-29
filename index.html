@@ -940,6 +940,15 @@ const CODES = {
     player.ultra=player.ultraMax;
     return '+250 SCHRAUBEN, ULTRA VOLL';
   },
+  DEMIRCI: ()=>{
+    game.scrap += 300;
+    if(!game.ultras.includes('spike')){
+      game.ultras.push('spike'); player.ultraSel=game.ultras.length-1; player.ultra=player.ultraMax;
+      return '+300 SCHRAUBEN, ULTRA FREI: WURZELSTICH';
+    }
+    player.ultra=player.ultraMax;
+    return '+300 SCHRAUBEN, ULTRA VOLL';
+  },
   // Weitere Fundstuecke - mal ein fester Bonus, mal reiner Zufall.
   GLUTKERN:      ()=> randomReward(),
   MONDSCHEIN:    ()=> randomReward(),
@@ -1233,7 +1242,7 @@ const BOT = {
   ultra: {name:'ULTRA-KOLOSSUS', spr:SPR.ultra, hp:1400,dmg:9, speed:26, r:20, range:34, windup:0.6, cd:1.25, scrap:400, score:5000, kbR:0.015, aggro:999, boss:true, bossKind:'ultra', gateDmg:16, scale:1.4}
 };
 
-const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters=[], blitze=[];
+const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters=[], blitze=[], roots=[];
 
 function spawnEnemy(type, x, y){
   const d=BOT[type];
@@ -1409,7 +1418,8 @@ const ULTRAS = [
   { id:'storm', name:'KLINGENSTURM', wave:10, hint:'WIRBEL, DER ALLES UM DICH TRIFFT' },
   { id:'rain',  name:'PFEILREGEN',   wave:15, hint:'PFEILE IN ALLE RICHTUNGEN' },
   { id:'quake', name:'DONNERSCHLAG', wave:20, hint:'DRUCKWELLE, BETAEUBUNG, HEILUNG' },
-  { id:'wrath', name:'WALDZORN', wave:9999, hint:'WURZELN REISSEN ALLE FEINDE IM UMKREIS NIEDER' }
+  { id:'wrath', name:'WALDZORN', wave:9999, hint:'WURZELN REISSEN ALLE FEINDE IM UMKREIS NIEDER' },
+  { id:'spike', name:'WURZELSTICH', wave:9999, hint:'WURZELN DURCHBOHREN RINGSUM ALLES IN WELLEN' }
 ];
 function ownedUltras(){ return ULTRAS.filter(u=> game.ultras.includes(u.id)); }
 function activeUltra(){ const o=ownedUltras(); return o.length ? o[player.ultraSel % o.length] : null; }
@@ -1440,6 +1450,21 @@ function fireUltra(){
     player.wrathT=1.8; player.wrathTick=0; player.inv=Math.max(player.inv,0.3);
     shocks.push({x:player.x, y:player.y, r:10, max:130, t:0, col:PAL.H});
     game.white=Math.max(game.white||0,0.5); shake(4); SFX.boom();
+  } else if(u.id==='spike'){
+    // Drei Ringe aus Wurzeln, die zeitversetzt aus dem Boden schiessen
+    player.inv=Math.max(player.inv,0.5); shake(5); SFX.heavy();
+    const rings=[ {r:14,n:5,delay:0}, {r:38,n:8,delay:0.14}, {r:64,n:11,delay:0.3} ];
+    for(const ring of rings){
+      const off=rr(0,TAU);
+      for(let i=0;i<ring.n;i++){
+        const a=off+i/ring.n*TAU;
+        roots.push({
+          x:player.x+Math.cos(a)*ring.r, y:player.y+Math.sin(a)*ring.r*0.7,
+          delay:ring.delay+rr(0,0.08), t:0, dur:0.55, h:rr(9,15),
+          lean:rr(-0.35,0.35), seed:rr(0,9), dmg:player.dmg*2.2
+        });
+      }
+    }
   } else {
     shocks.push({x:player.x, y:player.y, r:8, max:74, t:0, col:PAL.C});
     shocks.push({x:player.x, y:player.y, r:4, max:52, t:0, col:PAL.y});
@@ -1533,6 +1558,31 @@ function updateUltra(dt){
       for(let i=0;i<7;i++){ const a=rr(0,TAU), r=rr(20,120);
         part(p.x+Math.cos(a)*r, p.y-4+Math.sin(a)*r*0.5, 0,-40, 0.35, PAL.H, 1); }
       SFX.swing();
+    }
+  }
+}
+// Eine einzelne Wurzelspitze bricht durch den Boden: Schaden + Erdbrocken
+function eruptRoot(r){
+  burst(r.x, r.y, 5, PAL.b, 45, 0.3, 1);
+  part(r.x, r.y-1, rr(-6,6), rr(-32,-12), 0.3, PAL.l, 1);
+  shake(0.6); SFX.hit();
+  for(const e of enemies){
+    if(e.dead||e.spawnT>0) continue;
+    if(dist(r.x,r.y,e.x,e.y) < 12+e.r){
+      damageEnemy(e, r.dmg, 140, Math.atan2(e.y-r.y,e.x-r.x), true);
+      if(!e.dead){ e.st='cool'; e.t=0; e.cd=Math.max(e.cd,0.5); }
+    }
+  }
+}
+function updateRoots(dt){
+  for(let i=roots.length-1;i>=0;i--){
+    const r=roots[i];
+    if(r.delay>0){
+      r.delay-=dt;
+      if(r.delay<=0){ r.delay=0; eruptRoot(r); }
+    } else {
+      r.t+=dt;
+      if(r.t>=r.dur) roots.splice(i,1);
     }
   }
 }
@@ -1700,7 +1750,7 @@ function gameOver(reason){
 }
 function newGame(slot){
   enemies.length=0; bullets.length=0; parts.length=0; drops.length=0;
-  slashes.length=0; waves.length=0; floaters.length=0;
+  slashes.length=0; waves.length=0; floaters.length=0; roots.length=0;
   MSGQ.length=0;
   game.ultras=[]; game.usedCodes=new Set();
   game.turret=0; game.turretT=0; game.ultraMenuOpen=false; game.ultraNameT=0;
@@ -2148,6 +2198,7 @@ function updateFX(dt){
   }
   for(let i=floaters.length-1;i>=0;i--){ const f=floaters[i]; f.t+=dt; f.y-=14*dt; if(f.t>1) floaters.splice(i,1); }
   for(let i=blitze.length-1;i>=0;i--){ const b=blitze[i]; b.t+=dt; if(b.t>=b.dur) blitze.splice(i,1); }
+  updateRoots(dt);
 }
 
 /* ------------------------------------------------------------------
@@ -2464,6 +2515,46 @@ function drawBlitz(b){
   }
   ctx.globalAlpha=1;
 }
+function drawRoot(r){
+  const x=Math.round(r.x), y=Math.round(r.y);
+  if(r.delay>0){
+    // Erde reisst kurz auf, bevor die Wurzel hochschiesst
+    ctx.fillStyle=PAL.K; ctx.fillRect(x-2,y,5,1);
+    ctx.fillStyle=PAL.b; ctx.fillRect(x-1,y,3,1);
+    if(r.delay<0.12){ ctx.fillStyle=PAL.n; ctx.fillRect(x,y-1,1,1); }
+    return;
+  }
+  const p=clamp(r.t/r.dur,0,1);
+  const riseP=clamp(p/0.3,0,1);
+  const rise=riseP*(2-riseP);                         // ease-out Hochschiessen
+  const overshoot = (riseP>0.7 && riseP<1) ? Math.sin((riseP-0.7)/0.3*Math.PI)*0.15 : 0;
+  const h=r.h*(rise+overshoot);
+  const fade = p>0.65 ? Math.max(0,1-(p-0.65)/0.35) : 1;
+  ctx.globalAlpha=fade;
+  const segs=Math.max(3,Math.round(h));
+  // dunkler Kernschatten zuerst, damit die Wurzel sich vom Gras/Weg abhebt
+  for(let i=0;i<segs;i++){
+    const f=i/segs;
+    const yy=y-i;
+    const xx=Math.round(x + r.lean*i*0.5 + Math.sin(r.seed+i*0.8)*0.6*(1-f));
+    const wOut=Math.max(2, Math.round(5*(1-f*0.85)));
+    ctx.fillStyle=PAL.K; ctx.fillRect(xx-(wOut>>1)-1, yy, wOut+1, 1);
+  }
+  for(let i=0;i<segs;i++){
+    const f=i/segs;
+    const yy=y-i;
+    const xx=Math.round(x + r.lean*i*0.5 + Math.sin(r.seed+i*0.8)*0.6*(1-f));
+    const w=Math.max(1, Math.round(4*(1-f*0.8)));
+    ctx.fillStyle = f<0.15 ? PAL.b : (f<0.6 ? PAL.B : PAL.n);
+    ctx.fillRect(xx-(w>>1), yy, w, 1);
+  }
+  if(riseP>=1){
+    const tipX=Math.round(x+r.lean*h*0.5), tipY=Math.round(y-h);
+    ctx.fillStyle = Math.floor(game.time*20)%2===0 ? PAL.l : PAL.H;
+    ctx.fillRect(tipX, tipY-1, 1, 1);
+  }
+  ctx.globalAlpha=1;
+}
 function drawShocks(){
   for(const s of shocks){
     const a=1-s.r/s.max;
@@ -2566,6 +2657,7 @@ function drawWorld(){
     else drawPlayer();
   }
   // Effekte obenauf
+  for(const r of roots) drawRoot(r);
   for(const s of slashes) drawSlash(s);
   for(const b of blitze) drawBlitz(b);
   drawShocks();
