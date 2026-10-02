@@ -774,21 +774,12 @@ function keyName(e){
   if(c==='ShiftLeft'||c==='ShiftRight') return 'Shift';
   return e.key.length===1 ? e.key.toLowerCase() : e.key;
 }
-// Notbremse gegen "Held laeuft von allein": Geht ein Loslassen verloren (z.B.
-// eingebettet in einer Vorschau), stoppt die Laufrichtung trotzdem. Gehaltene
-// Tasten schickt der Browser laufend als Wiederholung - bleibt die aus, ist
-// die Taste in Wahrheit nicht mehr gedrueckt.
-const MOVE_KEYS = ['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
-const keyT = Object.create(null), keyRep = Object.create(null);
+// Hinweis: KEINE Abschaltung ueber ausbleibende Tastenwiederholungen - das
+// Betriebssystem stoppt die Wiederholung, sobald eine zweite Taste gedrueckt
+// wird (z.B. Leertaste im Kampf), obwohl die Lauftaste noch gehalten ist.
 function releaseAllKeys(){
   for(const k in keys) keys[k]=false;
   for(const s of [sticks.L, sticks.R]){ s.id=null; s.dx=0; s.dy=0; s.el.classList.remove('on'); }
-}
-function expireStaleKeys(){
-  const now=performance.now();
-  for(const k of MOVE_KEYS){
-    if(keys[k] && now-(keyT[k]||0) > (keyRep[k] ? 500 : 1200)) keys[k]=false;
-  }
 }
 addEventListener('keydown', e=>{
   leaveTouchMode();                                 // echter Tastendruck -> zurueck zu Tastatur/Maus
@@ -796,13 +787,13 @@ addEventListener('keydown', e=>{
   const k=keyName(e);
   if(!keys[k]) pressed.add(k);
   if(e.key==='?' && k!=='?') pressed.add('?');     // ? liegt je nach Layout auf anderer Taste
-  keys[k]=true; keyT[k]=performance.now(); keyRep[k]=!!e.repeat;
+  keys[k]=true;
   if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','F1','Tab'].includes(k)) e.preventDefault();
 }, {passive:false});
 // In der Capture-Phase, damit kein Element (z.B. das Code-Feld) das Loslassen verschlucken kann.
 addEventListener('keyup', e=>{
   const k=keyName(e);
-  keys[k]=false; keyRep[k]=false;
+  keys[k]=false;
   if(e.key && e.key.length===1) keys[e.key.toLowerCase()]=false;
 }, true);
 // Das Spiel laeuft oft eingebettet (Vorschau-Fenster). Tastendruecke kommen
@@ -1066,7 +1057,6 @@ bindBtn('ultraBtn','__ultra');
 
 function readInput(){
   if(!document.hasFocus()){ for(const k in keys) keys[k]=false; }   // ohne Fokus kommt kein Loslassen an
-  else expireStaleKeys();
   let mx=0,my=0;
   if(keys['a']||keys['ArrowLeft'])  mx-=1;
   if(keys['d']||keys['ArrowRight']) mx+=1;
