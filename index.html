@@ -1884,7 +1884,9 @@ function nearestEnemy(x,y,maxD,ang,maxSpread){
 }
 function updatePlayer(dt){
   const p=player;
-  p.anim += dt;
+  // Laufanimation an der echten Geschwindigkeit: keine "Moonwalk"-Schritte beim
+  // Anlaufen/Abbremsen, und im Stehen steht auch das Bein still.
+  p.anim += dt * Math.min(1.25, Math.hypot(p.vx,p.vy)/Math.max(1,p.speed));
   p.inv=Math.max(0,p.inv-dt); p.hurtT=Math.max(0,p.hurtT-dt);
   p.atkCd=Math.max(0,p.atkCd-dt); p.dashCd=Math.max(0,p.dashCd-dt);
   p.comboT-=dt; if(p.comboT<=0) p.combo=0;
@@ -1903,8 +1905,12 @@ function updatePlayer(dt){
   } else {
     const slow = inBush(p.x,p.y) ? 0.68 : 1;
     const tvx=IN.mx*p.speed*slow, tvy=IN.my*p.speed*slow;
-    p.vx=lerp(p.vx,tvx,1-Math.pow(0.0006,dt));
-    p.vy=lerp(p.vy,tvy,1-Math.pow(0.0006,dt));
+    // Knackiger: zuegig anlaufen (~70 ms), noch schneller stehen bleiben (~40 ms),
+    // statt wie vorher spuerbar nachzurutschen.
+    const halt = Math.hypot(IN.mx,IN.my) < 0.15;
+    const k = 1-Math.exp(-dt/(halt ? 0.04 : 0.07));
+    p.vx=lerp(p.vx,tvx,k); p.vy=lerp(p.vy,tvy,k);
+    if(halt && Math.hypot(p.vx,p.vy) < 4){ p.vx=0; p.vy=0; }
   }
   p.x+=p.vx*dt; p.y+=p.vy*dt;
   collideWorld(p,false);
@@ -2277,7 +2283,7 @@ function updateFX(dt){
 let lastTap=null;
 const SHOP = { w:176, h:132 };
 function shopPanelRect(){ return { x:Math.round((VW-SHOP.w)/2), y:Math.round((VH-SHOP.h)/2)-4, w:SHOP.w, h:SHOP.h }; }
-function shopBtnRect(){ return { x:VW-52, y:VH-52, w:48, h:16 }; }   // rechts, nicht in der Laufstick-Zone
+function shopBtnRect(){ return { x:VW-52, y:VH-22, w:48, h:16 }; }   // HUD-Koordinaten, unten rechts (Kampftasten sind in der Ruhe aus)
 const ULTRA_LABEL = 'SUPERKRÄFTE!';
 function ultraBtnRect(){
   if(!ownedUltras().length) return null;
@@ -2296,7 +2302,7 @@ function ultraMenuRowRect(i){
 // Knoepfe untereinander, gleich breit wie SUPERKRAEFTE! (bzw. an dessen
 // Stelle, solange es noch kein Ultra gibt).
 const HUD_BTN_W = textW(ULTRA_LABEL,1)+14;
-function hudBtnRowY(){ const u=ultraBtnRect(); return u ? u.y+u.h+2 : 53; }
+function hudBtnRowY(){ const u=ultraBtnRect(); return u ? u.y+u.h+2 : 45; }
 function guideBtnRect(){
   if(isTouch) return null;                         // Tastenliste gilt nur fuer Tastatur/Maus
   return { x:4, y:hudBtnRowY(), w:HUD_BTN_W, h:11 };
@@ -2320,12 +2326,13 @@ function codeRowRect(){
 const hitRect=(t,r)=> t.x>=r.x && t.x<=r.x+r.w && t.y>=r.y && t.y<=r.y+r.h;
 function tryTapCards(){
   if(!lastTap || game.state!=='play') return false;
+  const tl = toHud(lastTap, 0, 0);                 // Tipp in HUD-Koordinaten (oben links verkleinert)
   if(game.ultraMenuOpen){
     const o=ownedUltras();
-    for(let i=0;i<o.length;i++) if(hitRect(lastTap, ultraMenuRowRect(i))){
+    for(let i=0;i<o.length;i++) if(hitRect(tl, ultraMenuRowRect(i))){
       player.ultraSel=i; game.ultraMenuOpen=false; game.ultraNameT=5; SFX.pick(); return true;
     }
-    if(!hitRect(lastTap, ultraMenuRect()) && !hitRect(lastTap, ultraBtnRect())) game.ultraMenuOpen=false;
+    if(!hitRect(tl, ultraMenuRect()) && !hitRect(tl, ultraBtnRect())) game.ultraMenuOpen=false;
     return true;
   }
   // Anleitung/Level-Liste offen: jeder Tipp schliesst sie wieder (Knopf selbst = umschalten)
@@ -2333,18 +2340,18 @@ function tryTapCards(){
     const gb=guideBtnRect(), lb=levelInfoBtnRect();
     const wasGuide=game.guideOpen, wasLevel=game.levelInfoOpen;
     closeHudMenus();
-    if(gb && hitRect(lastTap, gb) && !wasGuide){ game.guideOpen=true; }
-    if(hitRect(lastTap, lb) && !wasLevel){ game.levelInfoOpen=true; }
+    if(gb && hitRect(tl, gb) && !wasGuide){ game.guideOpen=true; }
+    if(hitRect(tl, lb) && !wasLevel){ game.levelInfoOpen=true; }
     SFX.pick(); return true;
   }
   if(!game.shopOpen){
     const ub=ultraBtnRect(), gb=guideBtnRect(), lb=levelInfoBtnRect(), bar=ultraBarRect();
-    if(ub && hitRect(lastTap, ub)){ const o=!game.ultraMenuOpen; closeHudMenus(); game.ultraMenuOpen=o; SFX.pick(); return true; }
-    if(gb && hitRect(lastTap, gb)){ closeHudMenus(); game.guideOpen=true; SFX.pick(); return true; }
-    if(hitRect(lastTap, lb)){ closeHudMenus(); game.levelInfoOpen=true; SFX.pick(); return true; }
-    if(bar && hitRect(lastTap, bar)){ fireUltra(); return true; }
+    if(ub && hitRect(tl, ub)){ const o=!game.ultraMenuOpen; closeHudMenus(); game.ultraMenuOpen=o; SFX.pick(); return true; }
+    if(gb && hitRect(tl, gb)){ closeHudMenus(); game.guideOpen=true; SFX.pick(); return true; }
+    if(hitRect(tl, lb)){ closeHudMenus(); game.levelInfoOpen=true; SFX.pick(); return true; }
+    if(bar && hitRect(tl, bar)){ fireUltra(); return true; }
   }
-  if(game.phase==='rest' && hitRect(lastTap, shopBtnRect())){
+  if(game.phase==='rest' && hitRect(toHud(lastTap, VW, VH), shopBtnRect())){
     game.shopOpen=!game.shopOpen; game.ultraMenuOpen=false; SFX.pick(); return true;
   }
   if(game.shopOpen){
@@ -2576,8 +2583,8 @@ function drawPlayer(){
     ctx.restore();
     return;
   }
-  const moving=Math.hypot(p.vx,p.vy)>10;
-  const fr = moving ? WALK_CYCLE[Math.floor(p.anim*6)%4] : 0;
+  const moving=Math.hypot(p.vx,p.vy)>12;
+  const fr = moving ? WALK_CYCLE[Math.floor(p.anim*7)%4] : 0;
   const set = p.face==='side' ? SPR.pSide : (p.face==='up' ? SPR.pUp : SPR.pDown);
   const s=set[fr];
   const px=p.x-8, py=p.y-15;
@@ -2823,13 +2830,20 @@ function drawRegen(){
   ctx.fillStyle=PAL.G;
   ctx.fillRect(4,10, Math.round(w*clamp(player.regenT/player.regenEvery,0,1)), 1);
 }
-function pauseBtnRect(){                 // direkt unter der Torleiste, wenig Abstand
-  const barRight=VW-4+2;                 // minimal nach rechts gerueckt, buendig mit "TOR"
-  const w=20, h=20;                      // quadratisch und etwas kleiner
-  return { x:barRight-w, y:22, w, h };   // Torblock endet bei y=19 (Balken+Beschriftung)
+// HUD in 2/3 Groesse: jeder HUD-Pixel = genau 2 Rueckpuffer-Pixel, also weiter
+// gestochen scharf. Jede Gruppe wird zu ihrer Bildschirmecke hin verkleinert.
+const HUDK = 2/3;
+function hudScaled(ax, ay, fn){
+  ctx.save(); ctx.translate(ax,ay); ctx.scale(HUDK,HUDK); ctx.translate(-ax,-ay);
+  fn(); ctx.restore();
+}
+function toHud(t, ax, ay){ return { x:ax+(t.x-ax)/HUDK, y:ay+(t.y-ay)/HUDK }; }
+function pauseBtnRect(){                 // direkt unter der (verkleinerten) Torleiste
+  const w=13, h=13;
+  return { x:VW-3-w, y:15, w, h };
 }
 function fsBtnRect(){                    // gleiche Reihe, direkt links vom Pause-Knopf
-  const p=pauseBtnRect(), gap=4, w=20;
+  const p=pauseBtnRect(), gap=3, w=13;
   return { x:p.x-gap-w, y:p.y, w, h:p.h };
 }
 function drawGateBar(){
@@ -2937,55 +2951,65 @@ function drawLevelInfo(){
   });
 }
 function drawHUD(){
-  drawHearts();
-  drawSchild();
-  drawRegen();
-  drawGateBar();
   drawEdgeMarkers();
-  bar(4, 15, 22, 1-player.dashCd/player.dashCdMax, player.dashCd>0?'#3a4a3a':PAL.C, 'ROLLE', player.dashCd>0);
-  bar(4, 25, 22, 1-player.bowCd/player.bowCdMax,   player.bowCd>0 ?'#4a4030':PAL.O, 'BOGEN', player.bowCd>0);
-  bar(4, 35, 22, 1-player.healCd/player.healCdMax, player.healCd>0?'#4a3038':PAL.R, 'HEILEN', player.healCd>0);
-  const u=activeUltra();
-  if(u){
-    const full=player.ultra>=player.ultraMax;
-    const pulse = full && Math.floor(game.time*4)%2===0;
-    bar(4, 45, 30, player.ultra/player.ultraMax, full?(pulse?'#fff3c4':PAL.y):PAL.p, 'ULTRA', !full);
-    const r=ultraBtnRect();
-    panel(r.x, r.y, r.w, r.h, game.ultraMenuOpen?'rgba(46,40,10,.95)':(full?'rgba(46,40,10,.92)':'rgba(10,18,12,.9)'),
-      full||game.ultraMenuOpen?PAL.y:'#4a4a4a');
-    drawSpr(SPR.bolt, r.x+3, r.y+3, false, false);
-    drawText(ctx, ULTRA_LABEL, r.x+13, r.y+2, full?PAL.y:'#e9d98a', 1);
-    if(game.ultraNameT>0) drawText(ctx, u.name, r.x+r.w+4, r.y+2, '#9fb79a', 1);
-  }
-  const gb=guideBtnRect(), lb=levelInfoBtnRect(), inPlay=game.state==='play';
-  // Gleicher Stil wie SUPERKRAEFTE!: dunkel, duenner Rand, kleines Symbol links
-  if(gb && inPlay){
-    panel(gb.x, gb.y, gb.w, gb.h, game.guideOpen?'rgba(14,34,40,.95)':'rgba(10,18,12,.9)', game.guideOpen?PAL.C:'#4a4a4a');
-    drawText(ctx, '?', gb.x+3, gb.y+2, PAL.C, 1);
-    drawText(ctx, 'ANLEITUNG', gb.x+13, gb.y+2, '#e9d98a', 1);
-  }
-  if(inPlay){
-    panel(lb.x, lb.y, lb.w, lb.h, game.levelInfoOpen?'rgba(46,40,10,.95)':'rgba(10,18,12,.9)', game.levelInfoOpen?PAL.y:'#4a4a4a');
-    ctx.fillStyle=PAL.B; ctx.fillRect(lb.x+4, lb.y+2, 1, 7);            // kleine Fahne als Symbol
-    ctx.fillStyle=PAL.R; ctx.fillRect(lb.x+5, lb.y+2, 4, 3);
-    drawText(ctx, 'LEVEL', lb.x+13, lb.y+2, '#e9d98a', 1);
-  }
-
-  const left = enemies.length + game.spawnList.length;
-  if(game.phase==='wave'){
-    drawTextC(ctx, 'WELLE '+game.wave, VW/2, 3, '#e9f5dc', 1);
-    drawTextC(ctx, 'BOTS '+left, VW/2, 11, left>0?PAL.O:'#9fb79a', 1);
-  } else {
-    drawTextC(ctx, 'RUHE  '+Math.ceil(game.restT), VW/2, 3, PAL.C, 1);
-    drawTextC(ctx, 'WELLE '+(game.wave+1)+' KOMMT', VW/2, 11, '#9fb79a', 1);
-  }
-  drawSpr(SPR.bolt, 4, VH-10, false, false);
-  const scr=String(game.scrap);
-  drawText(ctx, scr, 12, VH-10, PAL.y, 1);
-  drawText(ctx, String(game.score), 18+textW(scr,1), VH-10, '#9fb79a', 1);
+  const inPlay=game.state==='play';
+  // --- oben links: Herzen, Leisten, Knoepfe ---
+  hudScaled(0, 0, ()=>{
+    drawHearts();
+    drawSchild();
+    drawRegen();
+    bar(4, 15, 22, 1-player.dashCd/player.dashCdMax, player.dashCd>0?'#3a4a3a':PAL.C, 'ROLLE', player.dashCd>0);
+    bar(4, 25, 22, 1-player.bowCd/player.bowCdMax,   player.bowCd>0 ?'#4a4030':PAL.O, 'BOGEN', player.bowCd>0);
+    bar(4, 35, 22, 1-player.healCd/player.healCdMax, player.healCd>0?'#4a3038':PAL.R, 'HEILEN', player.healCd>0);
+    const u=activeUltra();
+    if(u){
+      const full=player.ultra>=player.ultraMax;
+      const pulse = full && Math.floor(game.time*4)%2===0;
+      bar(4, 45, 30, player.ultra/player.ultraMax, full?(pulse?'#fff3c4':PAL.y):PAL.p, 'ULTRA', !full);
+      const r=ultraBtnRect();
+      panel(r.x, r.y, r.w, r.h, game.ultraMenuOpen?'rgba(46,40,10,.95)':(full?'rgba(46,40,10,.92)':'rgba(10,18,12,.9)'),
+        full||game.ultraMenuOpen?PAL.y:'#4a4a4a');
+      drawSpr(SPR.bolt, r.x+3, r.y+3, false, false);
+      drawText(ctx, ULTRA_LABEL, r.x+13, r.y+2, full?PAL.y:'#e9d98a', 1);
+      if(game.ultraNameT>0 && !game.ultraMenuOpen) drawText(ctx, u.name, r.x+r.w+4, r.y+2, '#9fb79a', 1);
+    }
+    const gb=guideBtnRect(), lb=levelInfoBtnRect();
+    // Gleicher Stil wie SUPERKRAEFTE!: dunkel, duenner Rand, kleines Symbol links
+    if(gb && inPlay){
+      panel(gb.x, gb.y, gb.w, gb.h, game.guideOpen?'rgba(14,34,40,.95)':'rgba(10,18,12,.9)', game.guideOpen?PAL.C:'#4a4a4a');
+      drawText(ctx, '?', gb.x+3, gb.y+2, PAL.C, 1);
+      drawText(ctx, 'ANLEITUNG', gb.x+13, gb.y+2, '#e9d98a', 1);
+    }
+    if(inPlay){
+      panel(lb.x, lb.y, lb.w, lb.h, game.levelInfoOpen?'rgba(46,40,10,.95)':'rgba(10,18,12,.9)', game.levelInfoOpen?PAL.y:'#4a4a4a');
+      ctx.fillStyle=PAL.B; ctx.fillRect(lb.x+4, lb.y+2, 1, 7);            // kleine Fahne als Symbol
+      ctx.fillStyle=PAL.R; ctx.fillRect(lb.x+5, lb.y+2, 4, 3);
+      drawText(ctx, 'LEVEL', lb.x+13, lb.y+2, '#e9d98a', 1);
+    }
+  });
+  // --- oben rechts: Tor ---
+  hudScaled(VW, 0, drawGateBar);
+  // --- oben Mitte: Welle ---
+  hudScaled(VW/2, 0, ()=>{
+    const left = enemies.length + game.spawnList.length;
+    if(game.phase==='wave'){
+      drawTextC(ctx, 'WELLE '+game.wave, VW/2, 3, '#e9f5dc', 1);
+      drawTextC(ctx, 'BOTS '+left, VW/2, 11, left>0?PAL.O:'#9fb79a', 1);
+    } else {
+      drawTextC(ctx, 'RUHE  '+Math.ceil(game.restT), VW/2, 3, PAL.C, 1);
+      drawTextC(ctx, 'WELLE '+(game.wave+1)+' KOMMT', VW/2, 11, '#9fb79a', 1);
+    }
+  });
+  // --- unten links: Schrauben und Punkte ---
+  hudScaled(0, VH, ()=>{
+    drawSpr(SPR.bolt, 4, VH-10, false, false);
+    const scr=String(game.scrap);
+    drawText(ctx, scr, 12, VH-10, PAL.y, 1);
+    drawText(ctx, String(game.score), 18+textW(scr,1), VH-10, '#9fb79a', 1);
+  });
 
   const chef = game.phase==='wave' ? enemies.find(e=>!e.dead && e.d.boss && e.spawnT<=0) : null;
-  if(chef){
+  if(chef) hudScaled(VW/2, VH, ()=>{
     const w=150, x=Math.round((VW-w)/2), y=VH-20;
     drawTextC(ctx, chef.d.name + (chef.hp<chef.hpMax*0.5 ? '  ·  WUT' : ''), VW/2, y-9,
       chef.hp<chef.hpMax*0.5 ? PAL.O : '#e9c0b0', 1);
@@ -2993,16 +3017,16 @@ function drawHUD(){
     ctx.fillStyle='#3a1d22'; ctx.fillRect(x,y,w,4);
     ctx.fillStyle=PAL.r; ctx.fillRect(x,y,Math.round(w*clamp(chef.hp/chef.hpMax,0,1)),4);
     ctx.fillStyle=PAL.R; ctx.fillRect(x,y,Math.round(w*clamp(chef.hp/chef.hpMax,0,1)),1);
-  }
+  });
   if(game.phase==='rest'){
-    drawShopButton();
+    hudScaled(VW, VH, drawShopButton);
     if(!game.shopOpen && inRect(player.x,player.y,COURT))
-      drawTextC(ctx, 'IM BURGHOF HEILST DU', VW/2, VH-26, PAL.H, 1);
+      hudScaled(VW/2, VH, ()=> drawTextC(ctx, 'IM BURGHOF HEILST DU', VW/2, VH-26, PAL.H, 1));
   }
   if(game.msgT>0){
     const a=Math.min(1,game.msgT);
     const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
-    ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 68, game.msgCol||PAL.y, sc); ctx.globalAlpha=1;
+    hudScaled(VW/2, 75, ()=>{ ctx.globalAlpha=a; drawTextC(ctx, game.msg, VW/2, 68, game.msgCol||PAL.y, sc); ctx.globalAlpha=1; });
   }
   if(game.white>0){
     ctx.globalAlpha=Math.min(0.5,game.white*0.5); ctx.fillStyle='#dff6ff'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
@@ -3010,9 +3034,11 @@ function drawHUD(){
   if(game.redFlash>0){
     ctx.globalAlpha=game.redFlash*0.5; ctx.fillStyle='#8c1c1c'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   }
-  if(game.ultraMenuOpen) drawUltraMenu();
-  if(game.guideOpen && guideBtnRect()) drawGuideMenu();
-  if(game.levelInfoOpen) drawLevelInfo();
+  hudScaled(0, 0, ()=>{
+    if(game.ultraMenuOpen) drawUltraMenu();
+    if(game.guideOpen && guideBtnRect()) drawGuideMenu();
+    if(game.levelInfoOpen) drawLevelInfo();
+  });
   if(game.shopOpen) drawShopPanel();
   if(player.hp<=2 && player.alive){
     const pulse=0.18+0.12*Math.sin(game.time*7);
