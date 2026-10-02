@@ -49,6 +49,11 @@ damit sie zum Rest passen.
 | `M` | Ton an/aus |
 | `?` / `F1` oder **?**-Knopf im Titelbild | Steuerungs-Übersicht mit allen Tasten (auch in der Pause) |
 
+Beim Spielen mit Tastatur/Maus zeigt eine kleine Tastenleiste unten rechts
+ständig die wichtigsten Tasten (Schwert, Bogen, Rolle, Heilen, Ultra,
+Wechseln); was gerade nachlädt oder noch nicht freigeschaltet ist, ist
+ausgegraut, ein volles Ultra blinkt.
+
 Tastatur/Maus ist immer aktiv. Die Touch-Oberfläche erscheint nur nach echtem
 Antippen und verschwindet wieder, sobald man eine Taste drückt oder die Maus
 bewegt.

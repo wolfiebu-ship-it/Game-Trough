@@ -2244,7 +2244,10 @@ function updateFX(dt){
 let lastTap=null;
 const SHOP = { w:176, h:132 };
 function shopPanelRect(){ return { x:Math.round((VW-SHOP.w)/2), y:Math.round((VH-SHOP.h)/2)-4, w:SHOP.w, h:SHOP.h }; }
-function shopBtnRect(){ return { x:VW-52, y:VH-52, w:48, h:16 }; }   // rechts, nicht in der Laufstick-Zone
+function shopBtnRect(){                    // rechts, nicht in der Laufstick-Zone
+  if(showKeyLegend()) return { x:VW-52, y:keyLegendRect().y-18, w:48, h:16 };   // ueber der Tastenleiste
+  return { x:VW-52, y:VH-52, w:48, h:16 };
+}
 const ULTRA_LABEL = 'SUPERKRÄFTE!';
 function ultraBtnRect(){
   if(!ownedUltras().length) return null;
@@ -2835,6 +2838,30 @@ function drawUltraMenu(){
     drawText(ctx, (active?'>':' ')+u.name, r.x+3, r.y+2, active?PAL.y:'#cfe0c8', 1);
   });
 }
+// --- Tastenleiste unten rechts: die wichtigsten Tasten immer im Blick (nur Tastatur/Maus) ---
+const showKeyLegend = ()=> !isTouch && game.state==='play';
+function keyLegendRect(){ return { x:VW-90, y:VH-68, w:88, h:66 }; }
+function drawKeyLegend(){
+  const r=keyLegendRect(), hasU=!!activeUltra(), full=hasU && player.ultra>=player.ultraMax;
+  const rows=[
+    ['SCHWERT', 'KLICK', true],
+    ['BOGEN',   'Q',     player.bowCd<=0],
+    ['ROLLE',   'SHIFT', player.dashCd<=0],
+    ['HEILEN',  'H',     player.healCd<=0],
+    ['ULTRA',   'X',     full],
+    ['WECHSEL', 'C',     ownedUltras().length>1],
+    ['ALLE',    '?',     true]
+  ];
+  panel(r.x, r.y, r.w, r.h, 'rgba(10,18,12,.72)', '#2f5c31');
+  rows.forEach(([label,key,ready],i)=>{
+    const y=r.y+3+i*9;
+    const pulse = label==='ULTRA' && full && Math.floor(game.time*4)%2===0;
+    drawText(ctx, label, r.x+4, y, ready?(pulse?'#fff3c4':'#cfe8c2'):'#5f6f5c', 1);
+    drawText(ctx, key, r.x+r.w-4-textW(key,1), y, ready?PAL.y:'#7a6f3a', 1);
+  });
+}
+// Mitte des freien Bereichs links der Tastenleiste (fuer Bossleiste & Hinweise)
+function hudCenterX(){ return showKeyLegend() ? Math.round(keyLegendRect().x/2) : VW/2; }
 function drawHUD(){
   drawHearts();
   drawSchild();
@@ -2872,8 +2899,8 @@ function drawHUD(){
 
   const chef = game.phase==='wave' ? enemies.find(e=>!e.dead && e.d.boss && e.spawnT<=0) : null;
   if(chef){
-    const w=150, x=Math.round((VW-w)/2), y=VH-20;
-    drawTextC(ctx, chef.d.name + (chef.hp<chef.hpMax*0.5 ? '  ·  WUT' : ''), VW/2, y-9,
+    const cx=hudCenterX(), w=Math.min(150, cx*2-12), x=Math.round(cx-w/2), y=VH-20;
+    drawTextC(ctx, chef.d.name + (chef.hp<chef.hpMax*0.5 ? '  ·  WUT' : ''), cx, y-9,
       chef.hp<chef.hpMax*0.5 ? PAL.O : '#e9c0b0', 1);
     ctx.fillStyle='#141019'; ctx.fillRect(x-1,y-1,w+2,6);
     ctx.fillStyle='#3a1d22'; ctx.fillRect(x,y,w,4);
@@ -2883,8 +2910,9 @@ function drawHUD(){
   if(game.phase==='rest'){
     drawShopButton();
     if(!game.shopOpen && inRect(player.x,player.y,COURT))
-      drawTextC(ctx, 'IM BURGHOF HEILST DU', VW/2, VH-26, PAL.H, 1);
+      drawTextC(ctx, 'IM BURGHOF HEILST DU', hudCenterX(), VH-26, PAL.H, 1);
   }
+  if(showKeyLegend()) drawKeyLegend();
   if(game.msgT>0){
     const a=Math.min(1,game.msgT);
     const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
