@@ -20,7 +20,7 @@
     font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; color:#cfe8c2; }
   body{ position:fixed; inset:0; width:100%; }
   #wrap{ position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
-  #stack{ position:relative; width:min(100vw, calc(100vh * 16 / 9)); aspect-ratio:16/9; max-height:100vh; }
+  #stack{ position:relative; width:min(100vw, calc(100vh * 16 / 9)); aspect-ratio:16/9; max-height:100vh; outline:none; }
   canvas{ display:block; width:100%; height:100%; image-rendering:pixelated;
     image-rendering:crisp-edges; background:#1a2c1c;
     box-shadow:0 0 40px rgba(0,0,0,.7), 0 0 120px rgba(40,120,50,.18); }
@@ -86,7 +86,7 @@
 </head>
 <body>
 <div id="wrap">
-  <div id="stack">
+  <div id="stack" tabindex="-1">
     <canvas id="game" width="768" height="432"></canvas>
     <div id="touch">
       <div class="stick" id="stickL"><div class="knob" id="knobL"></div></div>
@@ -758,23 +758,46 @@ const keys = Object.create(null);
 const pressed = new Set();                 // Tastendruck-Flanken dieses Frames
 const IN = { mx:0, my:0, aim:0, aimHeld:false, attackEdge:false, dashEdge:false, mouseAim:false };
 
-const typingInCode = ()=> document.activeElement === codeInput;
+const typingInCode = ()=> document.activeElement === codeInput && !codeBox.hidden;
 function leaveTouchMode(){
   if(!isTouch) return;
   isTouch=false; touchUI.classList.remove('on');
 }
+// Buchstaben und Ziffern nach ihrer Position auf der Tastatur (e.code), damit
+// WASD auch bei anderem Tastaturlayout, Feststelltaste oder gehaltener
+// Umschalttaste sicher ankommt.
+function keyName(e){
+  const c=e.code||'';
+  if(/^Key[A-Z]$/.test(c)) return c.slice(3).toLowerCase();
+  if(/^Digit[0-9]$/.test(c) && !e.shiftKey) return c.slice(5);
+  if(c==='Space') return ' ';
+  if(c==='ShiftLeft'||c==='ShiftRight') return 'Shift';
+  return e.key.length===1 ? e.key.toLowerCase() : e.key;
+}
 addEventListener('keydown', e=>{
   leaveTouchMode();                                 // echter Tastendruck -> zurueck zu Tastatur/Maus
   if(typingInCode()) return;                       // Buchstaben gehoeren dem Codefeld
-  const k=e.key.length===1 ? e.key.toLowerCase() : e.key;
+  const k=keyName(e);
   if(!keys[k]) pressed.add(k);
+  if(e.key==='?' && k!=='?') pressed.add('?');     // ? liegt je nach Layout auf anderer Taste
   keys[k]=true;
-  if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','F1'].includes(e.key)) e.preventDefault();
+  if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','F1','Tab'].includes(k)) e.preventDefault();
 }, {passive:false});
 addEventListener('keyup', e=>{
-  if(typingInCode()) return;
-  keys[e.key.length===1 ? e.key.toLowerCase() : e.key]=false;
+  keys[keyName(e)]=false;
 });
+// Das Spiel laeuft oft eingebettet (Vorschau-Fenster). Tastendruecke kommen
+// nur an, wenn das Spiel den Fokus hat - jeder Klick/Tipp holt ihn deshalb
+// ausdruecklich ins Spiel, auch wenn ein Handler preventDefault() aufruft.
+function grabFocus(e){
+  if(e && (e.target===codeInput || e.target===codeBtn)) return;
+  if(document.activeElement===codeInput) codeInput.blur();
+  try{ window.focus(); }catch(err){}
+  try{ document.getElementById('stack').focus({preventScroll:true}); }catch(err){}
+}
+addEventListener('pointerdown', grabFocus, true);
+addEventListener('mousedown',   grabFocus, true);
+addEventListener('touchstart',  grabFocus, {capture:true, passive:true});
 addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; if(game.state==='play') game.paused=true; });
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden && game.state==='play') game.paused=true; });
 
@@ -3098,6 +3121,12 @@ function render(){
   else if(game.state==='over'){ drawHUD(); drawOver(); }
   else if(game.state==='levelwin'){ drawHUD(); drawLevelWin(); }
   else { drawTitle(); if(game.levelSelectOpen) drawLevelSelect(); if(game.helpOpen) drawHelp(); }
+  // Ohne Fokus kommt keine Taste an (z.B. eingebettet in einer Vorschau) - sagen statt raten lassen.
+  if(!isTouch && !document.hasFocus()){
+    const t='INS SPIEL KLICKEN FÜR TASTATUR', w=textW(t,1)+8, x=Math.round((VW-w)/2);
+    panel(x, 1, w, 10, 'rgba(40,30,8,.95)', PAL.y);
+    drawTextC(ctx, t, VW/2, 2, PAL.y, 1);
+  }
 }
 
 /* ------------------------------------------------------------------
