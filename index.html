@@ -759,12 +759,17 @@ const pressed = new Set();                 // Tastendruck-Flanken dieses Frames
 const IN = { mx:0, my:0, aim:0, aimHeld:false, attackEdge:false, dashEdge:false, mouseAim:false };
 
 const typingInCode = ()=> document.activeElement === codeInput;
+function leaveTouchMode(){
+  if(!isTouch) return;
+  isTouch=false; touchUI.classList.remove('on');
+}
 addEventListener('keydown', e=>{
+  leaveTouchMode();                                 // echter Tastendruck -> zurueck zu Tastatur/Maus
   if(typingInCode()) return;                       // Buchstaben gehoeren dem Codefeld
   const k=e.key.length===1 ? e.key.toLowerCase() : e.key;
   if(!keys[k]) pressed.add(k);
   keys[k]=true;
-  if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','F1'].includes(e.key)) e.preventDefault();
 }, {passive:false});
 addEventListener('keyup', e=>{
   if(typingInCode()) return;
@@ -779,11 +784,13 @@ function canvasPos(cx,cy){
   return { x:(cx-r.left)/r.width*VW, y:(cy-r.top)/r.height*VH };
 }
 cv.addEventListener('mousemove', e=>{
+  leaveTouchMode();                                 // echte Mausbewegung -> zurueck zu Tastatur/Maus
   const p=canvasPos(e.clientX,e.clientY);
   mouseWX=p.x+cam.x; mouseWY=p.y+cam.y; mouseInside=true; IN.mouseAim=true;
 });
 cv.addEventListener('mouseleave', ()=>{ mouseInside=false; });
 cv.addEventListener('mousedown', e=>{
+  leaveTouchMode();
   e.preventDefault(); audioUnlock();
   const p=canvasPos(e.clientX,e.clientY); lastTap={x:p.x,y:p.y};
   if(e.button===0) pressed.add('__attack');
@@ -865,11 +872,14 @@ addEventListener('touchmove',  touchMove,  {passive:false});
 addEventListener('touchend',   touchEnd,   {passive:false});
 addEventListener('touchcancel',touchEnd,   {passive:false});
 function bindBtn(id, code){
+  // Touch setzt echten Touch-Modus, eine Maus (z.B. Klick auf die eigentlich
+  // nur per Touch sichtbaren Tasten) soll das Spiel NIE in den Touch-Modus
+  // zwingen - sonst verschwindet die Tastatur/Maus-Anleitung grundlos.
   const el=document.getElementById(id); if(!el) return;
-  const go=e=>{ e.preventDefault(); e.stopPropagation(); isTouch=true; touchUI.classList.add('on');
+  const go=e=>{ e.preventDefault(); e.stopPropagation();
     audioUnlock(); pressed.add(code); el.classList.add('hit');
     setTimeout(()=>el.classList.remove('hit'),110); };
-  el.addEventListener('touchstart', go, {passive:false});
+  el.addEventListener('touchstart', e=>{ isTouch=true; touchUI.classList.add('on'); go(e); }, {passive:false});
   el.addEventListener('mousedown', go);
 }
 const codeBox=document.getElementById('codeBox');
@@ -993,13 +1003,16 @@ const fsBtn=document.getElementById('fsBtn');
 if(fsBtn){
   const wrap=document.getElementById('wrap');
   if(!document.fullscreenEnabled && !wrap.webkitRequestFullscreen) fsBtn.style.display='none';
-  const go=e=>{ e.preventDefault(); e.stopPropagation(); isTouch=true; touchUI.classList.add('on');
+  const go=e=>{ e.preventDefault(); e.stopPropagation();
     try{
       if(document.fullscreenElement) document.exitFullscreen();
       else (wrap.requestFullscreen||wrap.webkitRequestFullscreen).call(wrap);
     }catch(err){}
   };
-  fsBtn.addEventListener('touchstart', go, {passive:false});
+  // Nur ein echter Touch schaltet die Touch-Oberflaeche ein - ein Mausklick
+  // auf den Vollbild-Knopf soll Tastatur/Maus-Spieler nicht in den Touch-
+  // Modus zwingen.
+  fsBtn.addEventListener('touchstart', e=>{ isTouch=true; touchUI.classList.add('on'); go(e); }, {passive:false});
   fsBtn.addEventListener('mousedown', go);
 }
 bindBtn('swordBtn','__attack');
@@ -1121,7 +1134,8 @@ const game = {
   castleHp:120, castleMax:120,
   shake:0, hitstop:0, slow:0, flash:0, redFlash:0,
   msg:'', msgT:0, shopOpen:false, cards:[], cardSel:0, tutorial:0, time:0, ultras:[], ultraNameT:0,
-  levelMode:0, levelSelectOpen:false, levelWonN:0            // 0 = normaler Endlos-Modus
+  levelMode:0, levelSelectOpen:false, levelWonN:0,           // 0 = normaler Endlos-Modus
+  helpOpen:false
 };
 try{ game.best = parseInt(localStorage.getItem('waldwacht_best')||'0',10)||0; }catch(e){}
 
@@ -2262,6 +2276,11 @@ function update(dt){
   if(pressed.has('m')){ muted=!muted; if(muted&&AC){ master.gain.value=0; } else if(AC){ master.gain.value=0.5; } }
 
   if(game.state==='title'){
+    if(game.helpOpen){
+      if((lastTap && !hitRect(lastTap, helpPanelRect())) || pressed.has('Escape') || pressed.has('?') || pressed.has('F1'))
+        game.helpOpen=false;
+      lastTap=null; pressed.clear(); return;
+    }
     if(game.levelSelectOpen){
       if(lastTap){
         for(let i=0;i<LEVELS.length;i++){
@@ -2279,6 +2298,7 @@ function update(dt){
     }
     if(lastTap){
       if(hitRect(lastTap, levelBtnRect())){ game.levelSelectOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
+      if(hitRect(lastTap, helpBtnRect())){ game.helpOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
       for(const b of saveSlotRects()){
         if(hitRect(lastTap, b)){ audioUnlock(); hasSave(b.slot) ? continueGame(b.slot) : newGame(b.slot); lastTap=null; pressed.clear(); return; }
       }
@@ -2287,6 +2307,7 @@ function update(dt){
       if(pressed.has(String(s))){ audioUnlock(); hasSave(s) ? continueGame(s) : newGame(s); lastTap=null; pressed.clear(); return; }
     }
     if(pressed.has('l')){ game.levelSelectOpen=true; lastTap=null; pressed.clear(); return; }
+    if(pressed.has('?') || pressed.has('F1')){ game.helpOpen=true; lastTap=null; pressed.clear(); return; }
     if(startEdge){ audioUnlock(); hasSave(1) ? continueGame(1) : newGame(1); }
     lastTap=null; pressed.clear(); return;
   }
@@ -2306,8 +2327,15 @@ function update(dt){
     if(startEdge && game.winT>0.8){ game.winT=undefined; game.state='title'; game.levelSelectOpen=true; }
     pressed.clear(); return;
   }
+  if(game.paused && game.helpOpen){
+    // Steuerungs-Uebersicht in der Pause: Esc/?/F1 schliesst nur die Uebersicht
+    if(pressed.has('Escape')||pressed.has('?')||pressed.has('F1')||pressed.has('p')) game.helpOpen=false;
+    lastTap=null; pressed.clear(); return;
+  }
   if(pressed.has('p')||pressed.has('Escape')) game.paused=!game.paused;
+  if(!game.paused) game.helpOpen=false;
   if(game.paused){
+    if(pressed.has('?')||pressed.has('F1')){ game.helpOpen=true; lastTap=null; pressed.clear(); return; }
     // Pause ist "sticky": nur P/Esc oder der Pause-Knopf setzen fort - kein
     // Tippen irgendwo im Bild, damit ein App-Wechsel oder ein Bildschirm-Aus
     // das Spiel nie versehentlich wieder loslaufen laesst.
@@ -2865,7 +2893,7 @@ function titleRows(){
     'TASTEN RECHTS: KAMPF/ULTRA'
   ] : [
     'WASD LAUFEN · MAUS ZIELEN',
-    'KLICK: SCHWERT · B: SHOP · P: PAUSE'
+    'KLICK: SCHWERT · ?: ALLE TASTEN'
   ];
   return { rows, gap:10 };
 }
@@ -2910,6 +2938,11 @@ function levelBtnRect(){
   const p=titlePanelRect(), label='LVL';
   return { x:p.x+4, y:p.y+5, w:textW(label,1)+8, h:9 };
 }
+// Daneben ein kleiner Hilfe-Knopf - oeffnet die volle Tastenuebersicht.
+function helpBtnRect(){
+  const lb=levelBtnRect();
+  return { x:lb.x, y:lb.y+lb.h+3, w:lb.w, h:lb.h };   // direkt unter LVL, links vom Titel
+}
 function drawTitle(){
   ctx.globalAlpha=0.55; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   const p=titlePanelRect(), {x,y,w,h}=p;
@@ -2917,6 +2950,9 @@ function drawTitle(){
   const lb=levelBtnRect();
   panel(lb.x, lb.y, lb.w, lb.h, 'rgba(16,32,18,.9)', PAL.y);
   drawTextC(ctx, 'LVL', lb.x+lb.w/2, lb.y+1, PAL.y, 1);
+  const hb=helpBtnRect();
+  panel(hb.x, hb.y, hb.w, hb.h, 'rgba(16,32,18,.9)', PAL.C);
+  drawTextC(ctx, '?', hb.x+hb.w/2, hb.y+1, PAL.C, 1);
   drawTextC(ctx,'WALDWACHT', VW/2, y+6, PAL.H, 3);
   if(game.best>0){
     const b='BESTE '+game.best;
@@ -2948,6 +2984,38 @@ function drawLevelSelect(){
     drawTextC(ctx, L.label, mx, r.y+2, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
     drawTextC(ctx, ok?L.desc:'GESPERRT', mx, r.y+10, ok?'#9fb79a':'#4a4a4a', 1);
   });
+  drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
+}
+// --- Hilfe: volle Tastenuebersicht, antippbar ueber den "?"-Knopf im Titelbild ---
+const HELP = { w:230, h:140 };
+function helpPanelRect(){ return { x:Math.round((VW-HELP.w)/2), y:Math.round((VH-HELP.h)/2), w:HELP.w, h:HELP.h }; }
+function helpRows(){
+  return [
+    ['W A S D / PFEILE', 'LAUFEN'],
+    ['MAUS', 'ZIELEN'],
+    ['LINKSKLICK/LEERTASTE', 'SCHWERT'],
+    ['RECHTSKLICK / Q', 'BOGEN'],
+    ['SHIFT', 'ROLLE'],
+    ['H', 'HEILEN'],
+    ['X / C', 'ULTRA/WECHSELN'],
+    ['B / 1-4', 'SHOP / KAUFEN'],
+    ['ENTER', 'NÄCHSTE WELLE'],
+    ['P / ESC', 'PAUSE'],
+    ['S (PAUSE) / M', 'SPEICHERN/TON']
+  ];
+}
+function drawHelp(){
+  ctx.globalAlpha=0.85; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
+  const p=helpPanelRect();
+  panel(p.x,p.y,p.w,p.h,'rgba(10,18,12,.97)',PAL.C);
+  drawTextC(ctx,'STEUERUNG', VW/2, p.y+5, PAL.C, 1);
+  const keyX=p.x+8, actX=p.x+134;
+  helpRows().forEach(([k,a],i)=>{
+    const ry=p.y+17+i*9;
+    drawText(ctx, k, keyX, ry, PAL.y, 1);
+    drawText(ctx, a, actX, ry, '#cfe8c2', 1);
+  });
+  drawTextC(ctx, 'HANDY: DAUMENSTICKS + TASTEN', VW/2, p.y+p.h-18, '#7f927b', 1);
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
 function drawOver(){
@@ -2995,6 +3063,7 @@ function drawPause(){
   const r=pauseSaveRect();
   panel(r.x, r.y, r.w, r.h, 'rgba(16,32,18,.92)', PAL.H);
   drawTextC(ctx, 'SPEICHERN', VW/2, r.y+5, PAL.y, 1);
+  if(!isTouch) drawTextC(ctx, '? ODER F1: STEUERUNG', VW/2, r.y+r.h+6, '#9fb79a', 1);
 }
 
 const btnDash=document.getElementById('dashBtn'), btnHeal=document.getElementById('healBtn');
@@ -3025,10 +3094,10 @@ function render(){
   ctx.save(); ctx.translate(sx,sy);
   drawWorld();
   ctx.restore();
-  if(game.state==='play'){ drawHUD(); if(game.paused) drawPause(); }
+  if(game.state==='play'){ drawHUD(); if(game.paused) drawPause(); if(game.paused && game.helpOpen) drawHelp(); }
   else if(game.state==='over'){ drawHUD(); drawOver(); }
   else if(game.state==='levelwin'){ drawHUD(); drawLevelWin(); }
-  else { drawTitle(); if(game.levelSelectOpen) drawLevelSelect(); }
+  else { drawTitle(); if(game.levelSelectOpen) drawLevelSelect(); if(game.helpOpen) drawHelp(); }
 }
 
 /* ------------------------------------------------------------------

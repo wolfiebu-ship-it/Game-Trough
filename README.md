@@ -47,6 +47,11 @@ damit sie zum Rest passen.
 | `S` oder Antippen von „SPEICHERN" (in der Pause) | von Hand speichern |
 | `N` (im Titelbild) | neues Spiel, auch wenn ein Spielstand da ist |
 | `M` | Ton an/aus |
+| `?` / `F1` oder **?**-Knopf im Titelbild | Steuerungs-Übersicht mit allen Tasten (auch in der Pause) |
+
+Tastatur/Maus ist immer aktiv. Die Touch-Oberfläche erscheint nur nach echtem
+Antippen und verschwindet wieder, sobald man eine Taste drückt oder die Maus
+bewegt.
 
 **Handy / Tablet** — zwei Daumensticks wie in Brawl Stars: links ziehen = laufen,
 rechts ziehen = zielen. Rechts unten liegen die Tasten für **Schwert**, **Bogen**,
