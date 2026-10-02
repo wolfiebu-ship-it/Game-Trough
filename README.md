@@ -54,8 +54,8 @@ selben Stil, alle untereinander (Listen klappen rechts daneben auf):
 **ANLEITUNG** klappt eine kompakte Tastenliste auf, **LEVEL** zeigt, welche
 Level geschafft, frei oder noch gesperrt sind. Antippen der Ultra-Leiste löst
 das Ultra aus; geht es noch nicht (kein Ultra / noch nicht voll geladen), sagt
-das Spiel warum. Im Titelbild stehen **HILFE** und **LEVEL** links und rechts
-neben „SPIELSTAND WÄHLEN".
+das Spiel warum. Im Titelbild stehen **HILFE**, **EINSTELLUNGEN** und **LEVEL** über den
+Spielständen.
 
 Tastatur/Maus ist immer aktiv. Die Touch-Oberfläche erscheint nur nach echtem
 Antippen und verschwindet wieder, sobald man eine Taste drückt oder die Maus
@@ -67,6 +67,20 @@ rechts ziehen = zielen. Rechts unten liegen die Tasten für **Schwert**, **Bogen
 damit man beim Laufen nicht aus Versehen draufkommt. Oben rechts schalten zwei
 kleine Knöpfe Pause (⏸) und Vollbild (⛶). In der Ruhephase öffnet der
 **SHOP**-Knopf unten rechts das Werkstattfenster.
+
+## Einstellungen
+
+Der Knopf **EINSTELLUNGEN** (im Titelbild in der Mitte, im Spiel oben links
+unter LEVEL) öffnet ein Fenster mit:
+
+- **Heldenname** (bis 12 Zeichen): steht klein über dem Helden, das Spiel
+  begrüßt ihn beim Start („LOS, NAME!") und meldet „NAME IST GEFALLEN".
+- **Lautstärke**, **Musik** und **Effekte** getrennt, je 0–10 (über −/+ oder
+  direkt auf den Balken tippen).
+- **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
+
+Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
+gespeichert und gilt auch nach dem Neuladen.
 
 ## Spielregeln
 

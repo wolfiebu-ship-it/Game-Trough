@@ -60,6 +60,13 @@
     text-transform:uppercase; padding:0 6px; outline:none; -webkit-user-select:text; user-select:text; }
   #codeInput::placeholder{ color:#c9b054; text-transform:uppercase; letter-spacing:.06em; }
   #codeInput:focus{ border-color:#fff3c4; }
+  #nameInput{ position:absolute; box-sizing:border-box; pointer-events:auto; touch-action:manipulation;
+    background:#0d140e; border:2px solid #5fd7ff; color:#e9f5dc;
+    font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; letter-spacing:.06em;
+    text-transform:uppercase; padding:0 6px; outline:none; -webkit-user-select:text; user-select:text; }
+  #nameInput[hidden]{ display:none; }
+  #nameInput::placeholder{ color:#6f8f8a; }
+  #nameInput:focus{ border-color:#c7f3ff; }
   #codeBtn{ position:absolute; box-sizing:border-box; pointer-events:auto; touch-action:manipulation;
     background:#3d3316; border:2px solid #ffe66d; color:#ffe66d; font-weight:bold;
     letter-spacing:.05em; cursor:pointer; }
@@ -105,6 +112,8 @@
         autocomplete="off" autocapitalize="characters" spellcheck="false">
       <button id="codeBtn" type="button">OK</button>
     </div>
+    <input id="nameInput" type="text" maxlength="12" placeholder="NAME EINGEBEN" hidden
+      autocomplete="off" autocapitalize="characters" spellcheck="false">
   </div>
 </div>
 <script>
@@ -758,7 +767,8 @@ const keys = Object.create(null);
 const pressed = new Set();                 // Tastendruck-Flanken dieses Frames
 const IN = { mx:0, my:0, aim:0, aimHeld:false, attackEdge:false, dashEdge:false, mouseAim:false };
 
-const typingInCode = ()=> document.activeElement === codeInput && !codeBox.hidden;
+const typingInCode = ()=> (document.activeElement === codeInput && !codeBox.hidden)
+                        || (document.activeElement === nameInput && !nameInput.hidden);
 function leaveTouchMode(){
   if(!isTouch) return;
   isTouch=false; touchUI.classList.remove('on');
@@ -800,8 +810,9 @@ addEventListener('keyup', e=>{
 // nur an, wenn das Spiel den Fokus hat - jeder Klick/Tipp holt ihn deshalb
 // ausdruecklich ins Spiel, auch wenn ein Handler preventDefault() aufruft.
 function grabFocus(e){
-  if(e && (e.target===codeInput || e.target===codeBtn)) return;
+  if(e && (e.target===codeInput || e.target===codeBtn || e.target===nameInput)) return;
   if(document.activeElement===codeInput) codeInput.blur();
+  if(document.activeElement===nameInput) nameInput.blur();
   try{ window.focus(); }catch(err){}
   try{ document.getElementById('stack').focus({preventScroll:true}); }catch(err){}
 }
@@ -850,7 +861,7 @@ function setStick(s, x, y){
 function touchStart(e){
   for(const t of e.changedTouches){
     const el=document.elementFromPoint(t.clientX, t.clientY);
-    if(el===codeInput || el===codeBtn || el===pauseBtn || el===fsBtn || el===pauseSaveBtn) return;
+    if(el===codeInput || el===codeBtn || el===nameInput || el===pauseBtn || el===fsBtn || el===pauseSaveBtn) return;
   }
   isTouch=true; touchUI.classList.add('on'); audioUnlock();
   const r=touchUI.getBoundingClientRect();
@@ -894,7 +905,7 @@ function touchEnd(e){
 // ausser ueber dem Code-Feld: dort wuerde ein abgefangenes touchmove auf manchen
 // Handys den Tipp-Gestus verwirren und die Tastatur gar nicht erst oeffnen.
 const lockScroll = e=>{
-  if(e.target===codeInput || e.target===codeBtn) return;
+  if(e.target===codeInput || e.target===codeBtn || e.target===nameInput) return;
   if(e.cancelable) e.preventDefault();
 };
 document.addEventListener('touchmove', lockScroll, {passive:false, capture:true});
@@ -944,7 +955,20 @@ codeBtn.addEventListener('click', e=>{ e.preventDefault(); audioUnlock(); redeem
 // Nichts von der globalen Touch-Steuerung darf hier je dazwischenfunken -
 // eigene Stopp-Aufrufe, statt sich allein auf die elementFromPoint-Pruefung
 // in touchStart() zu verlassen. So oeffnet die Tastatur auf dem Handy sicher.
-[codeInput, codeBtn].forEach(el=>{
+// --- Heldenname: nur Zeichen, die die Pixelschrift auch zeichnen kann ---
+const nameInput=document.getElementById('nameInput');
+function cleanName(v){ return String(v).toUpperCase().split('').filter(ch=>GLYPH[ch]).join('').slice(0,12); }
+nameInput.addEventListener('input', ()=>{
+  const c=cleanName(nameInput.value);
+  if(c!==nameInput.value) nameInput.value=c;
+  SETTINGS.name=c; saveSettings();
+});
+nameInput.addEventListener('keydown', e=>{
+  e.stopPropagation();
+  if(e.key==='Enter'||e.key==='Escape'){ e.preventDefault(); nameInput.blur(); }
+});
+nameInput.addEventListener('keyup', e=> e.stopPropagation());
+[codeInput, codeBtn, nameInput].forEach(el=>{
   el.addEventListener('touchstart', e=> e.stopPropagation(), {passive:true});
   el.addEventListener('touchend',   e=> e.stopPropagation(), {passive:true});
 });
@@ -1078,13 +1102,31 @@ function readInput(){
 /* ------------------------------------------------------------------
    6. Ton: alles zur Laufzeit synthetisiert
    ------------------------------------------------------------------ */
-let AC=null, master=null, musicGain=null, muted=false;
+let AC=null, master=null, musicGain=null, sfxGain=null, muted=false;
+// --- Einstellungen: Heldenname, Lautstaerken (0-10), Bildschirmwackeln ---
+const SETTINGS = { name:'', vol:10, music:5, sfx:10, shake:true };
+try{
+  const s=JSON.parse(localStorage.getItem('waldwacht_settings')||'{}');
+  for(const k of ['vol','music','sfx']) if(Number.isFinite(s[k])) SETTINGS[k]=Math.max(0,Math.min(10,Math.round(s[k])));
+  if(typeof s.shake==='boolean') SETTINGS.shake=s.shake;
+  if(typeof s.name==='string') SETTINGS.name=s.name.slice(0,12);
+}catch(e){}
+function saveSettings(){ try{ localStorage.setItem('waldwacht_settings', JSON.stringify(SETTINGS)); }catch(e){} }
+const heroName = ()=> SETTINGS.name.trim();
+function applyAudio(){
+  if(!AC) return;
+  master.gain.value   = muted ? 0 : SETTINGS.vol/10*0.5;
+  musicGain.gain.value= SETTINGS.music/10*0.44;
+  sfxGain.gain.value  = SETTINGS.sfx/10;
+}
 function audioUnlock(){
   if(AC) { if(AC.state==='suspended') AC.resume(); return; }
   try{
     AC=new (window.AudioContext||window.webkitAudioContext)();
-    master=AC.createGain(); master.gain.value=0.5; master.connect(AC.destination);
-    musicGain=AC.createGain(); musicGain.gain.value=0.22; musicGain.connect(master);
+    master=AC.createGain(); master.connect(AC.destination);
+    musicGain=AC.createGain(); musicGain.connect(master);
+    sfxGain=AC.createGain(); sfxGain.connect(master);
+    applyAudio();
   }catch(e){ AC=null; }
 }
 function env(node, t, a, d, peak){
@@ -1097,7 +1139,7 @@ function tone(freq, t, dur, type='square', peak=0.25, slide=0){
   if(!AC||muted) return;
   const o=AC.createOscillator(); o.type=type; o.frequency.setValueAtTime(freq,t);
   if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide), t+dur);
-  const g=env(o,t,0.008,dur,peak); g.connect(master);
+  const g=env(o,t,0.008,dur,peak); g.connect(sfxGain);
   o.start(t); o.stop(t+dur+0.05);
 }
 let noiseBuf=null;
@@ -1110,7 +1152,7 @@ function noise(t, dur, peak=0.2, filt=1800, q=1){
   }
   const s=AC.createBufferSource(); s.buffer=noiseBuf;
   const f=AC.createBiquadFilter(); f.type='bandpass'; f.frequency.value=filt; f.Q.value=q;
-  s.connect(f); const g=env(f,t,0.005,dur,peak); g.connect(master);
+  s.connect(f); const g=env(f,t,0.005,dur,peak); g.connect(sfxGain);
   s.start(t); s.stop(t+dur+0.05);
 }
 const SFX = {
@@ -1170,7 +1212,7 @@ const game = {
   shake:0, hitstop:0, slow:0, flash:0, redFlash:0,
   msg:'', msgT:0, shopOpen:false, cards:[], cardSel:0, tutorial:0, time:0, ultras:[], ultraNameT:0,
   levelMode:0, levelSelectOpen:false, levelWonN:0,           // 0 = normaler Endlos-Modus
-  helpOpen:false, guideOpen:false, levelInfoOpen:false
+  helpOpen:false, guideOpen:false, levelInfoOpen:false, settingsOpen:false
 };
 try{ game.best = parseInt(localStorage.getItem('waldwacht_best')||'0',10)||0; }catch(e){}
 
@@ -1322,7 +1364,7 @@ function burst(x,y,n,col,spd=40,life=0.4,size=1){
     part(x,y,Math.cos(a)*s,Math.sin(a)*s,rr(life*0.5,life),col,size,0); }
 }
 function floater(x,y,txt,col){ floaters.push({x,y,txt,col,t:0}); }
-function shake(v){ game.shake=Math.min(2.5, game.shake+v*0.25); }  // nur noch ein Hauch
+function shake(v){ if(!SETTINGS.shake) return; game.shake=Math.min(2.5, game.shake+v*0.25); }  // nur noch ein Hauch
 
 /* --- Kollision ------------------------------------------------------ */
 function collideWorld(e, isEnemy){
@@ -1425,7 +1467,7 @@ function hurtPlayer(dmg, fromX, fromY){
       burst(player.x, player.y-8, 40, PAL.H, 130, 0.9, 2); shake(2);
       return;
     }
-    player.hp=0; player.alive=false; gameOver('DU BIST GEFALLEN');
+    player.hp=0; player.alive=false; gameOver(heroName() ? heroName()+' IST GEFALLEN' : 'DU BIST GEFALLEN');
   }
 }
 function damageEnemy(e, dmg, kb, ang, heavy){
@@ -1818,6 +1860,7 @@ function newGame(slot){
     slot: slot||game.slot||1, levelMode:0,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
     flash:0, redFlash:0, msg:'', msgT:0, msgCol:PAL.y, shopOpen:false, cards:[], cardSel:0, tutorial:16 });
+  if(heroName()) say('LOS, '+heroName()+'!', 1.6, PAL.y);
   say('HALTE DIE BOTS VOM TOR FERN', 2.4, PAL.H);
   Object.assign(player, { speed:64, dmg:5, reach:26, arc:1.5, atkSpeed:1, maxHp:10,
     dashCdMax:2.8, bowCdMax:0.85, arrowDmg:4, bowCd:0, shootT:0,
@@ -2291,7 +2334,7 @@ function ultraMenuRowRect(i){
 }
 // Knoepfe untereinander, gleich breit wie SUPERKRAEFTE! (bzw. an dessen
 // Stelle, solange es noch kein Ultra gibt).
-const HUD_BTN_W = textW(ULTRA_LABEL,1)+14;
+const HUD_BTN_W = textW('EINSTELLUNGEN',1)+17;
 function hudBtnRowY(){ const u=ultraBtnRect(); return u ? u.y+u.h+2 : 45; }
 function guideBtnRect(){
   if(isTouch) return null;                         // Tastenliste gilt nur fuer Tastatur/Maus
@@ -2300,6 +2343,10 @@ function guideBtnRect(){
 function levelInfoBtnRect(){
   const g=guideBtnRect();
   return { x:4, y:g ? g.y+g.h+2 : hudBtnRowY(), w:HUD_BTN_W, h:11 };
+}
+function settingsHudBtnRect(){
+  const l=levelInfoBtnRect();
+  return { x:4, y:l.y+l.h+2, w:HUD_BTN_W, h:11 };
 }
 // Ultra-Leiste selbst antippbar: loest das Ultra aus (fuer Maus-Spieler)
 function ultraBarRect(){ return activeUltra() ? { x:2, y:43, w:66, h:9 } : null; }
@@ -2339,6 +2386,7 @@ function tryTapCards(){
     if(ub && hitRect(tl, ub)){ const o=!game.ultraMenuOpen; closeHudMenus(); game.ultraMenuOpen=o; SFX.pick(); return true; }
     if(gb && hitRect(tl, gb)){ closeHudMenus(); game.guideOpen=true; SFX.pick(); return true; }
     if(hitRect(tl, lb)){ closeHudMenus(); game.levelInfoOpen=true; SFX.pick(); return true; }
+    if(hitRect(tl, settingsHudBtnRect())){ closeHudMenus(); game.settingsOpen=true; SFX.pick(); return true; }
     if(bar && hitRect(tl, bar)){ fireUltra(); return true; }
   }
   if(game.phase==='rest' && hitRect(toHud(lastTap, VW, VH), shopBtnRect())){
@@ -2355,7 +2403,8 @@ function update(dt){
   readInput();
   game.time+=dt; game.dt=dt;
   const startEdge = pressed.has(' ')||pressed.has('Enter')||pressed.has('__attack')||pressed.has('e');
-  if(pressed.has('m')){ muted=!muted; if(muted&&AC){ master.gain.value=0; } else if(AC){ master.gain.value=0.5; } }
+  if(pressed.has('m')){ muted=!muted; applyAudio(); }
+  if(game.settingsOpen){ updateSettings(); return; }   // Einstellungen offen: Spiel steht
 
   if(game.state==='title'){
     if(game.helpOpen){
@@ -2380,6 +2429,7 @@ function update(dt){
     }
     if(lastTap){
       if(hitRect(lastTap, levelBtnRect())){ game.levelSelectOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
+      if(hitRect(lastTap, settingsBtnTitleRect())){ game.settingsOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
       if(hitRect(lastTap, helpBtnRect())){ game.helpOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
       for(const b of saveSlotRects()){
         if(hitRect(lastTap, b)){ audioUnlock(); hasSave(b.slot) ? continueGame(b.slot) : newGame(b.slot); lastTap=null; pressed.clear(); return; }
@@ -2559,9 +2609,17 @@ function drawSlash(s){
   }
   ctx.globalAlpha=1;
 }
+// Heldenname klein ueber dem Kopf (2/3 Groesse wie das HUD, weiter pixelscharf)
+function drawHeroName(){
+  const n=heroName(); if(!n || !player.alive) return;
+  ctx.save(); ctx.translate(q(player.x), q(player.y)-22); ctx.scale(HUDK,HUDK);
+  drawText(ctx, n, -Math.round(textW(n,1)/2), 0, '#e9f5dc', 1);
+  ctx.restore();
+}
 function drawPlayer(){
   const p=player;
   shadow(p.x, p.y, 11);
+  drawHeroName();
   // --- Rolle: eingerollte Figur, die sich einmal ueberschlaegt ---
   if(p.dashT>0){
     const t=1-clamp(p.dashT/0.22,0,1);
@@ -2975,6 +3033,10 @@ function drawHUD(){
       ctx.fillStyle=PAL.B; ctx.fillRect(lb.x+4, lb.y+2, 1, 7);            // kleine Fahne als Symbol
       ctx.fillStyle=PAL.R; ctx.fillRect(lb.x+5, lb.y+2, 4, 3);
       drawText(ctx, 'LEVEL', lb.x+13, lb.y+2, '#e9d98a', 1);
+      const sb=settingsHudBtnRect();
+      panel(sb.x, sb.y, sb.w, sb.h, 'rgba(10,18,12,.9)', '#4a4a4a');
+      drawGear(sb.x+3, sb.y+2, PAL.C);
+      drawText(ctx, 'EINSTELLUNGEN', sb.x+13, sb.y+2, '#e9d98a', 1);
     }
   });
   // --- oben rechts: Tor ---
@@ -3119,7 +3181,10 @@ function drawTitle(){
   drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+29, '#cfe8c2', 1);
   const {rows, gap, instrY, headerY} = titleLayout();
   rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+instrY+i*gap, '#9fb79a', 1));
-  drawTextC(ctx, 'SPIELSTAND WÄHLEN', VW/2, y+headerY, PAL.y, 1);
+  const sb=settingsBtnTitleRect();
+  panel(sb.x, sb.y, sb.w, sb.h, 'rgba(10,18,12,.9)', '#4a4a4a');
+  drawGear(sb.x+3, sb.y+2, PAL.C);
+  drawText(ctx, 'EINSTELLUNGEN', sb.x+13, sb.y+2, '#e9d98a', 1);
   for(const b of saveSlotRects()) drawSaveSlot(b);
 }
 // --- Levelauswahl: eigenes Overlay ueber dem Titelbild, volle Flaeche zur
@@ -3175,6 +3240,74 @@ function drawHelp(){
   });
   drawTextC(ctx, 'HANDY: DAUMENSTICKS + TASTEN', VW/2, p.y+p.h-18, '#7f927b', 1);
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
+}
+// --- Einstellungen: eigenes Fenster ueber Titel oder Spiel (Spiel steht solange) ---
+const SETP = { w:200, h:124 };
+function setPanelRect(){ return { x:Math.round((VW-SETP.w)/2), y:Math.round((VH-SETP.h)/2), w:SETP.w, h:SETP.h }; }
+const SET_SLIDERS = [ ['vol','LAUTSTÄRKE'], ['music','MUSIK'], ['sfx','EFFEKTE'] ];
+function setRowY(i){ return setPanelRect().y+21+i*16; }          // 0 = Name, 1-3 Regler, 4 Wackeln
+function setCtrlX(){ return setPanelRect().x+80; }
+function setMinusRect(i){ return { x:setCtrlX(), y:setRowY(i)-2, w:11, h:11 }; }
+function setSegRect(i,n){ return { x:setCtrlX()+14+n*7, y:setRowY(i)-2, w:6, h:11 }; }
+function setPlusRect(i){ return { x:setCtrlX()+14+70+2, y:setRowY(i)-2, w:11, h:11 }; }
+function setShakeRect(){ return { x:setCtrlX(), y:setRowY(4)-2, w:30, h:11 }; }
+function setNameRect(){ return { x:setCtrlX(), y:setRowY(0)-3, w:97, h:13 }; }
+function setDoneRect(){ const p=setPanelRect(); return { x:Math.round(VW/2-30), y:p.y+p.h-19, w:60, h:13 }; }
+function settingsBtnTitleRect(){
+  const p=titlePanelRect(), { headerY }=titleLayout(), w=textW('EINSTELLUNGEN',1)+17;
+  return { x:Math.round(p.x+p.w/2-w/2), y:p.y+headerY-2, w, h:11 };
+}
+function drawGear(x,y,col){
+  ctx.fillStyle=col;
+  ctx.fillRect(x+2,y,3,7); ctx.fillRect(x,y+2,7,3); ctx.fillRect(x+1,y+1,5,5);
+  ctx.fillStyle='#0d140e'; ctx.fillRect(x+3,y+3,1,1);
+}
+function drawSettings(){
+  ctx.globalAlpha=0.85; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
+  const p=setPanelRect();
+  panel(p.x,p.y,p.w,p.h,'rgba(10,18,12,.97)',PAL.C);
+  drawTextC(ctx,'EINSTELLUNGEN', VW/2, p.y+6, PAL.C, 1);
+  const lx=p.x+8;
+  drawText(ctx,'HELDENNAME', lx, setRowY(0), '#cfe8c2', 1);
+  const nr=setNameRect();
+  panel(nr.x, nr.y, nr.w, nr.h, '#0d140e', '#2f5c31');   // Rahmen unter dem echten Eingabefeld
+  SET_SLIDERS.forEach(([key,label],k)=>{
+    const i=k+1, v=SETTINGS[key];
+    drawText(ctx, label, lx, setRowY(i), '#cfe8c2', 1);
+    const m=setMinusRect(i), pl=setPlusRect(i);
+    panel(m.x,m.y,m.w,m.h,'rgba(16,32,18,.92)','#4a4a4a'); drawText(ctx,'-',m.x+3,m.y+2,PAL.y,1);
+    panel(pl.x,pl.y,pl.w,pl.h,'rgba(16,32,18,.92)','#4a4a4a'); drawText(ctx,'+',pl.x+3,pl.y+2,PAL.y,1);
+    for(let n=0;n<10;n++){
+      const r=setSegRect(i,n);
+      ctx.fillStyle = n<v ? (key==='music'?PAL.p:(key==='sfx'?PAL.O:PAL.H)) : '#22301f';
+      ctx.fillRect(r.x, r.y+2, r.w, r.h-4);
+    }
+  });
+  drawText(ctx,'WACKELN', lx, setRowY(4), '#cfe8c2', 1);
+  const sr=setShakeRect(), on=SETTINGS.shake;
+  panel(sr.x,sr.y,sr.w,sr.h, on?'rgba(26,46,26,.95)':'rgba(30,14,14,.95)', on?PAL.H:'#7a3a3a');
+  drawTextC(ctx, on?'AN':'AUS', sr.x+sr.w/2, sr.y+2, on?PAL.l:'#e9a0a0', 1);
+  const d=setDoneRect();
+  panel(d.x,d.y,d.w,d.h,'rgba(46,40,10,.95)',PAL.y);
+  drawTextC(ctx,'FERTIG', VW/2, d.y+3, PAL.y, 1);
+}
+function updateSettings(){
+  musicTick();                                     // Musik laeuft weiter, Lautstaerke hoerbar
+  let changed=false;
+  if(lastTap){
+    const t=lastTap;
+    SET_SLIDERS.forEach(([key],k)=>{
+      const i=k+1;
+      if(hitRect(t,setMinusRect(i))){ SETTINGS[key]=Math.max(0,SETTINGS[key]-1); changed=true; }
+      else if(hitRect(t,setPlusRect(i))){ SETTINGS[key]=Math.min(10,SETTINGS[key]+1); changed=true; }
+      else for(let n=0;n<10;n++) if(hitRect(t,setSegRect(i,n))){ SETTINGS[key]=n+1; changed=true; }
+    });
+    if(hitRect(t,setShakeRect())){ SETTINGS.shake=!SETTINGS.shake; changed=true; }
+    if(hitRect(t,setDoneRect()) || !hitRect(t,setPanelRect())) game.settingsOpen=false;
+  }
+  if(pressed.has('Escape')) game.settingsOpen=false;
+  if(changed){ saveSettings(); audioUnlock(); applyAudio(); SFX.pick(); }
+  lastTap=null; pressed.clear();
 }
 function drawOver(){
   ctx.globalAlpha=0.6; ctx.fillStyle='#20060a'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
@@ -3236,7 +3369,15 @@ function render(){
   touchUI.classList.toggle('rest', !showCombatBtns);
   const warVersteckt = codeBox.hidden;
   codeBox.hidden = !(game.state==='play' && game.shopOpen);
-  pauseBtn.hidden = game.state!=='play';
+  pauseBtn.hidden = game.state!=='play' || game.settingsOpen;
+  if(nameInput.hidden === game.settingsOpen){       // Namensfeld nur im Einstellungsfenster
+    nameInput.hidden = !game.settingsOpen;
+    if(game.settingsOpen){
+      const r=setNameRect(); placePct(nameInput, r.x, r.y, r.w, r.h);
+      nameInput.value=SETTINGS.name;
+      const h=nameInput.getBoundingClientRect().height; if(h>0) nameInput.style.fontSize=Math.max(9,h*0.55)+'px';
+    } else if(document.activeElement===nameInput) nameInput.blur();
+  }
   pauseSaveBtn.hidden = !game.paused;
   pauseSaveBtn.classList.toggle('show', game.paused);
   if(codeBox.hidden && document.activeElement===codeInput) codeInput.blur();
@@ -3256,6 +3397,7 @@ function render(){
   else if(game.state==='over'){ drawHUD(); drawOver(); }
   else if(game.state==='levelwin'){ drawHUD(); drawLevelWin(); }
   else { drawTitle(); if(game.levelSelectOpen) drawLevelSelect(); if(game.helpOpen) drawHelp(); }
+  if(game.settingsOpen) drawSettings();
   // Ohne Fokus kommt keine Taste an (z.B. eingebettet in einer Vorschau) - sagen statt raten lassen.
   if(!isTouch && !document.hasFocus()){
     const t='INS SPIEL KLICKEN FÜR TASTATUR', w=textW(t,1)+8, x=Math.round((VW-w)/2);
