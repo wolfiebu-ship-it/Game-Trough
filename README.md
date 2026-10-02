@@ -49,7 +49,8 @@ damit sie zum Rest passen.
 | `M` | Ton an/aus |
 | `?` / `F1` oder **HILFE**-Knopf im Titelbild | Steuerungs-Übersicht mit allen Tasten (auch in der Pause) |
 
-Im Spiel liegen oben links unter **SUPERKRÄFTE!** zwei kleine Knöpfe:
+Im Spiel liegen oben links unter **SUPERKRÄFTE!** zwei weitere Knöpfe im
+selben Stil, alle untereinander (Listen klappen rechts daneben auf):
 **ANLEITUNG** klappt eine kompakte Tastenliste auf, **LEVEL** zeigt, welche
 Level geschafft, frei oder noch gesperrt sind. Antippen der Ultra-Leiste löst
 das Ultra aus; geht es noch nicht (kein Ultra / noch nicht voll geladen), sagt
