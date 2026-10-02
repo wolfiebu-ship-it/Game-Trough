@@ -47,12 +47,14 @@ damit sie zum Rest passen.
 | `S` oder Antippen von „SPEICHERN" (in der Pause) | von Hand speichern |
 | `N` (im Titelbild) | neues Spiel, auch wenn ein Spielstand da ist |
 | `M` | Ton an/aus |
-| `?` / `F1` oder **?**-Knopf im Titelbild | Steuerungs-Übersicht mit allen Tasten (auch in der Pause) |
+| `?` / `F1` oder **HILFE**-Knopf im Titelbild | Steuerungs-Übersicht mit allen Tasten (auch in der Pause) |
 
-Beim Spielen mit Tastatur/Maus zeigt eine kleine Tastenleiste unten rechts
-ständig die wichtigsten Tasten (Schwert, Bogen, Rolle, Heilen, Ultra,
-Wechseln); was gerade nachlädt oder noch nicht freigeschaltet ist, ist
-ausgegraut, ein volles Ultra blinkt.
+Im Spiel liegen oben links unter **SUPERKRÄFTE!** zwei kleine Knöpfe:
+**ANLEITUNG** klappt eine kompakte Tastenliste auf, **LEVEL** zeigt, welche
+Level geschafft, frei oder noch gesperrt sind. Antippen der Ultra-Leiste löst
+das Ultra aus; geht es noch nicht (kein Ultra / noch nicht voll geladen), sagt
+das Spiel warum. Im Titelbild stehen **HILFE** und **LEVEL** links und rechts
+neben „SPIELSTAND WÄHLEN".
 
 Tastatur/Maus ist immer aktiv. Die Touch-Oberfläche erscheint nur nach echtem
 Antippen und verschwindet wieder, sobald man eine Taste drückt oder die Maus

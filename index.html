@@ -774,18 +774,37 @@ function keyName(e){
   if(c==='ShiftLeft'||c==='ShiftRight') return 'Shift';
   return e.key.length===1 ? e.key.toLowerCase() : e.key;
 }
+// Notbremse gegen "Held laeuft von allein": Geht ein Loslassen verloren (z.B.
+// eingebettet in einer Vorschau), stoppt die Laufrichtung trotzdem. Gehaltene
+// Tasten schickt der Browser laufend als Wiederholung - bleibt die aus, ist
+// die Taste in Wahrheit nicht mehr gedrueckt.
+const MOVE_KEYS = ['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+const keyT = Object.create(null), keyRep = Object.create(null);
+function releaseAllKeys(){
+  for(const k in keys) keys[k]=false;
+  for(const s of [sticks.L, sticks.R]){ s.id=null; s.dx=0; s.dy=0; s.el.classList.remove('on'); }
+}
+function expireStaleKeys(){
+  const now=performance.now();
+  for(const k of MOVE_KEYS){
+    if(keys[k] && now-(keyT[k]||0) > (keyRep[k] ? 500 : 1200)) keys[k]=false;
+  }
+}
 addEventListener('keydown', e=>{
   leaveTouchMode();                                 // echter Tastendruck -> zurueck zu Tastatur/Maus
   if(typingInCode()) return;                       // Buchstaben gehoeren dem Codefeld
   const k=keyName(e);
   if(!keys[k]) pressed.add(k);
   if(e.key==='?' && k!=='?') pressed.add('?');     // ? liegt je nach Layout auf anderer Taste
-  keys[k]=true;
+  keys[k]=true; keyT[k]=performance.now(); keyRep[k]=!!e.repeat;
   if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','F1','Tab'].includes(k)) e.preventDefault();
 }, {passive:false});
+// In der Capture-Phase, damit kein Element (z.B. das Code-Feld) das Loslassen verschlucken kann.
 addEventListener('keyup', e=>{
-  keys[keyName(e)]=false;
-});
+  const k=keyName(e);
+  keys[k]=false; keyRep[k]=false;
+  if(e.key && e.key.length===1) keys[e.key.toLowerCase()]=false;
+}, true);
 // Das Spiel laeuft oft eingebettet (Vorschau-Fenster). Tastendruecke kommen
 // nur an, wenn das Spiel den Fokus hat - jeder Klick/Tipp holt ihn deshalb
 // ausdruecklich ins Spiel, auch wenn ein Handler preventDefault() aufruft.
@@ -798,8 +817,9 @@ function grabFocus(e){
 addEventListener('pointerdown', grabFocus, true);
 addEventListener('mousedown',   grabFocus, true);
 addEventListener('touchstart',  grabFocus, {capture:true, passive:true});
-addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; if(game.state==='play') game.paused=true; });
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden && game.state==='play') game.paused=true; });
+addEventListener('blur', ()=>{ releaseAllKeys(); if(game.state==='play') game.paused=true; });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ releaseAllKeys(); if(game.state==='play') game.paused=true; } });
+addEventListener('pagehide', releaseAllKeys);
 
 let mouseWX=0, mouseWY=0, mouseInside=false;
 function canvasPos(cx,cy){
@@ -1045,6 +1065,8 @@ bindBtn('healBtn','__heal');
 bindBtn('ultraBtn','__ultra');
 
 function readInput(){
+  if(!document.hasFocus()){ for(const k in keys) keys[k]=false; }   // ohne Fokus kommt kein Loslassen an
+  else expireStaleKeys();
   let mx=0,my=0;
   if(keys['a']||keys['ArrowLeft'])  mx-=1;
   if(keys['d']||keys['ArrowRight']) mx+=1;
@@ -1158,7 +1180,7 @@ const game = {
   shake:0, hitstop:0, slow:0, flash:0, redFlash:0,
   msg:'', msgT:0, shopOpen:false, cards:[], cardSel:0, tutorial:0, time:0, ultras:[], ultraNameT:0,
   levelMode:0, levelSelectOpen:false, levelWonN:0,           // 0 = normaler Endlos-Modus
-  helpOpen:false
+  helpOpen:false, guideOpen:false, levelInfoOpen:false
 };
 try{ game.best = parseInt(localStorage.getItem('waldwacht_best')||'0',10)||0; }catch(e){}
 
@@ -1189,9 +1211,15 @@ function startLevel(n){
     say('LEVEL '+n+' GESTARTET', 2.2, PAL.H);
   }
 }
+// Geschafft = naechstes Level ist frei; das Endlevel merkt sich seinen Sieg extra.
+function levelDone(n){
+  if(n<getUnlockedLevel()) return true;
+  try{ return n===LEVELS.length && localStorage.getItem('waldwacht_endwon')==='1'; }catch(e){ return false; }
+}
 function winLevel(){
   const n = game.levelMode;
   unlockLevel(n+1);
+  if(n===LEVELS.length){ try{ localStorage.setItem('waldwacht_endwon','1'); }catch(e){} }
   game.state='levelwin'; game.levelWonN=n; game.winT=undefined;
   game.slow=0.5; shake(4); SFX.buy();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
@@ -1473,7 +1501,12 @@ function cycleUltra(){
   say('ULTRA: '+activeUltra().name, 1.2, PAL.C);
 }
 function fireUltra(){
-  if(!ultraReady() || !player.alive) return;
+  if(!player.alive) return;
+  // Nicht still ignorieren - sagen, warum es gerade nicht geht.
+  if(!activeUltra()){ say('ULTRA GIBT ES AB WELLE 3', 1.4, PAL.O); SFX.no(); return; }
+  if(!ultraReady()){
+    say('ULTRA LÄDT NOCH '+Math.floor(player.ultra/player.ultraMax*100)+'% - TREFFER LADEN', 1.4, PAL.O); SFX.no(); return;
+  }
   const u=activeUltra(); player.ultra=0;
   say(u.name+'!', 1.4, PAL.y); game.flash=0.4;
   if(u.id==='bolt'){
@@ -1790,7 +1823,7 @@ function newGame(slot){
   slashes.length=0; waves.length=0; floaters.length=0; roots.length=0;
   MSGQ.length=0;
   game.ultras=[]; game.usedCodes=new Set();
-  game.turret=0; game.turretT=0; game.ultraMenuOpen=false; game.ultraNameT=0;
+  game.turret=0; game.turretT=0; game.ultraMenuOpen=false; game.ultraNameT=0; game.guideOpen=false; game.levelInfoOpen=false;
   Object.assign(game, { state:'play', phase:'rest', wave:0, restT:6, spawnList:[], spawnT:0, paused:false,
     slot: slot||game.slot||1, levelMode:0,
     scrap:0, score:0, kills:0, castleHp:120, castleMax:120, shake:0, hitstop:0, slow:0,
@@ -2244,10 +2277,7 @@ function updateFX(dt){
 let lastTap=null;
 const SHOP = { w:176, h:132 };
 function shopPanelRect(){ return { x:Math.round((VW-SHOP.w)/2), y:Math.round((VH-SHOP.h)/2)-4, w:SHOP.w, h:SHOP.h }; }
-function shopBtnRect(){                    // rechts, nicht in der Laufstick-Zone
-  if(showKeyLegend()) return { x:VW-52, y:keyLegendRect().y-18, w:48, h:16 };   // ueber der Tastenleiste
-  return { x:VW-52, y:VH-52, w:48, h:16 };
-}
+function shopBtnRect(){ return { x:VW-52, y:VH-52, w:48, h:16 }; }   // rechts, nicht in der Laufstick-Zone
 const ULTRA_LABEL = 'SUPERKRÄFTE!';
 function ultraBtnRect(){
   if(!ownedUltras().length) return null;
@@ -2261,6 +2291,19 @@ function ultraMenuRowRect(i){
   const m=ultraMenuRect();
   return { x:m.x+2, y:m.y+2+i*12, w:m.w-4, h:11 };
 }
+// Unter SUPERKRAEFTE! (bzw. an dessen Stelle, solange es noch kein Ultra gibt)
+function hudBtnRowY(){ const u=ultraBtnRect(); return u ? u.y+u.h+2 : 53; }
+function guideBtnRect(){
+  if(isTouch) return null;                         // Tastenliste gilt nur fuer Tastatur/Maus
+  return { x:4, y:hudBtnRowY(), w:textW('ANLEITUNG',1)+8, h:11 };
+}
+function levelInfoBtnRect(){
+  const g=guideBtnRect();
+  return { x:g ? g.x+g.w+3 : 4, y:hudBtnRowY(), w:textW('LEVEL',1)+8, h:11 };
+}
+// Ultra-Leiste selbst antippbar: loest das Ultra aus (fuer Maus-Spieler)
+function ultraBarRect(){ return activeUltra() ? { x:2, y:43, w:66, h:9 } : null; }
+function closeHudMenus(){ game.ultraMenuOpen=false; game.guideOpen=false; game.levelInfoOpen=false; }
 function cardRects(){
   if(!game.shopOpen) return [];
   const p=shopPanelRect();
@@ -2281,9 +2324,21 @@ function tryTapCards(){
     if(!hitRect(lastTap, ultraMenuRect()) && !hitRect(lastTap, ultraBtnRect())) game.ultraMenuOpen=false;
     return true;
   }
-  const ub=ultraBtnRect();
-  if(ub && !game.shopOpen && hitRect(lastTap, ub)){
-    game.ultraMenuOpen=!game.ultraMenuOpen; SFX.pick(); return true;
+  // Anleitung/Level-Liste offen: jeder Tipp schliesst sie wieder (Knopf selbst = umschalten)
+  if(game.guideOpen || game.levelInfoOpen){
+    const gb=guideBtnRect(), lb=levelInfoBtnRect();
+    const wasGuide=game.guideOpen, wasLevel=game.levelInfoOpen;
+    closeHudMenus();
+    if(gb && hitRect(lastTap, gb) && !wasGuide){ game.guideOpen=true; }
+    if(hitRect(lastTap, lb) && !wasLevel){ game.levelInfoOpen=true; }
+    SFX.pick(); return true;
+  }
+  if(!game.shopOpen){
+    const ub=ultraBtnRect(), gb=guideBtnRect(), lb=levelInfoBtnRect(), bar=ultraBarRect();
+    if(ub && hitRect(lastTap, ub)){ const o=!game.ultraMenuOpen; closeHudMenus(); game.ultraMenuOpen=o; SFX.pick(); return true; }
+    if(gb && hitRect(lastTap, gb)){ closeHudMenus(); game.guideOpen=true; SFX.pick(); return true; }
+    if(hitRect(lastTap, lb)){ closeHudMenus(); game.levelInfoOpen=true; SFX.pick(); return true; }
+    if(bar && hitRect(lastTap, bar)){ fireUltra(); return true; }
   }
   if(game.phase==='rest' && hitRect(lastTap, shopBtnRect())){
     game.shopOpen=!game.shopOpen; game.ultraMenuOpen=false; SFX.pick(); return true;
@@ -2838,30 +2893,45 @@ function drawUltraMenu(){
     drawText(ctx, (active?'>':' ')+u.name, r.x+3, r.y+2, active?PAL.y:'#cfe0c8', 1);
   });
 }
-// --- Tastenleiste unten rechts: die wichtigsten Tasten immer im Blick (nur Tastatur/Maus) ---
-const showKeyLegend = ()=> !isTouch && game.state==='play';
-function keyLegendRect(){ return { x:VW-90, y:VH-68, w:88, h:66 }; }
-function drawKeyLegend(){
-  const r=keyLegendRect(), hasU=!!activeUltra(), full=hasU && player.ultra>=player.ultraMax;
-  const rows=[
-    ['SCHWERT', 'KLICK', true],
-    ['BOGEN',   'Q',     player.bowCd<=0],
-    ['ROLLE',   'SHIFT', player.dashCd<=0],
-    ['HEILEN',  'H',     player.healCd<=0],
-    ['ULTRA',   'X',     full],
-    ['WECHSEL', 'C',     ownedUltras().length>1],
-    ['ALLE',    '?',     true]
-  ];
-  panel(r.x, r.y, r.w, r.h, 'rgba(10,18,12,.72)', '#2f5c31');
-  rows.forEach(([label,key,ready],i)=>{
-    const y=r.y+3+i*9;
-    const pulse = label==='ULTRA' && full && Math.floor(game.time*4)%2===0;
-    drawText(ctx, label, r.x+4, y, ready?(pulse?'#fff3c4':'#cfe8c2'):'#5f6f5c', 1);
-    drawText(ctx, key, r.x+r.w-4-textW(key,1), y, ready?PAL.y:'#7a6f3a', 1);
+// --- Kleine Aufklapp-Listen oben links (wie SUPERKRAEFTE!): Anleitung und Level ---
+const GUIDE_ROWS = [
+  [['WASD','LAUFEN'], ['X','ULTRA']],
+  [['KLICK','SCHWERT'], ['C','WECHSELN']],
+  [['Q','BOGEN'], ['B','SHOP']],
+  [['SHIFT','ROLLE'], ['P','PAUSE']],
+  [['H','HEILEN'], ['M','TON']]
+];
+function guideMenuRect(){
+  const b=guideBtnRect();
+  return { x:b.x, y:b.y+b.h+2, w:146, h:GUIDE_ROWS.length*9+5 };
+}
+function drawGuideMenu(){
+  const m=guideMenuRect();
+  panel(m.x, m.y, m.w, m.h, 'rgba(10,18,12,.96)', PAL.C);
+  GUIDE_ROWS.forEach((row,i)=>{
+    const y=m.y+3+i*9;
+    row.forEach(([k,a],c)=>{
+      const x=m.x+4+c*82;
+      drawText(ctx, k, x, y, PAL.y, 1);
+      drawText(ctx, a, x+(c?9:34), y, '#cfe8c2', 1);
+    });
   });
 }
-// Mitte des freien Bereichs links der Tastenleiste (fuer Bossleiste & Hinweise)
-function hudCenterX(){ return showKeyLegend() ? Math.round(keyLegendRect().x/2) : VW/2; }
+function levelInfoRect(){
+  const b=levelInfoBtnRect();
+  return { x:4, y:b.y+b.h+2, w:150, h:LEVELS.length*9+5 };
+}
+function drawLevelInfo(){
+  const m=levelInfoRect(), un=getUnlockedLevel();
+  panel(m.x, m.y, m.w, m.h, 'rgba(10,18,12,.96)', PAL.y);
+  LEVELS.forEach((L,i)=>{
+    const y=m.y+3+i*9, done=levelDone(L.n), open=L.n<=un;
+    const cur = game.levelMode===L.n;
+    drawText(ctx, (cur?'>':' ')+L.label, m.x+3, y, open?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
+    const st = done?'GESCHAFFT':(open?'FREI':'GESPERRT');
+    drawText(ctx, st, m.x+m.w-4-textW(st,1), y, done?PAL.H:(open?'#cfe8c2':'#5a5a5a'), 1);
+  });
+}
 function drawHUD(){
   drawHearts();
   drawSchild();
@@ -2883,6 +2953,15 @@ function drawHUD(){
     drawText(ctx, ULTRA_LABEL, r.x+13, r.y+2, full?PAL.y:'#e9d98a', 1);
     if(game.ultraNameT>0) drawText(ctx, u.name, r.x+r.w+4, r.y+2, '#9fb79a', 1);
   }
+  const gb=guideBtnRect(), lb=levelInfoBtnRect(), inPlay=game.state==='play';
+  if(gb && inPlay){
+    panel(gb.x, gb.y, gb.w, gb.h, game.guideOpen?'rgba(14,34,40,.95)':'rgba(10,18,12,.9)', PAL.C);
+    drawText(ctx, 'ANLEITUNG', gb.x+4, gb.y+2, PAL.C, 1);
+  }
+  if(inPlay){
+    panel(lb.x, lb.y, lb.w, lb.h, game.levelInfoOpen?'rgba(46,40,10,.95)':'rgba(10,18,12,.9)', PAL.y);
+    drawText(ctx, 'LEVEL', lb.x+4, lb.y+2, PAL.y, 1);
+  }
 
   const left = enemies.length + game.spawnList.length;
   if(game.phase==='wave'){
@@ -2899,8 +2978,8 @@ function drawHUD(){
 
   const chef = game.phase==='wave' ? enemies.find(e=>!e.dead && e.d.boss && e.spawnT<=0) : null;
   if(chef){
-    const cx=hudCenterX(), w=Math.min(150, cx*2-12), x=Math.round(cx-w/2), y=VH-20;
-    drawTextC(ctx, chef.d.name + (chef.hp<chef.hpMax*0.5 ? '  ·  WUT' : ''), cx, y-9,
+    const w=150, x=Math.round((VW-w)/2), y=VH-20;
+    drawTextC(ctx, chef.d.name + (chef.hp<chef.hpMax*0.5 ? '  ·  WUT' : ''), VW/2, y-9,
       chef.hp<chef.hpMax*0.5 ? PAL.O : '#e9c0b0', 1);
     ctx.fillStyle='#141019'; ctx.fillRect(x-1,y-1,w+2,6);
     ctx.fillStyle='#3a1d22'; ctx.fillRect(x,y,w,4);
@@ -2910,9 +2989,8 @@ function drawHUD(){
   if(game.phase==='rest'){
     drawShopButton();
     if(!game.shopOpen && inRect(player.x,player.y,COURT))
-      drawTextC(ctx, 'IM BURGHOF HEILST DU', hudCenterX(), VH-26, PAL.H, 1);
+      drawTextC(ctx, 'IM BURGHOF HEILST DU', VW/2, VH-26, PAL.H, 1);
   }
-  if(showKeyLegend()) drawKeyLegend();
   if(game.msgT>0){
     const a=Math.min(1,game.msgT);
     const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
@@ -2925,6 +3003,8 @@ function drawHUD(){
     ctx.globalAlpha=game.redFlash*0.5; ctx.fillStyle='#8c1c1c'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   }
   if(game.ultraMenuOpen) drawUltraMenu();
+  if(game.guideOpen && guideBtnRect()) drawGuideMenu();
+  if(game.levelInfoOpen) drawLevelInfo();
   if(game.shopOpen) drawShopPanel();
   if(player.hp<=2 && player.alive){
     const pulse=0.18+0.12*Math.sin(game.time*7);
@@ -2944,7 +3024,7 @@ function titleRows(){
     'TASTEN RECHTS: KAMPF/ULTRA'
   ] : [
     'WASD LAUFEN · MAUS ZIELEN',
-    'KLICK: SCHWERT · ?: ALLE TASTEN'
+    'KLICK: SCHWERT · X: ULTRA · Q: BOGEN'
   ];
   return { rows, gap:10 };
 }
@@ -2985,25 +3065,25 @@ function drawSaveSlot(b){
 }
 // Kleiner Knopf oben links im Titelbild, oeffnet die Levelauswahl (wie der
 // Superkraefte-Knopf im Spiel: antippen, Liste erscheint, nochmal antippen waehlt).
+// Beide Knoepfe in der Zeile "SPIELSTAND WAEHLEN": links HILFE, rechts LEVEL.
 function levelBtnRect(){
-  const p=titlePanelRect(), label='LVL';
-  return { x:p.x+4, y:p.y+5, w:textW(label,1)+8, h:9 };
+  const p=titlePanelRect(), { headerY }=titleLayout(), w=textW('LEVEL',1)+8;
+  return { x:p.x+p.w-6-w, y:p.y+headerY-2, w, h:11 };
 }
-// Daneben ein kleiner Hilfe-Knopf - oeffnet die volle Tastenuebersicht.
 function helpBtnRect(){
-  const lb=levelBtnRect();
-  return { x:lb.x, y:lb.y+lb.h+3, w:lb.w, h:lb.h };   // direkt unter LVL, links vom Titel
+  const p=titlePanelRect(), { headerY }=titleLayout(), w=textW('HILFE',1)+8;
+  return { x:p.x+6, y:p.y+headerY-2, w, h:11 };
 }
 function drawTitle(){
   ctx.globalAlpha=0.55; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   const p=titlePanelRect(), {x,y,w,h}=p;
   panel(x,y,w,h);
   const lb=levelBtnRect();
-  panel(lb.x, lb.y, lb.w, lb.h, 'rgba(16,32,18,.9)', PAL.y);
-  drawTextC(ctx, 'LVL', lb.x+lb.w/2, lb.y+1, PAL.y, 1);
+  panel(lb.x, lb.y, lb.w, lb.h, 'rgba(46,40,10,.92)', PAL.y);
+  drawText(ctx, 'LEVEL', lb.x+4, lb.y+2, PAL.y, 1);
   const hb=helpBtnRect();
-  panel(hb.x, hb.y, hb.w, hb.h, 'rgba(16,32,18,.9)', PAL.C);
-  drawTextC(ctx, '?', hb.x+hb.w/2, hb.y+1, PAL.C, 1);
+  panel(hb.x, hb.y, hb.w, hb.h, 'rgba(14,34,40,.92)', PAL.C);
+  drawText(ctx, 'HILFE', hb.x+4, hb.y+2, PAL.C, 1);
   drawTextC(ctx,'WALDWACHT', VW/2, y+6, PAL.H, 3);
   if(game.best>0){
     const b='BESTE '+game.best;
@@ -3032,7 +3112,7 @@ function drawLevelSelect(){
   LEVELS.forEach((L,i)=>{
     const r = levelRowRect(i), ok = L.n<=unlocked, mx=r.x+r.w/2;
     panel(r.x, r.y, r.w, r.h, ok?'rgba(16,32,18,.92)':'rgba(12,14,13,.75)', ok?(L.finalBoss?PAL.R:PAL.H):'#3a3a3a');
-    drawTextC(ctx, L.label, mx, r.y+2, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
+    drawTextC(ctx, levelDone(L.n)?L.label+' · GESCHAFFT':L.label, mx, r.y+2, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
     drawTextC(ctx, ok?L.desc:'GESPERRT', mx, r.y+10, ok?'#9fb79a':'#4a4a4a', 1);
   });
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
