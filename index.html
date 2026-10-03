@@ -3229,7 +3229,18 @@ function update(dt){
       if(pressed.has('Escape')) game.levelSelectOpen=false;
       lastTap=null; pressed.clear(); return;
     }
+    if(game.delMode){                                   // Loeschen: einen der drei Plaetze antippen
+      if(lastTap){
+        let hit=false;
+        for(const b of saveSlotRects()) if(hitRect(lastTap,b)){ hit=true; if(hasSave(b.slot)) deleteSlot(b.slot); else SFX.no(); break; }
+        if(!hit) game.delMode=false;                    // Knopf nochmal oder daneben = abbrechen
+      }
+      for(let s=1;s<=SAVE_SLOTS;s++) if(pressed.has(String(s))){ if(hasSave(s)) deleteSlot(s); else SFX.no(); }
+      if(pressed.has('Escape')) game.delMode=false;
+      lastTap=null; pressed.clear(); return;
+    }
     if(lastTap){
+      if(hitRect(lastTap, delBtnRect())){ game.delMode=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
       if(hitRect(lastTap, levelBtnRect())){ game.levelSelectOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
       if(hitRect(lastTap, settingsBtnTitleRect())){ game.settingsOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
       if(hitRect(lastTap, helpBtnRect())){ game.helpOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
@@ -4058,13 +4069,8 @@ function titlePanelRect(){ return { x:Math.round((VW-TITLE.w)/2), y:4, w:TITLE.w
 function titleRows(){
   // Bewusst nur zwei knappe Zeilen - der Rest steckt im Spiel selbst,
   // hier soll das Titelbild nicht mit Textzeilen vollgestopft wirken.
-  const rows = isTouch ? [
-    'DAUMEN LINKS LAUFEN · RECHTS ZIELEN',
-    'TASTEN RECHTS: KAMPF/ULTRA'
-  ] : [
-    'WASD LAUFEN · MAUS ZIELEN',
-    'KLICK: SCHWERT · X: ULTRA · Q: BOGEN'
-  ];
+  // Eine Zeile; darunter sitzt der Knopf SPIELSTAND LOESCHEN, alles Weitere steht in der Hilfe.
+  const rows = isTouch ? ['DAUMEN LINKS LAUFEN · RECHTS ZIELEN'] : ['WASD LAUFEN · MAUS ZIELEN'];
   return { rows, gap:10 };
 }
 // Eine gemeinsame Quelle fuer alle Y-Positionen im Titelbild, damit Text
@@ -4072,9 +4078,17 @@ function titleRows(){
 function titleLayout(){
   const { rows, gap } = titleRows();
   const instrY = 48;
-  const headerY = instrY + rows.length*gap + 8;
+  const headerY = instrY + 2*gap + 8;
   const boxY = headerY + 12;
   return { rows, gap, instrY, headerY, boxY };
+}
+function delBtnRect(){
+  const p=titlePanelRect(), { instrY }=titleLayout(), w=textW('SPIELSTAND LÖSCHEN',1)+17;
+  return { x:Math.round(p.x+p.w/2-w/2), y:p.y+instrY+11, w, h:11 };
+}
+function deleteSlot(slot){
+  try{ localStorage.removeItem(slotKey(slot)); }catch(e){}
+  game.delMode=false; SFX.over();
 }
 // Drei Speicherplaetze nebeneinander unten im Titelbild.
 function saveSlotRects(){
@@ -4147,12 +4161,22 @@ function drawTitle(){
   if(noKeyFocus()) drawTextC(ctx, KEY_HINT, VW/2, y+32, PAL.y, 1);     // Platz des Untertitels, nichts ueberlagert
   else drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+32, '#cfe8c2', 1);
   const {rows, gap, instrY, headerY} = titleLayout();
-  rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+instrY+i*gap, '#9fb79a', 1));
+  rows.forEach((r,i)=> drawTextC(ctx, game.delMode?'WELCHEN SPIELSTAND LÖSCHEN?':r, VW/2, y+instrY+i*gap, game.delMode?'#f0704a':'#9fb79a', 1));
+  const db=delBtnRect(), dm=!!game.delMode;
+  panel(db.x, db.y, db.w, db.h, dm?'rgba(70,16,14,.97)':'rgba(30,14,14,.9)', dm?PAL.R:'#7a3a3a');
+  drawTextC(ctx, dm?'ABBRECHEN':'SPIELSTAND LÖSCHEN', db.x+db.w/2, db.y+2, dm?'#ffd0c0':'#e9a0a0', 1);
   const sb=settingsBtnTitleRect();
   panel(sb.x, sb.y, sb.w, sb.h, 'rgba(10,18,12,.9)', '#4a4a4a');
   drawGear(sb.x+3, sb.y+2, PAL.C);
   drawText(ctx, 'EINSTELLUNGEN', sb.x+13, sb.y+2, '#e9d98a', 1);
   for(const b of saveSlotRects()) drawSaveSlot(b);
+  if(game.delMode) for(const b of saveSlotRects()){        // Loeschmodus: belegte Plaetze rot markiert
+    if(!hasSave(b.slot)){ ctx.fillStyle='rgba(8,12,9,.55)'; ctx.fillRect(b.x,b.y,b.w,b.h); continue; }
+    ctx.fillStyle='rgba(120,24,20,.45)'; ctx.fillRect(b.x,b.y,b.w,b.h);
+    ctx.fillStyle=PAL.R; ctx.fillRect(b.x,b.y,b.w,1); ctx.fillRect(b.x,b.y+b.h-1,b.w,1); ctx.fillRect(b.x,b.y,1,b.h); ctx.fillRect(b.x+b.w-1,b.y,1,b.h);
+    const tw=textW('LÖSCHEN',1)+8; ctx.fillStyle='rgba(40,8,8,.92)'; ctx.fillRect(Math.round(b.x+b.w/2-tw/2), b.y+19, tw, 11);
+    drawTextC(ctx,'LÖSCHEN', b.x+b.w/2, b.y+21, '#ffd0c0', 1);
+  }
 }
 // --- Levelauswahl: eigenes Overlay ueber dem Titelbild, volle Flaeche zur
 // Verfuegung, deshalb hier keine Platznot wie im engen Titel-Panel. ---

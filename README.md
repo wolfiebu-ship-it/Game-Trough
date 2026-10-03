@@ -83,6 +83,10 @@ unter LEVEL) öffnet ein Fenster mit:
   (Grün, Gelb, Rot, Blau, Orange, Lila, Pink, Türkis, Hellblau, Braun, Weiß,
   Schwarz). Kapuze und Umhang des Helden nehmen die Farbe an, im Spiel, in der
   Rolle und auf den Speicherplätzen. Die Wahl bleibt gespeichert. Auch der Schwertschwung und die Luftwirbel um den Helden haben die Farbe des Helden.
+- **Spielstand löschen**: Im Titelbild öffnet der Knopf „SPIELSTAND LÖSCHEN" den
+  Löschmodus. Die belegten Plätze werden rot markiert; ein Tipp (oder `1`/`2`/`3`)
+  auf einen Platz löscht genau diesen Spielstand, der Platz zeigt wieder „NEUES SPIEL
+  ANFANGEN". „ABBRECHEN", Esc oder ein Tipp daneben bricht ab.
 - **Neustart**: „ALLES NEU STARTEN" löscht nach zweimaligem Tippen den ganzen
   Fortschritt: die drei Spielwelten, den Level-Speicher, alle Freigaben und
   „GESCHAFFT"-Haken, die erspielten Superkräfte und den Rekord. Name, Avatar
