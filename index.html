@@ -75,21 +75,22 @@
   #codeBtn:hover{ background:#24402a; }
   #codeBtn:active{ background:#12200f; }
   #pauseBtn{ position:absolute; pointer-events:auto; user-select:none; box-sizing:border-box;
-    background:#f2c53d; border:2px solid #4a3a0a;
-    box-shadow: inset 2px 2px 0 #fff2b0, inset -2px -2px 0 #b8860f, 2px 2px 0 rgba(0,0,0,.35); }
+    background:#f2c53d; border:1px solid #4a3a0a;
+    box-shadow: inset 1px 1px 0 #fff2b0, inset -1px -1px 0 #b8860f, 1px 1px 0 rgba(0,0,0,.35); }
   #pauseBtn[hidden]{ display:none; }
   #pauseBtn::before, #pauseBtn::after{
     content:''; position:absolute; top:26%; bottom:26%; width:13%;
     background:#4a3a0a; }
   #pauseBtn::before{ left:27%; }
   #pauseBtn::after{ right:27%; }
-  #pauseBtn:active{ box-shadow: inset 2px 2px 0 #b8860f, inset -2px -2px 0 #fff2b0; }
+  #pauseBtn:active{ box-shadow: inset 1px 1px 0 #b8860f, inset -1px -1px 0 #fff2b0; }
   #pauseSaveBtn{ position:absolute; pointer-events:none; background:transparent; border:0; }
   #pauseSaveBtn[hidden]{ display:none; }
   #pauseSaveBtn.show{ pointer-events:auto; }
   #fsBtn{ position:absolute; box-sizing:border-box; pointer-events:auto; display:flex;
     align-items:center; justify-content:center; user-select:none; color:#cfe8c2;
-    background:rgba(16,32,18,.45); border:2px solid rgba(200,240,190,.35); }
+    font-size:calc(min(100vw, 100vh * 16 / 9) * 0.017); line-height:1;
+    background:rgba(16,32,18,.45); border:1px solid rgba(200,240,190,.35); }
   .abtn.hit{ background:rgba(140,220,255,.45); }
 </style>
 </head>
@@ -1229,8 +1230,11 @@ function buildWorld(id){
   if(curTheme && curTheme.id===id) return;
   const T=THEMES[id]||THEMES.forest, t0=performance.now();
   curTheme=T; curSkin=SKINS[T.id]||null;
+  if(AC){                                       // Musik zuerst: Boden malen blockiert kurz, die neue Musik ist dann schon eingeplant
+    musicSwitch(T.music?T.id:'standard');
+    if(T.music) musicTickThemed(T.music); else if(typeof game!=='undefined' && game.state==='play' && !muted) musicTick();
+  }
   paintGround(T); plantWorld(T);
-  if(AC) musicSwitch(T.music?T.id:'standard');
   if(typeof game!=='undefined'){ game.world=T.id; game.buildMs=Math.round(performance.now()-t0); }
 }
 
@@ -1696,7 +1700,7 @@ function musicNoise(t, dur, peak, filt, q, atk){
 // Eigene Musik je Welt (Strand: ruhig und weich; Eis: Glockenklaenge; Hoelle: tief und drohend)
 function musicTickThemed(c){
   const bpm = game.phase==='wave' ? c.bpmWave : c.bpmRest, spb = 60/bpm/2, total = c.chords.length*8;
-  while(MUSIC.next < AC.currentTime + 0.25){
+  while(MUSIC.next < AC.currentTime + (MUSIC.fresh>0?2.5:0.25)){
     const t=Math.max(MUSIC.next, AC.currentTime+0.01), s=MUSIC.step%total, bar=Math.floor(s/8), st=s%8, ch=c.chords[bar];
     const osc=(type,f,a,d,peak)=>{ const o=AC.createOscillator(); o.type=type; o.frequency.setValueAtTime(f,t);
       const g=env(o,t,a,d,peak); g.connect(musicOut()); o.start(t); o.stop(t+a+d+0.1); };
@@ -1718,7 +1722,7 @@ function musicTick(){
   if(cfg){ musicTickThemed(cfg); return; }
   const bpm = game.phase==='wave' ? (138 + Math.min(30, game.wave*2)) : 96;
   const spb = 60/bpm/2;
-  while(MUSIC.next < AC.currentTime + 0.25){
+  while(MUSIC.next < AC.currentTime + (MUSIC.fresh>0?2.5:0.25)){
     const t=Math.max(MUSIC.next, AC.currentTime+0.01), s=MUSIC.step;
     const root = game.phase==='wave' ? 55 : 49;
     if(s%4===0){ const o=AC.createOscillator(); o.type='triangle';
@@ -1730,7 +1734,7 @@ function musicTick(){
     o2.frequency.setValueAtTime(root*4*Math.pow(2,deg/12), t);
     const g2=env(o2,t,0.008,spb*0.9,0.16); g2.connect(musicOut());
     o2.start(t); o2.stop(t+spb*1.2);
-    MUSIC.next = t + spb; MUSIC.step = (s+1)%32;
+    MUSIC.next = t + spb; MUSIC.step = (s+1)%32; if(MUSIC.fresh>0) MUSIC.fresh--;
   }
 }
 
@@ -3550,11 +3554,11 @@ function hudScaled(ax, ay, fn){
 }
 function toHud(t, ax, ay){ return { x:ax+(t.x-ax)/HUDK, y:ay+(t.y-ay)/HUDK }; }
 function pauseBtnRect(){                 // direkt unter der (verkleinerten) Torleiste
-  const w=13, h=13;
+  const w=9, h=9;
   return { x:VW-3-w, y:15, w, h };
 }
 function fsBtnRect(){                    // gleiche Reihe, direkt links vom Pause-Knopf
-  const p=pauseBtnRect(), gap=3, w=13;
+  const p=pauseBtnRect(), gap=2, w=9;
   return { x:p.x-gap-w, y:p.y, w, h:p.h };
 }
 function drawGateBar(){
@@ -3860,6 +3864,9 @@ function helpBtnRect(){
   const p=titlePanelRect(), { headerY }=titleLayout(), w=textW('HILFE',1)+17;
   return { x:p.x+6, y:p.y+headerY-2, w, h:11 };
 }
+// Ohne Fokus kommt keine Taste an (z.B. eingebettet in einer Vorschau)
+const KEY_HINT = 'KLICKEN FÜR TASTATUR';
+function noKeyFocus(){ return !isTouch && !document.hasFocus(); }
 function drawTitle(){
   ctx.globalAlpha=0.55; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   const p=titlePanelRect(), {x,y,w,h}=p;
@@ -3878,7 +3885,8 @@ function drawTitle(){
     const b='BESTE '+game.best;
     drawText(ctx, b, x+w-6-textW(b,1), y+6, PAL.y, 1);
   }
-  drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+32, '#cfe8c2', 1);
+  if(noKeyFocus()) drawTextC(ctx, KEY_HINT, VW/2, y+32, PAL.y, 1);     // Platz des Untertitels, nichts ueberlagert
+  else drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+32, '#cfe8c2', 1);
   const {rows, gap, instrY, headerY} = titleLayout();
   rows.forEach((r,i)=> drawTextC(ctx, r, VW/2, y+instrY+i*gap, '#9fb79a', 1));
   const sb=settingsBtnTitleRect();
@@ -4173,10 +4181,15 @@ function render(){
   else { drawTitle(); if(game.levelSelectOpen) drawLevelSelect(); if(game.helpOpen) drawHelp(); }
   if(game.settingsOpen) drawSettings();
   // Ohne Fokus kommt keine Taste an (z.B. eingebettet in einer Vorschau) - sagen statt raten lassen.
-  if(!isTouch && !document.hasFocus()){
-    const t='KLICKEN FÜR TASTATUR', w=textW(t,1)+10, x=Math.round((VW-w)/2);
-    panel(x, 24, w, 12, 'rgba(40,30,8,.95)', PAL.y);
-    drawTextC(ctx, t, VW/2, 27, PAL.y, 1);
+  // Nur im freien Spielbild; Titelbild und Fenster zeigen ihn an eigener Stelle bzw. gar nicht.
+  const frei = game.state==='play' && !game.paused && !game.settingsOpen && !game.shopOpen &&
+    !game.guideOpen && !game.levelInfoOpen && !game.ultraMenuOpen && !game.helpOpen;
+  if(frei && noKeyFocus()){
+    const t=KEY_HINT, w=textW(t,1)+10, x=Math.round((VW-w)/2);
+    hudScaled(VW/2, 0, ()=>{
+      panel(x, 26, w, 12, 'rgba(40,30,8,.95)', PAL.y);
+      drawTextC(ctx, t, VW/2, 29, PAL.y, 1);
+    });
   }
 }
 
@@ -4229,8 +4242,7 @@ placePct(pauseSaveBtn, pauseSaveRect().x, pauseSaveRect().y, pauseSaveRect().w, 
 // vmin-Schaetzung mehr, die je nach Bildschirmform woanders landen konnte.
 placePct(pauseBtn, pauseBtnRect().x, pauseBtnRect().y, pauseBtnRect().w, pauseBtnRect().h);
 placePct(fsBtn, fsBtnRect().x, fsBtnRect().y, fsBtnRect().w, fsBtnRect().h);
-requestAnimationFrame(()=>{ const h=fsBtn.getBoundingClientRect().height;
-  if(h>0) fsBtn.style.fontSize=Math.max(9,h*0.55)+'px'; });
+
 
 let last=performance.now();
 const MAXSTEP=1/40;                       // groesster Simulationsschritt
