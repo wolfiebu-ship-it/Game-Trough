@@ -194,22 +194,22 @@ Leben-Balken** über sich (nah dran steht zusätzlich die Zahl), damit man
 sofort sieht, dass es ein Gegner ist und wie viel Leben er noch hat.
 
 So schaltest du Level frei: Level 1 (und der **Endlos-Modus**, der im Wald
-spielt) ist immer frei und ganz normal spielbar. Im Endlos-Modus schaltet **jede
-zehnte Welle** das nächste Level frei: Welle 10 → Level 2, Welle 20 → Level 3,
+spielt) ist immer frei und ganz normal spielbar. **Ein geschafftes Level
+schaltet das nächste frei.** Außerdem schaltet im Endlos-Modus **jede zehnte
+Welle** das nächste Level frei: Welle 10 → Level 2, Welle 20 → Level 3,
 Welle 30 → Level 4, Welle 40 → Endlevel. Einen Knopf zum Freischalten gibt es
 nicht mehr; alte „alle frei"-Stände aus früheren Versionen werden beim Start
 zurückgesetzt (vorhandene Spielstände zählen weiter). **Teleportieren:** Im Spiel öffnet der Knopf LEVEL unter SUPERKRÄFTE! eine Liste;
 tippe eine Zeile an (HIN), um sofort in dieses Level/diese Welt zu springen, oder
 „ENDLOS-SPIEL", um zurück in deinen Spielstand zu gehen. Ein laufendes Endlos-Spiel
-wird vorher automatisch gespeichert. Ein Level zu gewinnen setzt „GESCHAFFT",
-schaltet aber kein neues Level frei.
+wird vorher automatisch gespeichert. Ein gewonnenes Level bekommt „GESCHAFFT".
 
 **Musik:** Jede Welt hat ihre eigene Musik (Stadt: ruhiger Nacht-Jazz,
 Strand: chillig, Eis: sanft, Hölle: düster). Beim Levelwechsel wechselt die Musik
 sofort, ohne Verzögerung.
 
 Während eines Levels steht oben
-„LEVEL 1 · WELLE 3/5", gesperrte Level zeigen „WELLE … IM ENDLOS-SPIEL".
+„LEVEL 1 · WELLE 3/5", gesperrte Level zeigen „ERST LEVEL … ODER WELLE …".
 
 Level-Durchläufe nutzen einen eigenen Fortschrittsspeicher (höchstes
 freigeschaltetes Level) und rühren die drei Endlos-Spielstände nicht an.

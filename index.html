@@ -1864,7 +1864,7 @@ function markDone(n){
 const levelDone = n => getDone().includes(n);
 function winLevel(){
   const n = game.levelMode;
-  markDone(n);
+  markDone(n); unlockLevel(n+1);                          // Level geschafft: das naechste ist frei
   clearLevelSave();                                       // Level gewonnen: Zwischenstand nicht mehr noetig
   game.winUltra = LEVEL_ULTRA[n] || null;                 // Belohnung: neue Superkraft
   game.winUltraNew = game.winUltra ? earnUltra(game.winUltra) : false;
@@ -2011,6 +2011,8 @@ function burst(x,y,n,col,spd=40,life=0.4,size=1){
   for(let i=0;i<n;i++){ const a=rr(0,TAU), s=rr(spd*0.3,spd);
     part(x,y,Math.cos(a)*s,Math.sin(a)*s,rr(life*0.5,life),col,size,0); }
 }
+// In der Hoelle ist das helle Gelb auf rotem Grund schlecht lesbar: dort ein sehr dunkles Gelb
+const hellYellow = col => (game.world==='hell' && col===PAL.y) ? '#a8861c' : col;
 function floater(x,y,txt,col){ floaters.push({x,y,txt,col,t:0}); }
 function shake(v){ if(!SETTINGS.shake) return; game.shake=Math.min(2.5, game.shake+v*0.25); }  // nur noch ein Hauch
 
@@ -3130,7 +3132,7 @@ function tryTapCards(){
     for(let i=0;i<=LEVELS.length;i++) if(hitRect(tl, levelInfoRowRect(i))){
       if(i===LEVELS.length){ teleportToEndless(); return true; }
       if(LEVELS[i].n<=getUnlockedLevel()){ teleportToLevel(LEVELS[i].n); return true; }
-      SFX.no(); say('GESPERRT · JE 10 WELLEN IM ENDLOS-SPIEL', 1.8, PAL.O); return true;
+      SFX.no(); say('GESPERRT · ERST LEVEL '+LEVELS[i-1].n+' SCHAFFEN', 1.8, PAL.O); return true;
     }
   }
   // Anleitung/Level-Liste offen: jeder Tipp schliesst sie wieder (Knopf selbst = umschalten)
@@ -3694,7 +3696,7 @@ function drawWorld(){
   ctx.globalAlpha=1;
   for(const f of floaters){
     ctx.globalAlpha=1-f.t;
-    drawTextC(ctx, f.txt, f.x, f.y, f.col, 1);
+    drawTextC(ctx, f.txt, f.x, f.y, hellYellow(f.col), 1);
     ctx.globalAlpha=1;
   }
   ctx.restore();
@@ -3980,7 +3982,7 @@ function drawHUD(){
       const mw=Math.max(...lines.map(l=>textW(l,sc)))+10;
       ctx.save(); ctx.translate(VW/2, MY); ctx.scale(K,K); ctx.translate(-VW/2, -MY);
       ctx.fillStyle='rgba(8,14,10,.6)'; ctx.fillRect(Math.round(VW/2-mw/2), MY-3, mw, mh);   // dunkle Leiste: lesbar auf jedem Untergrund
-      lines.forEach((l,i)=> drawTextC(ctx, l, VW/2, MY+i*lh, game.msgCol||PAL.y, sc));
+      lines.forEach((l,i)=> drawTextC(ctx, l, VW/2, MY+i*lh, hellYellow(game.msgCol||PAL.y), sc));
       ctx.restore(); ctx.globalAlpha=1;
     });
   }
@@ -4124,7 +4126,7 @@ function drawLevelSelect(){
     panel(r.x, r.y, r.w, r.h, ok?'rgba(16,32,18,.92)':'rgba(12,14,13,.75)', ok?(L.finalBoss?PAL.R:PAL.H):'#3a3a3a');
     drawTextC(ctx, L.label+' · '+WORLD_LABEL[L.world]+(levelDone(L.n)?' · GESCHAFFT':''), mx, r.y+3, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
     const sv=loadLevelSave(), saved = ok && sv && sv.level===L.n;
-    drawTextC(ctx, saved ? ('GESPEICHERT · WELLE '+((sv.wave||0)+1)) : (ok?L.desc:('WELLE '+UNLOCK_EVERY*i+' IM ENDLOS-SPIEL')), mx, r.y+13, saved?PAL.y:(ok?'#9fb79a':'#5a5a5a'), 1);
+    drawTextC(ctx, saved ? ('GESPEICHERT · WELLE '+((sv.wave||0)+1)) : (ok?L.desc:('ERST LEVEL '+i+' ODER WELLE '+UNLOCK_EVERY*i)), mx, r.y+13, saved?PAL.y:(ok?'#9fb79a':'#5a5a5a'), 1);
   });
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
@@ -4368,7 +4370,7 @@ function drawLevelWin(){
   }
   drawTextC(ctx, 'PUNKTE: '+game.score, VW/2, y+58, PAL.y, 1);
   drawTextC(ctx, 'BESTE: '+game.best, VW/2, y+69, '#9fb79a', 1);
-  if(getUnlockedLevel()<=n) drawTextC(ctx, 'LEVEL '+(n+1)+': WELLE '+UNLOCK_EVERY*n+' IM ENDLOS', VW/2, y+83, '#cfe8c2', 1);
+  drawTextC(ctx, 'LEVEL '+(n+1)+' IST JETZT FREI', VW/2, y+83, '#cfe8c2', 1);
   if(Math.floor(game.time*2)%2===0)
     drawTextC(ctx, isTouch?'TIPPEN: ZURÜCK ZUR AUSWAHL':'LEERTASTE: ZURÜCK ZUR AUSWAHL', VW/2, y+h+4, '#cfe8c2', 1);
 }
