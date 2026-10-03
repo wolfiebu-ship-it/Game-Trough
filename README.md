@@ -136,8 +136,8 @@ gespeichert und gilt auch nach dem Neuladen.
   Sekunden. Lässt du los, verschwindet das Schild sofort (kurze Sperre von 2 s).
   Hält es 3 Treffer aus oder läuft die Zeit ab, lädt es 5 s nach (im Bosskampf
   10 s; SCHILD-Balken). Am Handy: die Taste SCHILD gedrückt halten.
-- **Luftwirbel**: Um den Helden wehen kleine Wirbel in seiner Avatar-Farbe, im Stehen etwas
-  mehr; beim Schlagen kommen Luftwirbel dazu.
+- **Luftbögen**: Im Stehen kreisen zwei Luftbögen in der Avatar-Farbe um den
+  Helden – dieselbe Optik wie beim Schwertschlag, beim Laufen seltener.
 - **Fokus**: Verliert das Spiel den Fokus (z. B. zum Chatten), werden alle
   gehaltenen Tasten losgelassen und das Spiel pausiert – der Held läuft nie
   von allein weiter.
