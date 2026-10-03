@@ -1758,15 +1758,19 @@ function startLevel(n){
     say('SCHAFFE WELLE '+LEVELS[n-1].target, 2.2, PAL.y);
   }
 }
-// Geschafft = naechstes Level ist frei; das Endlevel merkt sich seinen Sieg extra.
-function levelDone(n){
-  if(n<getUnlockedLevel()) return true;
-  try{ return n===LEVELS.length && localStorage.getItem('waldwacht_endwon')==='1'; }catch(e){ return false; }
+// "Frei" (anwaehlbar, auch per Knopf in den Einstellungen) und "geschafft" (wirklich
+// gewonnen) sind getrennt: geschafft wird nur gespeichert, wenn man das Ziel erreicht hat.
+function getDone(){
+  try{ const a=JSON.parse(localStorage.getItem('waldwacht_done')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; }
 }
+function markDone(n){
+  const a=getDone(); if(a.includes(n)) return;
+  a.push(n); try{ localStorage.setItem('waldwacht_done', JSON.stringify(a)); }catch(e){}
+}
+const levelDone = n => getDone().includes(n);
 function winLevel(){
   const n = game.levelMode;
-  unlockLevel(n+1);
-  if(n===LEVELS.length){ try{ localStorage.setItem('waldwacht_endwon','1'); }catch(e){} }
+  unlockLevel(n+1); markDone(n);
   game.state='levelwin'; game.levelWonN=n; game.winT=undefined;
   game.slow=0.5; shake(4); SFX.buy();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
@@ -2326,7 +2330,10 @@ function endWave(){
     // Auch im Endlos-Modus: wer Welle 5/10/15/20 schafft, schaltet das naechste Level frei
     for(let i=0;i<LEVELS.length-1;i++){
       const nxt=LEVELS[i+1];
-      if(game.wave>=LEVELS[i].target && getUnlockedLevel()<nxt.n){ unlockLevel(nxt.n); say(nxt.label+' FREIGESCHALTET', 2.2, PAL.y); }
+      if(game.wave>=LEVELS[i].target){
+        markDone(LEVELS[i].n);
+        if(getUnlockedLevel()<nxt.n){ unlockLevel(nxt.n); say(nxt.label+' FREIGESCHALTET', 2.2, PAL.y); }
+      }
     }
   }
   if(!game.levelMode) saveGame();   // Zwischenstand sichern - hier ist ein sicherer Punkt (nicht im Levellauf: der nutzt keinen Speicherplatz)

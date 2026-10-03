@@ -80,7 +80,8 @@ unter LEVEL) öffnet ein Fenster mit:
   direkt auf den Balken tippen).
 - **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
 - **Alle Level**: der Knopf „FREISCHALTEN" öffnet alle fünf Level auf einmal
-  (zum Ausprobieren, ohne vorher Wellen schaffen zu müssen).
+  (zum Ausprobieren, ohne vorher Wellen schaffen zu müssen). „GESCHAFFT" steht
+  trotzdem nur bei Leveln, die du wirklich gewonnen hast.
 
 Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
 gespeichert und gilt auch nach dem Neuladen.
