@@ -97,8 +97,9 @@ gespeichert und gilt auch nach dem Neuladen.
   belegter Platz zeigt „SPIELWELT 1/2/3" mit Heldenköpfchen, Schrauben,
   Punkten und der erreichten Welle — antippen (oder `1`/`2`/`3`) setzt genau
   dort fort. Ein leerer Platz zeigt „NEUES SPIEL ANFANGEN" und startet dort
-  ein frisches Spiel. Nach jeder gehaltenen Welle und jedem Kauf wird
-  automatisch in den aktiven Platz gespeichert; in der Pause speichert
+  ein frisches Spiel. Nach jeder gehaltenen Welle, jedem Kauf und beim
+  Verlassen des Spiels wird automatisch in den aktiven Platz gespeichert (ein
+  Spiel belegt immer nur seinen eigenen Platz, Level-Läufe gar keinen); in der Pause speichert
   zusätzlich ein eigener, immer klickbarer „SPEICHERN"-Knopf zuverlässig von
   Hand.
 - **Ultra-Name**: Wählst du per Menü oder `C` ein Ultra aus, steht sein Name
@@ -171,6 +172,11 @@ beschriftet, geschaffte grün umrandet.
   Angriffsmustern (Stampf-Druckwelle, Schulter-Salven, Teleport-Klingenwirbel).
   Er wird bereits ab 65 % Leben wütend (statt 50 %) und ruft schneller
   Verstärkung — der schwerste Kampf im Spiel.
+
+So schaltest du Level frei: Level 1 ist immer frei. Schaffst du Welle 5
+(Level 1 oder im Endlos-Modus), wird Level 2 frei; Welle 10 schaltet Level 3
+frei, Welle 15 Level 4, Welle 20 das Endlevel. Während eines Levels steht oben
+„LEVEL 1 · WELLE 3/5", gesperrte Level zeigen „ERST LEVEL … SCHAFFEN".
 
 Level-Durchläufe nutzen einen eigenen Fortschrittsspeicher (höchstes
 freigeschaltetes Level) und rühren die drei Endlos-Spielstände nicht an.

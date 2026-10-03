@@ -824,7 +824,9 @@ addEventListener('mousedown',   grabFocus, true);
 addEventListener('touchstart',  grabFocus, {capture:true, passive:true});
 addEventListener('blur', ()=>{ releaseAllKeys(); if(game.state==='play') game.paused=true; });
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ releaseAllKeys(); if(game.state==='play') game.paused=true; } });
-addEventListener('pagehide', releaseAllKeys);
+addEventListener('pagehide', ()=>{ releaseAllKeys(); saveGame(); });
+// Spiel verlassen (Tab zu, App gewechselt, Bildschirm aus): Stand automatisch in den eigenen Platz
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) saveGame(); });
 
 let mouseWX=0, mouseWY=0, mouseInside=false;
 function canvasPos(cx,cy){
@@ -1247,7 +1249,7 @@ function startLevel(n){
     game.scrap = 150;                    // kleiner Vorsprung fuer den Endkampf
     say('ENDLEVEL: ULTRA-KOLOSSUS', 2.6, PAL.R);
   } else {
-    say('LEVEL '+n+' GESTARTET', 2.2, PAL.H);
+    say('LEVEL '+n+': SCHAFFE WELLE '+LEVELS[n-1].target, 2.4, PAL.H);
   }
 }
 // Geschafft = naechstes Level ist frei; das Endlevel merkt sich seinen Sieg extra.
@@ -1286,10 +1288,12 @@ function hasSave(slot){ return !!loadSaveRaw(slot); }
 // eingebetteten Vorschau-Rahmen (Artefakt-Vorschau, htmlpreview.github.io usw.)
 // blockieren localStorage stillschweigend, ohne dass setItem() einen Fehler wirft.
 function saveGame(){
+  if(game.levelMode || game.state!=='play') return false;   // Level-Laeufe belegen nie einen Spielstand
   const slot = game.slot||1;
   const key = slotKey(slot);
   const payload = JSON.stringify({
-    wave:game.wave, scrap:game.scrap, score:game.score, kills:game.kills,
+    // mitten in einer Welle zaehlt die letzte geschaffte - beim Laden geht es mit genau dieser Welle weiter
+    wave: game.phase==='wave' ? Math.max(0, game.wave-1) : game.wave, scrap:game.scrap, score:game.score, kills:game.kills,
     castleHp:game.castleHp, castleMax:game.castleMax,
     ultras:(game.ultras||[]).slice(), usedCodes:Array.from(game.usedCodes||[]),
     hp:player.hp, maxHp:player.maxHp, speed:player.speed, dmg:player.dmg, reach:player.reach,
@@ -1790,6 +1794,13 @@ function endWave(){
   }
   rollCards();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
+  if(!game.levelMode){
+    // Auch im Endlos-Modus: wer Welle 5/10/15/20 schafft, schaltet das naechste Level frei
+    for(let i=0;i<LEVELS.length-1;i++){
+      const nxt=LEVELS[i+1];
+      if(game.wave>=LEVELS[i].target && getUnlockedLevel()<nxt.n){ unlockLevel(nxt.n); say(nxt.label+' FREIGESCHALTET', 2.2, PAL.y); }
+    }
+  }
   if(!game.levelMode) saveGame();   // Zwischenstand sichern - hier ist ein sicherer Punkt (nicht im Levellauf: der nutzt keinen Speicherplatz)
 }
 function doSpawns(dt){
@@ -2514,7 +2525,8 @@ function update(dt){
     // Tippen irgendwo im Bild, damit ein App-Wechsel oder ein Bildschirm-Aus
     // das Spiel nie versehentlich wieder loslaufen laesst.
     if(pressed.has('s')){
-      if(saveGame()){ say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
+      if(game.levelMode){ say('IM LEVEL WIRD NICHT GESPEICHERT', 1.8, PAL.O); SFX.no(); }
+      else if(saveGame()){ say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
       else{ say('SPEICHERN NICHT MÖGLICH', 1.8, PAL.R); SFX.no(); }
     }
     lastTap=null; pressed.clear(); return;
@@ -3106,12 +3118,15 @@ function drawHUD(){
   // --- oben Mitte: Welle ---
   hudScaled(VW/2, 0, ()=>{
     const left = enemies.length + game.spawnList.length;
+    // Im Level-Modus immer zeigen, wie weit es bis zum Ziel ist (z.B. "LEVEL 1 · WELLE 3/5")
+    const L = game.levelMode ? LEVELS[game.levelMode-1] : null;
+    const goal = (n)=> L ? (L.finalBoss ? 'ENDLEVEL' : L.label+' · WELLE '+n+'/'+L.target) : 'WELLE '+n;
     if(game.phase==='wave'){
-      drawTextC(ctx, 'WELLE '+game.wave, VW/2, 3, '#e9f5dc', 1);
+      drawTextC(ctx, goal(game.wave), VW/2, 3, '#e9f5dc', 1);
       drawTextC(ctx, 'BOTS '+left, VW/2, 11, left>0?PAL.O:'#9fb79a', 1);
     } else {
       drawTextC(ctx, 'RUHE  '+Math.ceil(game.restT), VW/2, 3, PAL.C, 1);
-      drawTextC(ctx, 'WELLE '+(game.wave+1)+' KOMMT', VW/2, 11, '#9fb79a', 1);
+      drawTextC(ctx, goal(game.wave+1)+(L&&L.finalBoss?'':' KOMMT'), VW/2, 11, '#9fb79a', 1);
     }
   });
   // --- unten links: Schrauben und Punkte ---
@@ -3267,7 +3282,7 @@ function drawLevelSelect(){
     const r = levelRowRect(i), ok = L.n<=unlocked, mx=r.x+r.w/2;
     panel(r.x, r.y, r.w, r.h, ok?'rgba(16,32,18,.92)':'rgba(12,14,13,.75)', ok?(L.finalBoss?PAL.R:PAL.H):'#3a3a3a');
     drawTextC(ctx, levelDone(L.n)?L.label+' · GESCHAFFT':L.label, mx, r.y+3, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
-    drawTextC(ctx, ok?L.desc:'GESPERRT', mx, r.y+13, ok?'#9fb79a':'#4a4a4a', 1);
+    drawTextC(ctx, ok?L.desc:('ERST '+LEVELS[i-1].label+' SCHAFFEN'), mx, r.y+13, ok?'#9fb79a':'#5a5a5a', 1);
   });
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
@@ -3431,7 +3446,7 @@ function render(){
   const showCombatBtns = game.state==='play' && game.phase!=='rest' && !game.paused;
   touchUI.classList.toggle('rest', !showCombatBtns);
   const warVersteckt = codeBox.hidden;
-  codeBox.hidden = !(game.state==='play' && game.shopOpen);
+  codeBox.hidden = !(game.state==='play' && game.shopOpen && !game.paused && !game.settingsOpen);
   pauseBtn.hidden = game.state!=='play' || game.settingsOpen;
   if(nameInput.hidden === game.settingsOpen){       // Namensfeld nur im Einstellungsfenster
     nameInput.hidden = !game.settingsOpen;
@@ -3493,7 +3508,8 @@ placePct(pauseSaveBtn, pauseSaveRect().x, pauseSaveRect().y, pauseSaveRect().w, 
     if(now-lastSaveT<400) return;      // ein Antippen kann mehrere Events feuern - nur einmal ausloesen
     lastSaveT=now;
     audioUnlock();
-    if(saveGame()){ say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
+    if(game.levelMode){ say('IM LEVEL WIRD NICHT GESPEICHERT', 1.8, PAL.O); SFX.no(); }
+    else if(saveGame()){ say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
     else{ say('SPEICHERN NICHT MÖGLICH', 1.8, PAL.R); SFX.no(); }
   };
   // Auf mehrere Ereignistypen gleichzeitig hoeren: je nach Browser/Geraet
