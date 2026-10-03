@@ -180,11 +180,11 @@ function cvs(w,h){ const c=document.createElement('canvas'); c.width=w; c.height
   const g=c.getContext('2d'); g.imageSmoothingEnabled=false; return c; }
 
 // Zeichenkette -> Pixelbild
-function mk(rows){
+function mk(rows, pal){
   const w=rows[0].length, h=rows.length, c=cvs(w,h), g=c.getContext('2d');
   const id=g.createImageData(w,h), d=id.data;
   for(let y=0;y<h;y++) for(let x=0;x<w;x++){
-    const col=PRGB[rows[y][x]]; if(!col) continue;
+    const ch=rows[y][x], col=(pal&&pal[ch])||PRGB[ch]; if(!col) continue;
     const i=(y*w+x)*4; d[i]=col[0]; d[i+1]=col[1]; d[i+2]=col[2]; d[i+3]=255;
   }
   g.putImageData(id,0,0); return c;
@@ -195,7 +195,7 @@ function flashOf(src, col='#ffffff'){
   g.drawImage(src,0,0); g.globalCompositeOperation='source-atop';
   g.fillStyle=col; g.fillRect(0,0,c.width,c.height); return c;
 }
-function sprite(rows){ const img=mk(rows); return { img, flash:flashOf(img), w:img.width, h:img.height, rows }; }
+function sprite(rows, pal){ const img=mk(rows, pal); return { img, flash:flashOf(img), w:img.width, h:img.height, rows }; }
 
 // --- 5x7-Bitmapschrift ---------------------------------------------
 const FONT_SRC = {
@@ -290,11 +290,12 @@ SPR.pSide = P_LEGS_SIDE.map(l => sprite(P_TOP_SIDE.concat(l)));
 const WALK_CYCLE = [0,1,0,2];
 
 // --- Rolle: die Figur macht sich zur Kugel und dreht sich ---
-SPR.roll = sprite([
+const ROLL_ROWS = [
   '..............','....KKKKKK....','..KKhhhhhhKK..','.KhHHHHHHHHhK.',
   '.KhHHHHHHHHhK.','KhHGGGGGGGGHhK','KhGGGbbbbGGGhK','KhGGGGGGGGGGhK',
   '.KBBGGGGGGBBK.','.KBBBGGGGBBBK.','..KKBBBBBBKK..','....KKKKKK....',
-  '..............','..............']);
+  '..............','..............'];
+SPR.roll = sprite(ROLL_ROWS);
 
 // --- Bots: Schrott-Metall mit gluehendem Visier -----------------------
 SPR.scout = [sprite([
@@ -538,7 +539,36 @@ SPR.stand  = sprite([
   '..KMMMMMMMMK..','..KMKKKKKKMK..','..KMKyyyyKMK..','..KMKyKKyKMK..',
   '..KMKyyyyKMK..','..KMKKKKKKMK..','..KMMMMMMMMK..','..KKKKKKKKKK..']);
 SPR.tower  = sprite(['K.K.K.K','KMMMMMK','KMmMmMK','KMMMMMK','KMmMmMK','KMMMMMK','KKKKKKK']);
-SPR.head   = sprite(P_TOP_DOWN.slice(1,8).map(r=>r.slice(3,13)));  // kleines Heldenkoepfchen fuer Speicherplaetze
+const HEAD_ROWS = P_TOP_DOWN.slice(1,8).map(r=>r.slice(3,13));
+SPR.head   = sprite(HEAD_ROWS);  // kleines Heldenkoepfchen fuer Speicherplaetze
+
+// --- Heldenfarben: Kapuze und Umhang (die vier Gruentoene g G h H) bekommen andere Toene ---
+function hsl2rgb(h,s,l){
+  const a=s*Math.min(l,1-l), f=n=>{ const k=(n+h/30)%12; return l-a*Math.max(-1,Math.min(k-3,9-k,1)); };
+  return [Math.round(f(0)*255), Math.round(f(8)*255), Math.round(f(4)*255)];
+}
+const HERO_COLORS = [
+  { name:'GRÜN' }, // Standard: Originalfarben
+  { name:'GELB',    hue:48,  sat:.80 }, { name:'ROT',     hue:2,   sat:.62 }, { name:'BLAU',    hue:218, sat:.58 },
+  { name:'ORANGE',  hue:27,  sat:.80 }, { name:'LILA',    hue:278, sat:.50 }, { name:'PINK',    hue:326, sat:.62 },
+  { name:'TÜRKIS',  hue:178, sat:.60 }, { name:'HELLBLAU',hue:196, sat:.72 }, { name:'BRAUN',   hue:25,  sat:.45, dark:.06 },
+  { name:'WEISS',   hue:0,   sat:.04, light:.22 }, { name:'SCHWARZ', hue:260, sat:.14, dark:-.2 }
+];
+function heroPal(i){
+  const c=HERO_COLORS[i]; if(!c || c.hue===undefined) return null;
+  const d=c.dark||0, lift=c.light||0;
+  const L=[.20+d,.33+d,.44+d,.56+d].map(v=>Math.max(.05,Math.min(.95,v+lift)));
+  const pal={}; ['g','G','h','H'].forEach((k,n)=>{ pal[k]=hsl2rgb(c.hue, c.sat, L[n]); }); return pal;
+}
+const HERO_CACHE = {};
+function heroSet(i){
+  if(HERO_CACHE[i]) return HERO_CACHE[i];
+  const pal=heroPal(i);
+  return HERO_CACHE[i] = {
+    pDown:P_LEGS.map(l=>sprite(P_TOP_DOWN.concat(l),pal)), pUp:P_LEGS.map(l=>sprite(P_TOP_UP.concat(l),pal)),
+    pSide:P_LEGS_SIDE.map(l=>sprite(P_TOP_SIDE.concat(l),pal)), roll:sprite(ROLL_ROWS,pal), head:sprite(HEAD_ROWS,pal) };
+}
+function applyHeroColor(i){ Object.assign(SPR, heroSet(i)); }
 
 /* ------------------------------------------------------------------
    3. Prozedurale Grafik: Wald, Felsen, Burg, Boden
@@ -1596,12 +1626,13 @@ function readInput(){
    ------------------------------------------------------------------ */
 let AC=null, master=null, musicGain=null, sfxGain=null, muted=false, musicBus=null;
 // --- Einstellungen: Heldenname, Lautstaerken (0-10), Bildschirmwackeln ---
-const SETTINGS = { name:'', vol:10, music:5, sfx:10, shake:true };
+const SETTINGS = { name:'', vol:10, music:5, sfx:10, shake:true, hero:0 };
 try{
   const s=JSON.parse(localStorage.getItem('waldwacht_settings')||'{}');
   for(const k of ['vol','music','sfx']) if(Number.isFinite(s[k])) SETTINGS[k]=Math.max(0,Math.min(10,Math.round(s[k])));
   if(typeof s.shake==='boolean') SETTINGS.shake=s.shake;
   if(typeof s.name==='string') SETTINGS.name=s.name.slice(0,12);
+  if(Number.isInteger(s.hero) && s.hero>=0 && s.hero<12) SETTINGS.hero=s.hero;
 }catch(e){}
 function saveSettings(){ try{ localStorage.setItem('waldwacht_settings', JSON.stringify(SETTINGS)); }catch(e){} }
 const heroName = ()=> SETTINGS.name.trim();
@@ -3846,7 +3877,7 @@ function drawSaveSlot(b){
     drawTextC(ctx, 'WELLE '+(d.wave||0), mx, b.y+27, '#cfe8c2', 1);
     const sl='SCHRAUBEN: '+(d.scrap||0), ss=Math.min(0.75, (b.w-10)/textW(sl,1));   // klein, passt auch bei vielen Schrauben ins Feld
     ctx.save(); ctx.translate(Math.round(mx), b.y+38); ctx.scale(ss,ss);
-    drawTextC(ctx, sl, 0, 0, '#9fb79a', 1);
+    drawTextC(ctx, sl, 0, 0, '#cfe8c2', 1);
     ctx.restore();
   } else {
     panel(b.x, b.y, b.w, b.h, 'rgba(12,18,13,.8)', '#3a4a3a');
@@ -3959,7 +3990,7 @@ function drawHelp(){
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
 // --- Einstellungen: eigenes Fenster ueber Titel oder Spiel (Spiel steht solange) ---
-const SETP = { w:200, h:124 };
+const SETP = { w:200, h:140 };
 function setPanelRect(){ return { x:Math.round((VW-SETP.w)/2), y:Math.round((VH-SETP.h)/2), w:SETP.w, h:SETP.h }; }
 const SET_SLIDERS = [ ['vol','LAUTSTÄRKE'], ['music','MUSIK'], ['sfx','EFFEKTE'] ];
 function setRowY(i){ return setPanelRect().y+21+i*16; }          // 0 = Name, 1-3 Regler, 4 Wackeln
@@ -3967,6 +3998,10 @@ function setCtrlX(){ return setPanelRect().x+80; }
 function setMinusRect(i){ return { x:setCtrlX(), y:setRowY(i)-2, w:11, h:11 }; }
 function setSegRect(i,n){ return { x:setCtrlX()+14+n*7, y:setRowY(i)-2, w:6, h:11 }; }
 function setPlusRect(i){ return { x:setCtrlX()+14+70+2, y:setRowY(i)-2, w:11, h:11 }; }
+function setHeroRect(){ return { x:setCtrlX(), y:setRowY(5)-5, w:30, h:18 }; }
+// Farbwahl: kleines Fenster mit 12 Farbfeldern (6 x 2), liegt ueber den Reglern
+function setPickRect(){ const p=setPanelRect(); return { x:p.x+14, y:p.y+40, w:p.w-28, h:62 }; }
+function setSwatchRect(i){ const r=setPickRect(), col=i%6, row=Math.floor(i/6); return { x:r.x+8+col*28, y:r.y+16+row*22, w:24, h:18 }; }
 function setShakeRect(){ return { x:setCtrlX(), y:setRowY(4)-2, w:30, h:11 }; }
 function setNameRect(){ return { x:setCtrlX(), y:setRowY(0)-3, w:97, h:13 }; }
 function setDoneRect(){ const p=setPanelRect(); return { x:Math.round(VW/2-30), y:p.y+p.h-19, w:60, h:13 }; }
@@ -4004,9 +4039,24 @@ function drawSettings(){
   const sr=setShakeRect(), on=SETTINGS.shake;
   panel(sr.x,sr.y,sr.w,sr.h, on?'rgba(26,46,26,.95)':'rgba(30,14,14,.95)', on?PAL.H:'#7a3a3a');
   drawTextC(ctx, on?'AN':'AUS', sr.x+sr.w/2, sr.y+2, on?PAL.l:'#e9a0a0', 1);
+  drawText(ctx,'AVATAR', lx, setRowY(5), '#cfe8c2', 1);
+  const hr=setHeroRect();
+  panel(hr.x,hr.y,hr.w,hr.h, game.heroPick?'rgba(26,46,26,.95)':'rgba(16,26,18,.95)', game.heroPick?PAL.l:PAL.C);
+  ctx.save(); ctx.translate(hr.x+Math.round((hr.w-SPR.head.w*2)/2), hr.y+2); ctx.scale(2,2); ctx.drawImage(SPR.head.img,0,0); ctx.restore();
+  drawText(ctx, HERO_COLORS[SETTINGS.hero].name, hr.x+hr.w+5, setRowY(5), PAL.y, 1);
   const d=setDoneRect();
   panel(d.x,d.y,d.w,d.h,'rgba(46,40,10,.95)',PAL.y);
   drawTextC(ctx,'FERTIG', VW/2, d.y+3, PAL.y, 1);
+  if(game.heroPick){
+    const pr=setPickRect();
+    panel(pr.x,pr.y,pr.w,pr.h,'rgba(8,14,10,.99)',PAL.l);
+    drawTextC(ctx,'FARBE WÄHLEN', VW/2, pr.y+4, PAL.l, 1);
+    for(let i=0;i<HERO_COLORS.length;i++){
+      const r=setSwatchRect(i), cur=i===SETTINGS.hero, hs=heroSet(i).head;
+      panel(r.x,r.y,r.w,r.h, cur?'rgba(46,40,10,.95)':'rgba(16,26,18,.95)', cur?PAL.y:'#4a4a4a');
+      ctx.save(); ctx.translate(r.x+Math.round((r.w-hs.w*2)/2), r.y+2); ctx.scale(2,2); ctx.drawImage(hs.img,0,0); ctx.restore();
+    }
+  }
 }
 function updateSettings(){
   musicTick();                                     // Musik laeuft weiter, Lautstaerke hoerbar
@@ -4019,10 +4069,19 @@ function updateSettings(){
       else if(hitRect(t,setPlusRect(i))){ SETTINGS[key]=Math.min(10,SETTINGS[key]+1); changed=true; }
       else for(let n=0;n<10;n++) if(hitRect(t,setSegRect(i,n))){ SETTINGS[key]=n+1; changed=true; }
     });
-    if(hitRect(t,setShakeRect())){ SETTINGS.shake=!SETTINGS.shake; changed=true; }
-    if(hitRect(t,setDoneRect()) || !hitRect(t,setPanelRect())) game.settingsOpen=false;
+    if(game.heroPick){                                   // Farbwahl offen: nur sie reagiert
+      let hit=false;
+      for(let i=0;i<HERO_COLORS.length;i++) if(hitRect(t,setSwatchRect(i))){
+        SETTINGS.hero=i; applyHeroColor(i); changed=true; hit=true; game.heroPick=false; break; }
+      if(!hit && !hitRect(t,setPickRect())) game.heroPick=false;
+    } else {
+      if(hitRect(t,setShakeRect())){ SETTINGS.shake=!SETTINGS.shake; changed=true; }
+      if(hitRect(t,setHeroRect())){ game.heroPick=true; SFX.pick(); }
+      else if(hitRect(t,setDoneRect()) || !hitRect(t,setPanelRect())) game.settingsOpen=false;
+    }
   }
-  if(pressed.has('Escape')) game.settingsOpen=false;
+  if(pressed.has('Escape')){ if(game.heroPick) game.heroPick=false; else game.settingsOpen=false; }
+  if(!game.settingsOpen) game.heroPick=false;
   if(changed){ saveSettings(); audioUnlock(); applyAudio(); SFX.pick(); }
   lastTap=null; pressed.clear();
 }
@@ -4212,6 +4271,7 @@ function render(){
   let best=0; for(let i=1;i<=SAVE_SLOTS;i++){ const d=loadSaveRaw(i); if(d && d.wave>best) best=d.wave; }
   unlockLevel(1+Math.floor(best/UNLOCK_EVERY));
 })();
+applyHeroColor(SETTINGS.hero);
 buildWorld('forest');
 resetPlayer();
 cam.x=clamp(q(player.x-VW/2),0,WW-VW-1); cam.y=clamp(q(player.y-VH/2),0,WH-VH-1);

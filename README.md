@@ -78,6 +78,10 @@ unter LEVEL) öffnet ein Fenster mit:
   begrüßt ihn beim Start („LOS, NAME!") und meldet „NAME IST GEFALLEN".
 - **Lautstärke**, **Musik** und **Effekte** getrennt, je 0–10 (über −/+ oder
   direkt auf den Balken tippen).
+- **Avatar**: zeigt dein Köpfchen. Antippen öffnet „FARBE WÄHLEN" mit 12 Farben
+  (Grün, Gelb, Rot, Blau, Orange, Lila, Pink, Türkis, Hellblau, Braun, Weiß,
+  Schwarz). Kapuze und Umhang des Helden nehmen die Farbe an, im Spiel, in der
+  Rolle und auf den Speicherplätzen. Die Wahl bleibt gespeichert.
 - **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
 
 Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
