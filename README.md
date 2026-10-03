@@ -180,7 +180,13 @@ Hörnern, größer als alle anderen, mit drei rotierenden Angriffsmustern
 
 So schaltest du Level frei: Level 1 ist immer frei. Schaffst du Welle 5
 (Level 1 oder im Endlos-Modus), wird Level 2 frei; Welle 10 schaltet Level 3
-frei, Welle 15 Level 4, Welle 20 das Endlevel. Während eines Levels steht oben
+frei, Welle 15 Level 4, Welle 20 das Endlevel. **Teleportieren:** Im Spiel öffnet der Knopf LEVEL unter SUPERKRÄFTE! eine Liste;
+tippe eine Zeile an (HIN), um sofort in dieses Level/diese Welt zu springen, oder
+„ENDLOS-SPIEL", um zurück in deinen Spielstand zu gehen. Ein laufendes Endlos-Spiel
+wird vorher automatisch gespeichert. Gesperrte Level lassen sich in den
+Einstellungen mit „ALLE LEVEL – FREISCHALTEN" öffnen.
+
+Während eines Levels steht oben
 „LEVEL 1 · WELLE 3/5", gesperrte Level zeigen „ERST LEVEL … SCHAFFEN".
 
 Level-Durchläufe nutzen einen eigenen Fortschrittsspeicher (höchstes

@@ -2962,6 +2962,13 @@ function tryTapCards(){
     if(!hitRect(tl, ultraMenuRect()) && !hitRect(tl, ultraBtnRect())) game.ultraMenuOpen=false;
     return true;
   }
+  if(game.levelInfoOpen){                           // Zeile antippen = teleportieren
+    for(let i=0;i<=LEVELS.length;i++) if(hitRect(tl, levelInfoRowRect(i))){
+      if(i===LEVELS.length){ teleportToEndless(); return true; }
+      if(LEVELS[i].n<=getUnlockedLevel()){ teleportToLevel(LEVELS[i].n); return true; }
+      SFX.no(); say('ERST ALLE LEVEL FREISCHALTEN (EINSTELLUNGEN)', 1.8, PAL.O); return true;
+    }
+  }
   // Anleitung/Level-Liste offen: jeder Tipp schliesst sie wieder (Knopf selbst = umschalten)
   if(game.guideOpen || game.levelInfoOpen){
     const gb=guideBtnRect(), lb=levelInfoBtnRect();
@@ -3607,20 +3614,42 @@ function drawGuideMenu(){
     });
   });
 }
+// Level-Liste im Spiel: antippen = dorthin teleportieren (nur freigeschaltete Level),
+// letzte Zeile = zurueck ins Endlos-Spiel (aktueller Spielstand-Platz).
 function levelInfoRect(){
   const b=levelInfoBtnRect();
-  return { x:b.x+b.w+3, y:b.y, w:154, h:LEVELS.length*12+6 };
+  return { x:b.x+b.w+3, y:b.y, w:158, h:(LEVELS.length+1)*13+6 };
+}
+function levelInfoRowRect(i){
+  const m=levelInfoRect();
+  return { x:m.x+2, y:m.y+3+i*13, w:m.w-4, h:12 };
 }
 function drawLevelInfo(){
   const m=levelInfoRect(), un=getUnlockedLevel();
   panel(m.x, m.y, m.w, m.h, 'rgba(10,18,12,.96)', PAL.y);
   LEVELS.forEach((L,i)=>{
-    const y=m.y+4+i*12, done=levelDone(L.n), open=L.n<=un;
-    const cur = game.levelMode===L.n;
-    drawText(ctx, (cur?'>':' ')+L.label, m.x+3, y, open?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
-    const st = done?'GESCHAFFT':(open?'FREI':'GESPERRT');
-    drawText(ctx, st, m.x+m.w-4-textW(st,1), y, done?PAL.H:(open?'#cfe8c2':'#5a5a5a'), 1);
+    const r=levelInfoRowRect(i), done=levelDone(L.n), open=L.n<=un, cur=game.levelMode===L.n;
+    if(open){ ctx.fillStyle=cur?'rgba(255,230,90,.22)':'rgba(255,230,90,.08)'; ctx.fillRect(r.x,r.y,r.w,r.h); }
+    drawText(ctx, (cur?'>':' ')+L.label, r.x+2, r.y+2, open?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
+    const st = done?'GESCHAFFT':(open?'HIN':'GESPERRT');
+    drawText(ctx, st, r.x+r.w-3-textW(st,1), r.y+2, done?PAL.H:(open?'#cfe8c2':'#5a5a5a'), 1);
   });
+  const r=levelInfoRowRect(LEVELS.length), endless=!game.levelMode;
+  ctx.fillStyle=endless?'rgba(120,220,120,.22)':'rgba(120,220,120,.08)'; ctx.fillRect(r.x,r.y,r.w,r.h);
+  drawText(ctx, (endless?'>':' ')+'ENDLOS-SPIEL', r.x+2, r.y+2, PAL.H, 1);
+  drawText(ctx, 'HIN', r.x+r.w-3-textW('HIN',1), r.y+2, '#cfe8c2', 1);
+}
+// In ein Level springen; ein laufendes Endlos-Spiel wird vorher gesichert
+function teleportToLevel(n){
+  closeHudMenus();
+  if(!game.levelMode) saveGame();
+  startLevel(n); SFX.pick();
+}
+function teleportToEndless(){
+  closeHudMenus();
+  const sl=game.slot||1;
+  if(!game.levelMode) saveGame();
+  hasSave(sl) ? continueGame(sl) : newGame(sl); SFX.pick();
 }
 function drawHUD(){
   drawEdgeMarkers();
