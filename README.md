@@ -119,8 +119,8 @@ gespeichert und gilt auch nach dem Neuladen.
   geht der Bildschirm aus, pausiert das Spiel von selbst und bleibt es,
   bis man es bewusst wieder freigibt.
 - **Pfeile**: Der Bogen ist nicht mehr unendlich. Zum Start gibt es 100
-  Pfeile (die Zahl steht am BOGEN-Balken), je 8 besiegte Bots kommen 5 dazu,
-  jeder eingelöste Code bringt zusätzlich 50. Der Code `PFEILE` gibt 100
+  Pfeile (die Zahl steht am BOGEN-Balken), je 10 besiegte Bots kommen 5 dazu,
+  jeder eingelöste Code bringt zusätzlich 10. Der Code `PFEILE` gibt 30
   Pfeile und 20 Schrauben. Ohne Pfeile meldet das Spiel „KEINE PFEILE".
 - **Schild (F halten)**: Eine leuchtende Blase um den Helden schluckt bis zu 3
   Treffer komplett – aber nur, solange du **F gedrückt hältst**, höchstens 3
@@ -270,7 +270,16 @@ manche schalten direkt eine Werkstatt-Verbesserung frei (oder geben
 Schrauben, wenn die schon auf Maximalstufe ist), andere würfeln eine
 zufällige Belohnung aus (Schrauben, volle Heilung, volle Ultra-Leiste,
 Tor-Reparatur oder ein kleiner permanenter Bonus). Jeder Code ist einmal je
-Durchlauf einlösbar.
+Durchlauf einlösbar. Alle Codes funktionieren in jedem Level – auch in Level 1.
+
+### Codes je Level
+| Level | Codes |
+|---|---|
+| 1 · Wald | `FOREST`, `PFEILE`, `WALDWACHT`, `DEMIRCI` und die Fundstück-Codes oben |
+| 2 · Stadt | `STADTLICHT` (120 Schrauben, Ultra voll), `NEONNACHT` (Zufall), `STRASSENFEGER` (Schaden), `BETONHERZ` (Herz) |
+| 3 · Eis | `EISZAPFEN` (Eispfeile), `SCHNEEBALL` (80 Schrauben, voll geheilt), `FROSTBISS` (Rolle), `POLARSTERN` (Ultra voll) |
+| 4 · Strand | `MUSCHELHORN` (Zufall), `SONNENBRAND` (Feuerklinge), `WELLENREITER` (Tempo), `PALMENSCHATTEN` (Tor +40, voll geheilt) |
+| 5 · Hölle | `HOELLENFEUER` (Feuerklinge + 100 Schrauben), `TEUFELSPAKT` (300 Schrauben), `LAVAHERZ` (Herz), `ASCHEREGEN` (100 Schrauben, Ultra voll) |
 
 ## Technik
 
