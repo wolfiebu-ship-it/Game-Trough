@@ -1712,6 +1712,14 @@ function env(node, t, a, d, peak){
   g.gain.exponentialRampToValueAtTime(0.0001,t+a+d);
   node.connect(g); return g;
 }
+// Haltende Huellkurve fuer die Weltmusik: laut genug bleiben statt in Sekundenbruchteilen zu verklingen
+function envS(node, t, a, d, peak){
+  const g=AC.createGain(); g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(peak,t+a);
+  g.gain.exponentialRampToValueAtTime(peak*0.45,t+a+d*0.55);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+a+d);
+  node.connect(g); return g;
+}
 function tone(freq, t, dur, type='square', peak=0.25, slide=0){
   if(!AC||muted) return;
   const o=AC.createOscillator(); o.type=type; o.frequency.setValueAtTime(freq,t);
@@ -1795,10 +1803,10 @@ function musicTickThemed(c){
   while(MUSIC.next < AC.currentTime + (MUSIC.fresh>0?8:0.25)){
     const t=Math.max(MUSIC.next, AC.currentTime+0.01), s=MUSIC.step%total, bar=Math.floor(s/8), st=s%8, ch=c.chords[bar];
     const osc=(type,f,a,d,peak)=>{ const o=AC.createOscillator(); o.type=type; o.frequency.setValueAtTime(f,t);
-      const g=env(o,t,a,d,peak); g.connect(musicOut()); o.start(t); o.stop(t+a+d+0.1); };
+      const g=envS(o,t,a,d,peak*1.4); g.connect(musicOut()); o.start(t); o.stop(t+a+d+0.1); };
     if(s===0 && MUSIC.fresh===16) musicStinger(t, ch.root*4, ch.notes.concat([12]), 0.2);
     if(c.bassSteps.includes(st)) osc(c.bassType, ch.root*(st===4?1.5:1), 0.02, spb*3.2, c.bassPeak);
-    if(st===0) for(const semi of ch.notes) osc(c.padType, ch.root*2*Math.pow(2,semi/12), MUSIC.fresh>0?0.1:spb*3.5, spb*6, c.padPeak);
+    if(st===0) for(const semi of ch.notes) osc(c.padType, ch.root*2*Math.pow(2,semi/12), Math.min(spb*3.5,0.3), spb*8, c.padPeak);
     const deg=c.lead[s];
     if(deg>=0){ const oct=Math.floor(deg/c.scale.length), semi=c.scale[deg%c.scale.length]+12*oct;
       osc(c.leadType, c.leadBase*Math.pow(2,semi/12), 0.012, c.leadDur, c.leadPeak); }
@@ -4206,12 +4214,13 @@ function drawHelp(){
 const SETP = { w:200, h:140 };
 function setPanelRect(){ return { x:Math.round((VW-SETP.w)/2), y:Math.round((VH-SETP.h)/2), w:SETP.w, h:SETP.h }; }
 const SET_SLIDERS = [ ['vol','LAUTSTÄRKE'], ['music','MUSIK'], ['sfx','EFFEKTE'] ];
-function setRowY(i){ return setPanelRect().y+21+i*16; }          // 0 = Name, 1-3 Regler, 4 Wackeln
+function setRowY(i){ return setPanelRect().y+20+i*14; }          // 0 = Name, 1-3 Regler, 4 Wackeln
 function setCtrlX(){ return setPanelRect().x+80; }
 function setMinusRect(i){ return { x:setCtrlX(), y:setRowY(i)-2, w:11, h:11 }; }
 function setSegRect(i,n){ return { x:setCtrlX()+14+n*7, y:setRowY(i)-2, w:6, h:11 }; }
 function setPlusRect(i){ return { x:setCtrlX()+14+70+2, y:setRowY(i)-2, w:11, h:11 }; }
-function setHeroRect(){ return { x:setCtrlX(), y:setRowY(5)-5, w:30, h:18 }; }
+function setHeroRect(){ return { x:setCtrlX(), y:setRowY(5)-4, w:30, h:16 }; }
+function setResetRect(){ return { x:setCtrlX(), y:setRowY(6)-2, w:112, h:11 }; }
 // Farbwahl: kleines Fenster mit 12 Farbfeldern (6 x 2), liegt ueber den Reglern
 function setPickRect(){ const p=setPanelRect(); return { x:p.x+14, y:p.y+40, w:p.w-28, h:62 }; }
 function setSwatchRect(i){ const r=setPickRect(), col=i%6, row=Math.floor(i/6); return { x:r.x+8+col*28, y:r.y+16+row*22, w:24, h:18 }; }
@@ -4257,6 +4266,10 @@ function drawSettings(){
   panel(hr.x,hr.y,hr.w,hr.h, game.heroPick?'rgba(26,46,26,.95)':'rgba(16,26,18,.95)', game.heroPick?PAL.l:PAL.C);
   ctx.save(); ctx.translate(hr.x+Math.round((hr.w-SPR.head.w*2)/2), hr.y+2); ctx.scale(2,2); ctx.drawImage(SPR.head.img,0,0); ctx.restore();
   drawText(ctx, HERO_COLORS[SETTINGS.hero].name, hr.x+hr.w+5, setRowY(5), PAL.y, 1);
+  drawText(ctx,'NEUSTART', lx, setRowY(6), '#cfe8c2', 1);
+  const rr2=setResetRect(), armed=(game.resetArmT||0)>0;
+  panel(rr2.x,rr2.y,rr2.w,rr2.h, armed?'rgba(70,16,14,.97)':'rgba(30,14,14,.95)', armed?PAL.R:'#7a3a3a');
+  drawTextC(ctx, armed?'SICHER? NOCHMAL':'ALLES NEU STARTEN', rr2.x+rr2.w/2, rr2.y+2, armed?'#ffd0c0':'#e9a0a0', 1);
   const d=setDoneRect();
   panel(d.x,d.y,d.w,d.h,'rgba(46,40,10,.95)',PAL.y);
   drawTextC(ctx,'FERTIG', VW/2, d.y+3, PAL.y, 1);
@@ -4271,7 +4284,19 @@ function drawSettings(){
     }
   }
 }
+// Alles Gespielte zuruecksetzen: Spielwelten, Levelstand, Freigaben, Geschafft-Haken, Superkraefte, Rekord.
+// Einstellungen (Name, Avatar, Lautstaerke) bleiben.
+function resetAllProgress(){
+  const keys=['waldwacht_save','waldwacht_levelsave','waldwacht_freigabe','waldwacht_level','waldwacht_done','waldwacht_ultras','waldwacht_best'];
+  for(let i=1;i<=SAVE_SLOTS;i++) keys.push(slotKey(i));
+  try{ for(const k of keys) localStorage.removeItem(k); }catch(e){}
+  game.best=0; game.levelMode=0; game.ultras=[]; game.resetArmT=0;
+  game.settingsOpen=false; game.paused=false; game.shopOpen=false; game.levelSelectOpen=false; game.helpOpen=false;
+  buildWorld('forest'); game.state='title';
+  SFX.over();
+}
 function updateSettings(){
+  game.resetArmT=Math.max(0,(game.resetArmT||0)-(game.dt||0));
   musicTick();                                     // Musik laeuft weiter, Lautstaerke hoerbar
   let changed=false;
   if(lastTap){
@@ -4287,14 +4312,18 @@ function updateSettings(){
       for(let i=0;i<HERO_COLORS.length;i++) if(hitRect(t,setSwatchRect(i))){
         SETTINGS.hero=i; applyHeroColor(i); changed=true; hit=true; game.heroPick=false; break; }
       if(!hit && !hitRect(t,setPickRect())) game.heroPick=false;
+    } else if(hitRect(t,setResetRect())){
+      if((game.resetArmT||0)>0){ resetAllProgress(); lastTap=null; pressed.clear(); return; }
+      game.resetArmT=4; SFX.no();                          // erst nach dem zweiten Tippen wirklich loeschen
     } else {
+      game.resetArmT=0;
       if(hitRect(t,setShakeRect())){ SETTINGS.shake=!SETTINGS.shake; changed=true; }
       if(hitRect(t,setHeroRect())){ game.heroPick=true; SFX.pick(); }
       else if(hitRect(t,setDoneRect()) || !hitRect(t,setPanelRect())) game.settingsOpen=false;
     }
   }
   if(pressed.has('Escape')){ if(game.heroPick) game.heroPick=false; else game.settingsOpen=false; }
-  if(!game.settingsOpen) game.heroPick=false;
+  if(!game.settingsOpen){ game.heroPick=false; game.resetArmT=0; }
   if(changed){ saveSettings(); audioUnlock(); applyAudio(); SFX.pick(); }
   lastTap=null; pressed.clear();
 }

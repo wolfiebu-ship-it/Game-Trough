@@ -83,6 +83,10 @@ unter LEVEL) öffnet ein Fenster mit:
   (Grün, Gelb, Rot, Blau, Orange, Lila, Pink, Türkis, Hellblau, Braun, Weiß,
   Schwarz). Kapuze und Umhang des Helden nehmen die Farbe an, im Spiel, in der
   Rolle und auf den Speicherplätzen. Die Wahl bleibt gespeichert. Auch der Schwertschwung und die Luftwirbel um den Helden haben die Farbe des Helden.
+- **Neustart**: „ALLES NEU STARTEN" löscht nach zweimaligem Tippen den ganzen
+  Fortschritt: die drei Spielwelten, den Level-Speicher, alle Freigaben und
+  „GESCHAFFT"-Haken, die erspielten Superkräfte und den Rekord. Name, Avatar
+  und Lautstärke bleiben. Danach beginnt alles wie beim ersten Start.
 - **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
 
 Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
