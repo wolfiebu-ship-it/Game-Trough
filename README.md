@@ -85,8 +85,8 @@ unter LEVEL) öffnet ein Fenster mit:
   Rolle und auf den Speicherplätzen. Die Wahl bleibt gespeichert. Auch der Schwertschwung und die Luftwirbel um den Helden haben die Farbe des Helden.
 - **Spielstand löschen**: Im Titelbild öffnet der Knopf „SPIELSTAND LÖSCHEN" den
   Löschmodus. Die belegten Plätze werden rot markiert; ein Tipp (oder `1`/`2`/`3`)
-  auf einen Platz löscht genau diesen Spielstand, der Platz zeigt wieder „NEUES SPIEL
-  ANFANGEN". „ABBRECHEN", Esc oder ein Tipp daneben bricht ab.
+  auf einen Platz fragt „BIST DU SICHER?"; erst „JA, LÖSCHEN" löscht genau diesen
+  Spielstand, der Platz zeigt wieder „NEUES SPIEL ANFANGEN". „ABBRECHEN", Esc oder ein Tipp daneben bricht ab.
 - **Neustart**: „ALLES NEU STARTEN" löscht nach zweimaligem Tippen den ganzen
   Fortschritt: die drei Spielwelten, den Level-Speicher, alle Freigaben und
   „GESCHAFFT"-Haken, die erspielten Superkräfte und den Rekord. Name, Avatar
@@ -136,8 +136,9 @@ gespeichert und gilt auch nach dem Neuladen.
   Sekunden. Lässt du los, verschwindet das Schild sofort (kurze Sperre von 2 s).
   Hält es 3 Treffer aus oder läuft die Zeit ab, lädt es 5 s nach (im Bosskampf
   10 s; SCHILD-Balken). Am Handy: die Taste SCHILD gedrückt halten.
-- **Luftbögen**: Im Stehen kreisen zwei Luftbögen in der Avatar-Farbe um den
-  Helden – dieselbe Optik wie beim Schwertschlag, beim Laufen seltener.
+- **Funkeln**: Um den Helden blitzen kleine Lichtpunkte in der Avatar-Farbe auf
+  (auf dem Höhepunkt als kleines Kreuz) und steigen leicht nach oben; beim Laufen
+  seltener. Beim Schwertschlag kommen die Luftbögen dazu.
 - **Fokus**: Verliert das Spiel den Fokus (z. B. zum Chatten), werden alle
   gehaltenen Tasten losgelassen und das Spiel pausiert – der Held läuft nie
   von allein weiter.

@@ -2007,6 +2007,7 @@ const BOT = {
   ultra: {name:'TEUFEL-KOLOSSUS', spr:SPR.ultra, hp:2800,dmg:10, speed:36, r:20, range:36, windup:0.42, cd:0.85, scrap:400, score:5000, kbR:0.012, aggro:999, boss:true, bossKind:'ultra', gateDmg:20, scale:1.4}
 };
 
+const glints=[];                                   // Funkeln um den Helden
 const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters=[], blitze=[], roots=[];
 
 // Pro Welt tragen die normalen Bots andere Gesichter (gleiche Werte, anderer Name und Sprite)
@@ -2617,7 +2618,7 @@ function gameOver(reason){
 }
 function newGame(slot, world){
   enemies.length=0; bullets.length=0; parts.length=0; drops.length=0;
-  slashes.length=0; waves.length=0; floaters.length=0; roots.length=0;
+  slashes.length=0; waves.length=0; floaters.length=0; roots.length=0; glints.length=0;
   MSGQ.length=0;
   game.ultras=[]; game.usedCodes=new Set(); mergeEarnedUltras();
   game.turret=0; game.turretT=0; game.ultraMenuOpen=false; game.ultraNameT=0; game.guideOpen=false; game.levelInfoOpen=false;
@@ -2697,16 +2698,15 @@ function updatePlayer(dt){
   p.atkCd=Math.max(0,p.atkCd-dt); p.dashCd=Math.max(0,p.dashCd-dt);
   p.comboT-=dt; if(p.comboT<=0) p.combo=0;
 
-  // --- Im Stehen kreisen zwei Luftbögen um den Helden - dieselbe Optik und Farbe wie beim Schwertschlag ---
-  if(p.alive && p.dashT<=0 && !p.swing){
+  // --- Funkeln in Heldenfarbe: kleine Lichtpunkte blitzen rund um den Helden auf und steigen leicht nach oben ---
+  if(p.alive && p.dashT<=0){
     const still = Math.hypot(p.vx,p.vy)<12;
     p.sparkT=(p.sparkT||0)-dt;
     if(p.sparkT<=0){
-      p.sparkT = still ? 0.42 : 0.9;
-      p.orbit = (p.orbit||rr(0,TAU)) + 1.9;                 // jeder neue Bogen sitzt ein Stueck weiter herum
-      const arc=2.3, reach=22;
-      slashes.push({x:p.x, y:p.y-8, ang:p.orbit, arc, reach, t:0, dur:0.55, heavy:false, mine:true});
-      slashes.push({x:p.x, y:p.y-8, ang:p.orbit+Math.PI, arc:arc*0.8, reach:reach-3, t:0.12, dur:0.55, heavy:false, mine:true});
+      p.sparkT = still ? rr(0.1,0.2) : rr(0.25,0.45);
+      const sw=heroSwing(), a=rr(0,TAU), r=rr(6,14), k=Math.random();
+      glints.push({ x:p.x+Math.cos(a)*r, y:p.y-7+Math.sin(a)*r*0.9, vy:-rr(5,10), t:0, dur:rr(0.55,0.95),
+        col: k<0.2 ? '#ffffff' : sw.hi, arm: sw.mid });
     }
   }
 
@@ -3094,6 +3094,7 @@ function updateFX(dt){
     p.vx*=Math.pow(0.25,dt); p.vy*=Math.pow(0.25,dt);
   }
   for(let i=slashes.length-1;i>=0;i--){ const s=slashes[i]; s.t+=dt; if(s.t>=s.dur) slashes.splice(i,1); }
+  for(let i=glints.length-1;i>=0;i--){ const g=glints[i]; g.t+=dt; g.y+=g.vy*dt; if(g.t>=g.dur) glints.splice(i,1); }
   for(let i=shocks.length-1;i>=0;i--){
     const s=shocks[i]; s.t+=dt; s.r+=(s.max-s.r)*Math.min(1,dt*7);
     if(s.r>s.max-1.5) shocks.splice(i,1);
@@ -3229,17 +3230,27 @@ function update(dt){
       lastTap=null; pressed.clear(); return;
     }
     if(game.delMode){                                   // Loeschen: einen der drei Plaetze antippen
+      if(game.delConfirm){                              // zweite Stufe: wirklich loeschen?
+        const c=delConfirmRects();
+        if(lastTap){
+          if(hitRect(lastTap,c.yes)) deleteSlot(game.delConfirm);
+          else if(hitRect(lastTap,c.no) || !hitRect(lastTap,c.box)) game.delConfirm=0;
+        }
+        if(pressed.has('Enter')||pressed.has('j')) deleteSlot(game.delConfirm);
+        else if(pressed.has('Escape')||pressed.has('n')) game.delConfirm=0;
+        lastTap=null; pressed.clear(); return;
+      }
       if(lastTap){
         let hit=false;
-        for(const b of saveSlotRects()) if(hitRect(lastTap,b)){ hit=true; if(hasSave(b.slot)) deleteSlot(b.slot); else SFX.no(); break; }
+        for(const b of saveSlotRects()) if(hitRect(lastTap,b)){ hit=true; if(hasSave(b.slot)){ game.delConfirm=b.slot; SFX.pick(); } else SFX.no(); break; }
         if(!hit) game.delMode=false;                    // Knopf nochmal oder daneben = abbrechen
       }
-      for(let s=1;s<=SAVE_SLOTS;s++) if(pressed.has(String(s))){ if(hasSave(s)) deleteSlot(s); else SFX.no(); }
+      for(let s=1;s<=SAVE_SLOTS;s++) if(pressed.has(String(s))){ if(hasSave(s)){ game.delConfirm=s; SFX.pick(); } else SFX.no(); }
       if(pressed.has('Escape')) game.delMode=false;
       lastTap=null; pressed.clear(); return;
     }
     if(lastTap){
-      if(hitRect(lastTap, delBtnRect())){ game.delMode=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
+      if(hitRect(lastTap, delBtnRect())){ game.delMode=true; game.delConfirm=0; SFX.pick(); lastTap=null; pressed.clear(); return; }
       if(hitRect(lastTap, levelBtnRect())){ game.levelSelectOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
       if(hitRect(lastTap, settingsBtnTitleRect())){ game.settingsOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
       if(hitRect(lastTap, helpBtnRect())){ game.helpOpen=true; SFX.pick(); lastTap=null; pressed.clear(); return; }
@@ -3515,6 +3526,15 @@ function drawPlayer(){
   }
   const blink = p.inv>0 && Math.floor(p.inv*18)%2===0;
   if(!blink) drawSpr(s, px, py, p.flip, p.hurtT>0);
+  // Funkeln: weich ein- und ausblenden; auf dem Hoehepunkt blitzt ein kleines Kreuz
+  for(const g of glints){
+    const ph=Math.sin(Math.PI*clamp(g.t/g.dur,0,1)), x=Math.round(g.x), y=Math.round(g.y);
+    ctx.fillStyle=g.col;
+    ctx.globalAlpha=Math.min(1,ph*1.4);
+    ctx.fillRect(x,y,1,1);
+    if(ph>0.6){ ctx.fillStyle=g.arm; ctx.globalAlpha=(ph-0.6)/0.4; ctx.fillRect(x-1,y,1,1); ctx.fillRect(x+1,y,1,1); ctx.fillRect(x,y-1,1,1); ctx.fillRect(x,y+1,1,1); }
+  }
+  ctx.globalAlpha=1;
   drawBlockBubble();
   if(!behind && !p.swing){ pxLine(hx,hy+1,tipx,tipy+1,PAL.K); pxLine(hx,hy,tipx,tipy,PAL.w); }
 }
@@ -4085,9 +4105,14 @@ function delBtnRect(){
   const p=titlePanelRect(), { instrY }=titleLayout(), w=textW('SPIELSTAND LÖSCHEN',1)+17;
   return { x:Math.round(p.x+p.w/2-w/2), y:p.y+instrY+11, w, h:11 };
 }
+// Sicherheitsfrage vor dem Loeschen: Fenster mit "JA, LOESCHEN" und "NEIN"
+function delConfirmRects(){
+  const w=176, h=58, x=Math.round((VW-w)/2), y=Math.round((VH-h)/2);
+  return { box:{x,y,w,h}, yes:{x:x+8,y:y+h-20,w:78,h:13}, no:{x:x+w-86,y:y+h-20,w:78,h:13} };
+}
 function deleteSlot(slot){
   try{ localStorage.removeItem(slotKey(slot)); }catch(e){}
-  game.delMode=false; SFX.over();
+  game.delMode=false; game.delConfirm=0; SFX.over();
 }
 // Drei Speicherplaetze nebeneinander unten im Titelbild.
 function saveSlotRects(){
@@ -4175,6 +4200,15 @@ function drawTitle(){
     ctx.fillStyle=PAL.R; ctx.fillRect(b.x,b.y,b.w,1); ctx.fillRect(b.x,b.y+b.h-1,b.w,1); ctx.fillRect(b.x,b.y,1,b.h); ctx.fillRect(b.x+b.w-1,b.y,1,b.h);
     const tw=textW('LÖSCHEN',1)+8; ctx.fillStyle='rgba(40,8,8,.92)'; ctx.fillRect(Math.round(b.x+b.w/2-tw/2), b.y+19, tw, 11);
     drawTextC(ctx,'LÖSCHEN', b.x+b.w/2, b.y+21, '#ffd0c0', 1);
+  }
+  if(game.delMode && game.delConfirm){                     // Sicherheitsfrage
+    ctx.globalAlpha=0.7; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
+    const c=delConfirmRects(), bx=c.box;
+    panel(bx.x,bx.y,bx.w,bx.h,'rgba(24,8,8,.98)',PAL.R);
+    drawTextC(ctx,'BIST DU SICHER?', VW/2, bx.y+6, PAL.R, 1);
+    drawTextC(ctx,'SPIELSTAND '+game.delConfirm+' LÖSCHEN?', VW/2, bx.y+18, '#e9c0b0', 1);
+    panel(c.yes.x,c.yes.y,c.yes.w,c.yes.h,'rgba(70,16,14,.97)',PAL.R); drawTextC(ctx,'JA, LÖSCHEN', c.yes.x+c.yes.w/2, c.yes.y+3, '#ffd0c0', 1);
+    panel(c.no.x,c.no.y,c.no.w,c.no.h,'rgba(16,32,18,.95)',PAL.H); drawTextC(ctx,'NEIN', c.no.x+c.no.w/2, c.no.y+3, PAL.y, 1);
   }
 }
 // --- Levelauswahl: eigenes Overlay ueber dem Titelbild, volle Flaeche zur
