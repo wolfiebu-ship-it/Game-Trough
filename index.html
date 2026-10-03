@@ -1888,6 +1888,7 @@ function getDone(){
   try{ const a=JSON.parse(localStorage.getItem('waldwacht_done')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; }
 }
 function markDone(n){
+  unlockLevel(n+1);                                     // geschafft heisst immer: das naechste Level ist frei
   const a=getDone(); if(a.includes(n)) return;
   a.push(n); try{ localStorage.setItem('waldwacht_done', JSON.stringify(a)); }catch(e){}
 }
@@ -4502,6 +4503,7 @@ function render(){
   try{ localStorage.removeItem('waldwacht_level'); }catch(e){}
   let best=0; for(let i=1;i<=SAVE_SLOTS;i++){ const d=loadSaveRaw(i); if(d && d.wave>best) best=d.wave; }
   unlockLevel(1+Math.floor(best/UNLOCK_EVERY));
+  for(const n of getDone()) unlockLevel(n+1);       // schon geschaffte Level oeffnen ihre Nachfolger (auch aus aelteren Staenden)
 })();
 applyHeroColor(SETTINGS.hero);
 buildWorld('forest');
