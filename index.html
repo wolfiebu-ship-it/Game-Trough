@@ -3867,7 +3867,7 @@ function drawHelp(){
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
 // --- Einstellungen: eigenes Fenster ueber Titel oder Spiel (Spiel steht solange) ---
-const SETP = { w:200, h:124 };
+const SETP = { w:200, h:140 };
 function setPanelRect(){ return { x:Math.round((VW-SETP.w)/2), y:Math.round((VH-SETP.h)/2), w:SETP.w, h:SETP.h }; }
 const SET_SLIDERS = [ ['vol','LAUTSTÄRKE'], ['music','MUSIK'], ['sfx','EFFEKTE'] ];
 function setRowY(i){ return setPanelRect().y+21+i*16; }          // 0 = Name, 1-3 Regler, 4 Wackeln
@@ -3876,6 +3876,7 @@ function setMinusRect(i){ return { x:setCtrlX(), y:setRowY(i)-2, w:11, h:11 }; }
 function setSegRect(i,n){ return { x:setCtrlX()+14+n*7, y:setRowY(i)-2, w:6, h:11 }; }
 function setPlusRect(i){ return { x:setCtrlX()+14+70+2, y:setRowY(i)-2, w:11, h:11 }; }
 function setShakeRect(){ return { x:setCtrlX(), y:setRowY(4)-2, w:30, h:11 }; }
+function setLevelsRect(){ return { x:setCtrlX(), y:setRowY(5)-2, w:84, h:11 }; }
 function setNameRect(){ return { x:setCtrlX(), y:setRowY(0)-3, w:97, h:13 }; }
 function setDoneRect(){ const p=setPanelRect(); return { x:Math.round(VW/2-30), y:p.y+p.h-19, w:60, h:13 }; }
 function settingsBtnTitleRect(){
@@ -3912,6 +3913,10 @@ function drawSettings(){
   const sr=setShakeRect(), on=SETTINGS.shake;
   panel(sr.x,sr.y,sr.w,sr.h, on?'rgba(26,46,26,.95)':'rgba(30,14,14,.95)', on?PAL.H:'#7a3a3a');
   drawTextC(ctx, on?'AN':'AUS', sr.x+sr.w/2, sr.y+2, on?PAL.l:'#e9a0a0', 1);
+  drawText(ctx,'ALLE LEVEL', lx, setRowY(5), '#cfe8c2', 1);
+  const lr=setLevelsRect(), all=getUnlockedLevel()>=LEVELS.length;
+  panel(lr.x,lr.y,lr.w,lr.h, all?'rgba(26,46,26,.95)':'rgba(46,40,10,.95)', all?PAL.H:PAL.y);
+  drawTextC(ctx, all?'ALLE FREI':'FREISCHALTEN', lr.x+lr.w/2, lr.y+2, all?PAL.l:PAL.y, 1);
   const d=setDoneRect();
   panel(d.x,d.y,d.w,d.h,'rgba(46,40,10,.95)',PAL.y);
   drawTextC(ctx,'FERTIG', VW/2, d.y+3, PAL.y, 1);
@@ -3928,6 +3933,7 @@ function updateSettings(){
       else for(let n=0;n<10;n++) if(hitRect(t,setSegRect(i,n))){ SETTINGS[key]=n+1; changed=true; }
     });
     if(hitRect(t,setShakeRect())){ SETTINGS.shake=!SETTINGS.shake; changed=true; }
+    if(hitRect(t,setLevelsRect()) && getUnlockedLevel()<LEVELS.length){ unlockLevel(LEVELS.length); SFX.buy(); }
     if(hitRect(t,setDoneRect()) || !hitRect(t,setPanelRect())) game.settingsOpen=false;
   }
   if(pressed.has('Escape')) game.settingsOpen=false;

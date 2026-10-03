@@ -79,6 +79,8 @@ unter LEVEL) öffnet ein Fenster mit:
 - **Lautstärke**, **Musik** und **Effekte** getrennt, je 0–10 (über −/+ oder
   direkt auf den Balken tippen).
 - **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
+- **Alle Level**: der Knopf „FREISCHALTEN" öffnet alle fünf Level auf einmal
+  (zum Ausprobieren, ohne vorher Wellen schaffen zu müssen).
 
 Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
 gespeichert und gilt auch nach dem Neuladen.
