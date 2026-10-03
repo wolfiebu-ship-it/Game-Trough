@@ -1402,6 +1402,7 @@ function touchStart(e){
   e.preventDefault();
 }
 function touchMove(e){
+  syncSticks(e);
   const r=touchUI.getBoundingClientRect();
   for(const t of e.changedTouches){
     for(const key of ['L','R']){ const s=sticks[key];
@@ -1414,7 +1415,14 @@ function touchMove(e){
   }
   e.preventDefault();
 }
+// Sticks, deren Finger laut Browser gar nicht mehr aufliegt, sofort loslassen (verlorene touchend-Ereignisse)
+function syncSticks(e){
+  const ids=new Set(Array.from(e.touches||[]).map(t=>t.identifier));
+  for(const key of ['L','R']){ const s=sticks[key];
+    if(s.id!==null && !ids.has(s.id)){ s.id=null; s.dx=0; s.dy=0; s.el.classList.remove('on'); } }
+}
 function touchEnd(e){
+  const ended = Array.from(e.changedTouches||[]).map(t=>t.identifier);
   for(const t of e.changedTouches){
     for(const key of ['L','R']){ const s=sticks[key];
       if(s.id===t.identifier){
@@ -1423,6 +1431,7 @@ function touchEnd(e){
       }
     }
   }
+  syncSticks(e);
   e.preventDefault();
 }
 // Wischen darf die Seite niemals verschieben (Capture laeuft auch ueber den Tasten) -
@@ -1604,6 +1613,17 @@ bindBtn('bowBtn','__bow');
 bindBtn('dashBtn','__dash');
 bindBtn('healBtn','__heal');
 bindBtn('shieldBtn','__block');
+// Schild-Knopf: gedrueckt halten = Schild bleibt (wie die F-Taste)
+let shieldBtnHeld=false;
+(function(){
+  const el=document.getElementById('shieldBtn'); if(!el) return;
+  const on=()=>{ shieldBtnHeld=true; }, off=()=>{ shieldBtnHeld=false; };
+  el.addEventListener('touchstart', on, {passive:true});
+  el.addEventListener('mousedown', on);
+  for(const ev of ['touchend','touchcancel']) addEventListener(ev, e=>{ if(!e.touches || e.touches.length===0 || !el.contains(document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY))) off(); }, true);
+  addEventListener('mouseup', off, true);
+  addEventListener('blur', off);
+})();
 bindBtn('ultraBtn','__ultra');
 
 function readInput(){
@@ -1621,6 +1641,7 @@ function readInput(){
   IN.attackEdge = pressed.has('__attack')||pressed.has(' ')||pressed.has('j');
   IN.bowEdge    = pressed.has('__bow')||pressed.has('q');
   IN.blockEdge  = pressed.has('__block')||pressed.has('f');
+  IN.blockHeld  = !!(keys['f'] || shieldBtnHeld);
   IN.dashEdge   = pressed.has('__dash')||pressed.has('Shift')||pressed.has('l')||pressed.has('k');
   IN.healEdge   = pressed.has('__heal')||pressed.has('h')||pressed.has('r');
   IN.ultraEdge  = pressed.has('__ultra')||pressed.has('x');
@@ -1902,8 +1923,8 @@ const player = {
   ultra:0, ultraMax:100, ultraSel:0, stormT:0, stormTick:0, rainT:0, rainLeft:0, boltT:0, boltLeft:0,
   shield:0, shieldMax:0, shieldT:0, shieldEvery:18, burn:0, ice:0, extraArrows:0,
   greed:0, ultraGain:1, revive:0,
-  arrows:100, arrowKills:0,                // Pfeile sind begrenzt: 100 zum Start, +5 je 4 besiegte Bots
-  block:0, blockCd:0, blockCdMax:5,        // F-Schild: beliebig oft, faengt 2 Treffer ab; 5 s Nachladen (Boss: 10 s)
+  arrows:100, arrowKills:0,                // Pfeile sind begrenzt: 100 zum Start, +5 je 8 besiegte Bots
+  block:0, blockT:0, blockCd:0, blockCdMax:5,   // F-Schild: nur solange F gehalten wird, hoechstens 3 s, faengt 3 Treffer ab; danach Nachladen
   inv:0, anim:0, hurtT:0, alive:true,
   lifesteal:0, thorns:0, magnet:34,
   upg:{}
@@ -2058,11 +2079,18 @@ function playerShoot(){
 // Im Bosskampf laedt der Schild doppelt so lange nach.
 const bossFight = ()=> enemies.some(e=>!e.dead && e.d.boss);
 const blockReload = ()=> bossFight() ? 10 : 5;
+const SHIELD_HITS = 3, SHIELD_TIME = 3;          // F halten: bleibt bis 3 Treffer oder 3 Sekunden
+// Schild wird eingezogen: F losgelassen (kurze Sperre) oder Zeit abgelaufen (volle Ladezeit)
+function dropShield(timeout){
+  player.block=0; player.blockT=0;
+  player.blockCdMax = timeout ? blockReload() : (bossFight() ? 4 : 2); player.blockCd=player.blockCdMax;
+  if(timeout) floater(player.x, player.y-20, 'SCHILD WEG', PAL.O);
+}
 function playerBlock(){
   if(!player.alive) return;
   if(player.block>0) return;                             // steht schon
   if(player.blockCd>0){ SFX.no(); floater(player.x, player.y-20, 'SCHILD LÄDT', '#7f927b'); return; }
-  player.block=2;
+  player.block=SHIELD_HITS; player.blockT=SHIELD_TIME;
   SFX.heal(); floater(player.x, player.y-20, 'SCHILD', PAL.C);
   burst(player.x, player.y-7, 14, PAL.C, 70, 0.45);
 }
@@ -2128,7 +2156,7 @@ function damageEnemy(e, dmg, kb, ang, heavy){
 function killEnemy(e){
   e.dead=true;
   game.kills++; game.score += e.d.score; chargeUltra(e.d.boss?40:5);
-  if(++player.arrowKills>=4){                           // alle 4 besiegten Bots: 5 Pfeile Nachschub
+  if(++player.arrowKills>=8){                           // alle 8 besiegten Bots: 5 Pfeile Nachschub
     player.arrowKills=0; player.arrows+=5;
     floater(player.x, player.y-26, '+5 PFEILE', PAL.S);
   }
@@ -2584,6 +2612,17 @@ function updatePlayer(dt){
   p.atkCd=Math.max(0,p.atkCd-dt); p.dashCd=Math.max(0,p.dashCd-dt);
   p.comboT-=dt; if(p.comboT<=0) p.combo=0;
 
+  // --- Funken in Heldenfarbe: im Stehen ein wenig mehr, beim Laufen weniger ---
+  if(p.alive && p.dashT<=0){
+    const still = Math.hypot(p.vx,p.vy)<12;
+    p.sparkT=(p.sparkT||0)-dt;
+    if(p.sparkT<=0){
+      p.sparkT = still ? rr(0.1,0.22) : rr(0.3,0.5);
+      const sw=heroSwing(), a=rr(0,TAU), r=rr(5,9);
+      part(p.x+Math.cos(a)*r, p.y-7+Math.sin(a)*r*0.8, Math.cos(a)*rr(2,8), rr(-16,-8), rr(0.5,0.9), Math.random()<0.3?sw.hi:sw.mid, 1, -8);
+    }
+  }
+
   // --- Zielrichtung ---
   const moving = Math.hypot(IN.mx,IN.my)>0.15;
   if(IN.aimHeld) p.aim=IN.aim;
@@ -2625,6 +2664,10 @@ function updatePlayer(dt){
   if(IN.dashEdge) playerDash();
   if(IN.healEdge) playerHeal();
   if(IN.blockEdge) playerBlock();
+  if(p.block>0){                                         // Schild nur solange F gehalten wird
+    p.blockT-=dt;
+    if(!IN.blockHeld) dropShield(false); else if(p.blockT<=0) dropShield(true);
+  }
   if(p.block<=0) p.blockCd=Math.max(0,p.blockCd-dt);
   game.noArrowT=Math.max(0,(game.noArrowT||0)-dt);
   // Schutzschild laedt sich nach
@@ -3685,7 +3728,7 @@ const GUIDE_ROWS = [
   [['Q','BOGEN'], ['B','SHOP']],
   [['SHIFT','ROLLE'], ['P','PAUSE']],
   [['H','HEILEN'], ['M','TON']],
-  [['F','SCHILD'], ['','']]
+  [['F','SCHILD HALTEN'], ['','']]
 ];
 function guideMenuRect(){
   const b=guideBtnRect();
@@ -3754,7 +3797,7 @@ function drawHUD(){
     if(noArrows) drawText(ctx, 'BOGEN '+player.arrows, 29, 23, PAL.r, 1);
     bar(4, 35, 22, 1-player.healCd/player.healCdMax, player.healCd>0?'#4a3038':PAL.R, 'HEILEN', player.healCd>0);
     const bl=player.block;
-    bar(4, 45, 22, bl>0 ? 1 : 1-player.blockCd/player.blockCdMax, bl>0?PAL.C:(player.blockCd>0?'#2a4048':'#5fb7cf'),
+    bar(4, 45, 22, bl>0 ? clamp(player.blockT/SHIELD_TIME,0,1) : 1-player.blockCd/player.blockCdMax, bl>0?PAL.C:(player.blockCd>0?'#2a4048':'#5fb7cf'),
         bl>0 ? 'SCHILD x'+bl : 'SCHILD', bl<=0 && player.blockCd>0);
     const u=activeUltra();
     if(u){
@@ -3989,7 +4032,7 @@ function helpRows(){
     ['LINKSKLICK/LEERTASTE', 'SCHWERT'],
     ['RECHTSKLICK / Q', 'BOGEN'],
     ['SHIFT', 'ROLLE'],
-    ['F', 'SCHILD'],
+    ['F HALTEN', 'SCHILD'],
     ['H', 'HEILEN'],
     ['X / C', 'ULTRA/WECHSELN'],
     ['B / 1-4', 'SHOP / KAUFEN'],
@@ -4335,6 +4378,7 @@ placePct(pauseBtn, pauseBtnRect().x, pauseBtnRect().y, pauseBtnRect().w, pauseBt
 placePct(fsBtn, fsBtnRect().x, fsBtnRect().y, fsBtnRect().w, fsBtnRect().h);
 
 
+let hadFocus=document.hasFocus();
 let last=performance.now();
 const MAXSTEP=1/40;                       // groesster Simulationsschritt
 function frame(now){
@@ -4345,6 +4389,10 @@ function frame(now){
   let dt=(now-last)/1000; last=now;
   if(!(dt>0)) dt=1/60;
   if(dt>0.2) dt=0.2;
+  // Fokus weg (z.B. zum Chatten geklickt): gehaltene Tasten/Stick sofort loslassen, nie automatisch weiterlaufen
+  const hasF = document.hasFocus();
+  if(!hasF){ releaseAllKeys(); if(hadFocus && game.state==='play' && !game.paused) game.paused=true; }
+  hadFocus = hasF;
   let rest=dt;
   while(rest>0.00001){ const step=Math.min(rest, MAXSTEP); update(step); rest-=step; }
   render();

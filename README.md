@@ -37,7 +37,7 @@ damit sie zum Rest passen.
 | Maus | zielen |
 | Linksklick oder `Leertaste` | Schwerthieb |
 | Rechtsklick oder `Q` | Pfeil schießen (verbraucht einen Pfeil) |
-| `F` | Schild: fängt die nächsten 2 Treffer ab, danach 10 s Pause |
+| `F` (halten) | Schild: bleibt nur, solange du F hältst – höchstens 3 s und bis zu 3 Treffer |
 | `Shift` | Rolle (kurz unverwundbar, 2,8 s Wartezeit) |
 | `H` | heilen: ein ganzes Herz, alle 15 Sekunden |
 | `X` / `C` | Ultra auslösen / Ultra wechseln (ab Welle 10) |
@@ -119,12 +119,19 @@ gespeichert und gilt auch nach dem Neuladen.
   geht der Bildschirm aus, pausiert das Spiel von selbst und bleibt es,
   bis man es bewusst wieder freigibt.
 - **Pfeile**: Der Bogen ist nicht mehr unendlich. Zum Start gibt es 100
-  Pfeile (die Zahl steht am BOGEN-Balken), je 4 besiegte Bots kommen 5 dazu,
+  Pfeile (die Zahl steht am BOGEN-Balken), je 8 besiegte Bots kommen 5 dazu,
   jeder eingelöste Code bringt zusätzlich 50. Der Code `PFEILE` gibt 100
   Pfeile und 20 Schrauben. Ohne Pfeile meldet das Spiel „KEINE PFEILE".
-- **Schild (F)**: Eine leuchtende Blase um den Helden schluckt die nächsten
-  zwei Treffer komplett. Danach lädt sie 10 Sekunden lang nach (SCHILD-Balken).
-  Am Handy gibt es dafür die Taste SCHILD.
+- **Schild (F halten)**: Eine leuchtende Blase um den Helden schluckt bis zu 3
+  Treffer komplett – aber nur, solange du **F gedrückt hältst**, höchstens 3
+  Sekunden. Lässt du los, verschwindet das Schild sofort (kurze Sperre von 2 s).
+  Hält es 3 Treffer aus oder läuft die Zeit ab, lädt es 5 s nach (im Bosskampf
+  10 s; SCHILD-Balken). Am Handy: die Taste SCHILD gedrückt halten.
+- **Funken**: Der Held funkelt dezent in seiner Avatar-Farbe, im Stehen etwas
+  mehr; beim Schlagen kommen Luftwirbel dazu.
+- **Fokus**: Verliert das Spiel den Fokus (z. B. zum Chatten), werden alle
+  gehaltenen Tasten losgelassen und das Spiel pausiert – der Held läuft nie
+  von allein weiter.
 - **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 10 gibt es nach jeder
