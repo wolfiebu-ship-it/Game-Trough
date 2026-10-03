@@ -1030,6 +1030,10 @@ const THEMES = {
   },
   city: {
     id:'city', seed:777001, margin:{top:18,bot:10},
+    music:{ bpmRest:68, bpmWave:78, chords:[{root:73.42,notes:[0,3,7,10]},{root:98,notes:[0,4,7,10]},{root:65.41,notes:[0,4,7,11]},{root:110,notes:[0,4,7,10]}],
+            scale:[0,3,5,7,10], leadBase:392, leadType:'triangle', leadPeak:0.12, leadDur:1.3,
+            lead:[2,-1,-1,-1,3,-1,2,-1, -1,-1,0,-1,-1,1,-1,-1, 4,-1,-1,3,-1,-1,2,-1, -1,0,-1,-1,-1,-1,1,-1],
+            padType:'triangle', padPeak:0.09, bassType:'sine', bassPeak:0.42, bassSteps:[0,4], hat:0.015, swell:true },
     ground:{ dark:'#23262c', base:'#2d3036', mid:'#373b42', light:'#42464e', glade:'#5a5f68' },
     path:{ a:'#2f3238', b:'#26292e', c:'#1d1f23', edge:'light', edgeP:0.9 }, court:['#3a3f44','#474c52'],
     treeTries:900, treeCap:105, treeP:0.6, treeGlade:0.0, treePad:4, treeSpot:11, rockAvoid:30,
@@ -1226,7 +1230,7 @@ function buildWorld(id){
   const T=THEMES[id]||THEMES.forest, t0=performance.now();
   curTheme=T; curSkin=SKINS[T.id]||null;
   paintGround(T); plantWorld(T);
-  MUSIC.step=0;
+  if(AC) musicSwitch(T.music?T.id:'standard');
   if(typeof game!=='undefined'){ game.world=T.id; game.buildMs=Math.round(performance.now()-t0); }
 }
 
@@ -1586,7 +1590,7 @@ function readInput(){
 /* ------------------------------------------------------------------
    6. Ton: alles zur Laufzeit synthetisiert
    ------------------------------------------------------------------ */
-let AC=null, master=null, musicGain=null, sfxGain=null, muted=false;
+let AC=null, master=null, musicGain=null, sfxGain=null, muted=false, musicBus=null;
 // --- Einstellungen: Heldenname, Lautstaerken (0-10), Bildschirmwackeln ---
 const SETTINGS = { name:'', vol:10, music:5, sfx:10, shake:true };
 try{
@@ -1662,7 +1666,22 @@ const SFX = {
 
 // --- kleine Endlosmusik ---------------------------------------------
 const SCALE=[0,3,5,7,10];                                   // Moll-Pentatonik
-const MUSIC={ step:0, next:0 };
+const MUSIC={ step:0, next:0, key:null };
+// Jede Welt spielt ueber einen eigenen Kanal: beim Wechsel wird der alte sofort stumm
+// geschaltet (schon geplante Toene verstummen), der neue beginnt direkt mit dem ersten Takt.
+function musicOut(){
+  if(!musicBus){ musicBus=AC.createGain(); musicBus.connect(musicGain); }
+  return musicBus;
+}
+function musicSwitch(key){
+  MUSIC.key=key; MUSIC.step=0; MUSIC.next=0;
+  if(musicBus){
+    const old=musicBus, t=AC.currentTime;
+    old.gain.cancelScheduledValues(t); old.gain.setValueAtTime(old.gain.value,t); old.gain.linearRampToValueAtTime(0,t+0.04);
+    setTimeout(()=>{ try{ old.disconnect(); }catch(e){} },200);
+    musicBus=null;
+  }
+}
 // Rauschen fuer Wellen (langsames An-/Abschwellen) und leises Shaker-Ticken in der Musik
 function musicNoise(t, dur, peak, filt, q, atk){
   if(!noiseBuf){
@@ -1672,7 +1691,7 @@ function musicNoise(t, dur, peak, filt, q, atk){
   const src=AC.createBufferSource(); src.buffer=noiseBuf; src.loop=true;
   const f=AC.createBiquadFilter(); f.type=filt>3000?'highpass':'bandpass'; f.frequency.value=filt; f.Q.value=q;
   const g=AC.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(peak,t+atk); g.gain.linearRampToValueAtTime(0.0001,t+dur);
-  src.connect(f); f.connect(g); g.connect(musicGain); src.start(t); src.stop(t+dur+0.05);
+  src.connect(f); f.connect(g); g.connect(musicOut()); src.start(t); src.stop(t+dur+0.05);
 }
 // Eigene Musik je Welt (Strand: ruhig und weich; Eis: Glockenklaenge; Hoelle: tief und drohend)
 function musicTickThemed(c){
@@ -1680,7 +1699,7 @@ function musicTickThemed(c){
   while(MUSIC.next < AC.currentTime + 0.25){
     const t=Math.max(MUSIC.next, AC.currentTime+0.01), s=MUSIC.step%total, bar=Math.floor(s/8), st=s%8, ch=c.chords[bar];
     const osc=(type,f,a,d,peak)=>{ const o=AC.createOscillator(); o.type=type; o.frequency.setValueAtTime(f,t);
-      const g=env(o,t,a,d,peak); g.connect(musicGain); o.start(t); o.stop(t+a+d+0.1); };
+      const g=env(o,t,a,d,peak); g.connect(musicOut()); o.start(t); o.stop(t+a+d+0.1); };
     if(c.bassSteps.includes(st)) osc(c.bassType, ch.root*(st===4?1.5:1), 0.02, spb*3.2, c.bassPeak);
     if(st===0) for(const semi of ch.notes) osc(c.padType, ch.root*2*Math.pow(2,semi/12), spb*3.5, spb*6, c.padPeak);
     const deg=c.lead[s];
@@ -1694,6 +1713,8 @@ function musicTickThemed(c){
 function musicTick(){
   if(!AC||muted) return;
   const cfg = (game.state!=='title' && curTheme && curTheme.music) || null;
+  const mkey = cfg ? curTheme.id : 'standard';
+  if(MUSIC.key!==mkey) musicSwitch(mkey);
   if(cfg){ musicTickThemed(cfg); return; }
   const bpm = game.phase==='wave' ? (138 + Math.min(30, game.wave*2)) : 96;
   const spb = 60/bpm/2;
@@ -1702,12 +1723,12 @@ function musicTick(){
     const root = game.phase==='wave' ? 55 : 49;
     if(s%4===0){ const o=AC.createOscillator(); o.type='triangle';
       o.frequency.setValueAtTime(root*(s%16===8?1.5:1), t);
-      const g=env(o,t,0.01,spb*2.4,0.5); g.connect(musicGain); o.start(t); o.stop(t+spb*3); }
+      const g=env(o,t,0.01,spb*2.4,0.5); g.connect(musicOut()); o.start(t); o.stop(t+spb*3); }
     if(game.phase==='wave' && s%2===0){ noise(t,0.05,0.06,3000,1); }
     const deg=SCALE[(s*3)%SCALE.length] + (s%8<4?0:12);
     const o2=AC.createOscillator(); o2.type='square';
     o2.frequency.setValueAtTime(root*4*Math.pow(2,deg/12), t);
-    const g2=env(o2,t,0.008,spb*0.9,0.16); g2.connect(musicGain);
+    const g2=env(o2,t,0.008,spb*0.9,0.16); g2.connect(musicOut());
     o2.start(t); o2.stop(t+spb*1.2);
     MUSIC.next = t + spb; MUSIC.step = (s+1)%32;
   }
@@ -1738,6 +1759,7 @@ const LEVELS = [
   { n:4, target:20, label:'LEVEL 4',   world:'beach',  desc:'BIS WELLE 20 · SCHATTENFÜRST' },
   { n:5, target:1,  label:'ENDLEVEL',  world:'hell',   desc:'TEUFEL-KOLOSSUS', finalBoss:true }
 ];
+const UNLOCK_EVERY = 10;      // Endlos-Modus: alle 10 Wellen ein neues Level
 function getUnlockedLevel(){
   try{ return Math.max(1, Math.min(LEVELS.length, parseInt(localStorage.getItem('waldwacht_level')||'1',10)||1)); }
   catch(e){ return 1; }
@@ -1771,7 +1793,7 @@ function markDone(n){
 const levelDone = n => getDone().includes(n);
 function winLevel(){
   const n = game.levelMode;
-  unlockLevel(n+1); markDone(n);
+  markDone(n);
   game.state='levelwin'; game.levelWonN=n; game.winT=undefined;
   game.slow=0.5; shake(4); SFX.buy();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
@@ -2329,10 +2351,10 @@ function endWave(){
   rollCards();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
   if(!game.levelMode){
-    // Auch im Endlos-Modus: wer Welle 5/10/15/20 schafft, schaltet das naechste Level frei
+    // Im Endlos-Modus schaltet jede zehnte Welle (10/20/30/40) das naechste Level frei
     for(let i=0;i<LEVELS.length-1;i++){
       const nxt=LEVELS[i+1];
-      if(game.wave>=LEVELS[i].target){
+      if(game.wave>=UNLOCK_EVERY*(i+1)){
         markDone(LEVELS[i].n);
         if(getUnlockedLevel()<nxt.n){ unlockLevel(nxt.n); say(nxt.label+' FREIGESCHALTET', 2.2, PAL.y); }
       }
@@ -2968,7 +2990,7 @@ function tryTapCards(){
     for(let i=0;i<=LEVELS.length;i++) if(hitRect(tl, levelInfoRowRect(i))){
       if(i===LEVELS.length){ teleportToEndless(); return true; }
       if(LEVELS[i].n<=getUnlockedLevel()){ teleportToLevel(LEVELS[i].n); return true; }
-      SFX.no(); say('ERST ALLE LEVEL FREISCHALTEN (EINSTELLUNGEN)', 1.8, PAL.O); return true;
+      SFX.no(); say('GESPERRT · JE 10 WELLEN IM ENDLOS-SPIEL', 1.8, PAL.O); return true;
     }
   }
   // Anleitung/Level-Liste offen: jeder Tipp schliesst sie wieder (Knopf selbst = umschalten)
@@ -3876,7 +3898,7 @@ function drawLevelSelect(){
     const r = levelRowRect(i), ok = L.n<=unlocked, mx=r.x+r.w/2;
     panel(r.x, r.y, r.w, r.h, ok?'rgba(16,32,18,.92)':'rgba(12,14,13,.75)', ok?(L.finalBoss?PAL.R:PAL.H):'#3a3a3a');
     drawTextC(ctx, L.label+' · '+WORLD_LABEL[L.world]+(levelDone(L.n)?' · GESCHAFFT':''), mx, r.y+3, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
-    drawTextC(ctx, ok?L.desc:('ERST '+LEVELS[i-1].label+' SCHAFFEN'), mx, r.y+13, ok?'#9fb79a':'#5a5a5a', 1);
+    drawTextC(ctx, ok?L.desc:('WELLE '+UNLOCK_EVERY*i+' IM ENDLOS-SPIEL'), mx, r.y+13, ok?'#9fb79a':'#5a5a5a', 1);
   });
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
@@ -3913,7 +3935,7 @@ function drawHelp(){
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
 // --- Einstellungen: eigenes Fenster ueber Titel oder Spiel (Spiel steht solange) ---
-const SETP = { w:200, h:140 };
+const SETP = { w:200, h:124 };
 function setPanelRect(){ return { x:Math.round((VW-SETP.w)/2), y:Math.round((VH-SETP.h)/2), w:SETP.w, h:SETP.h }; }
 const SET_SLIDERS = [ ['vol','LAUTSTÄRKE'], ['music','MUSIK'], ['sfx','EFFEKTE'] ];
 function setRowY(i){ return setPanelRect().y+21+i*16; }          // 0 = Name, 1-3 Regler, 4 Wackeln
@@ -3922,7 +3944,6 @@ function setMinusRect(i){ return { x:setCtrlX(), y:setRowY(i)-2, w:11, h:11 }; }
 function setSegRect(i,n){ return { x:setCtrlX()+14+n*7, y:setRowY(i)-2, w:6, h:11 }; }
 function setPlusRect(i){ return { x:setCtrlX()+14+70+2, y:setRowY(i)-2, w:11, h:11 }; }
 function setShakeRect(){ return { x:setCtrlX(), y:setRowY(4)-2, w:30, h:11 }; }
-function setLevelsRect(){ return { x:setCtrlX(), y:setRowY(5)-2, w:84, h:11 }; }
 function setNameRect(){ return { x:setCtrlX(), y:setRowY(0)-3, w:97, h:13 }; }
 function setDoneRect(){ const p=setPanelRect(); return { x:Math.round(VW/2-30), y:p.y+p.h-19, w:60, h:13 }; }
 function settingsBtnTitleRect(){
@@ -3959,10 +3980,6 @@ function drawSettings(){
   const sr=setShakeRect(), on=SETTINGS.shake;
   panel(sr.x,sr.y,sr.w,sr.h, on?'rgba(26,46,26,.95)':'rgba(30,14,14,.95)', on?PAL.H:'#7a3a3a');
   drawTextC(ctx, on?'AN':'AUS', sr.x+sr.w/2, sr.y+2, on?PAL.l:'#e9a0a0', 1);
-  drawText(ctx,'ALLE LEVEL', lx, setRowY(5), '#cfe8c2', 1);
-  const lr=setLevelsRect(), all=getUnlockedLevel()>=LEVELS.length;
-  panel(lr.x,lr.y,lr.w,lr.h, all?'rgba(26,46,26,.95)':'rgba(46,40,10,.95)', all?PAL.H:PAL.y);
-  drawTextC(ctx, all?'ALLE FREI':'FREISCHALTEN', lr.x+lr.w/2, lr.y+2, all?PAL.l:PAL.y, 1);
   const d=setDoneRect();
   panel(d.x,d.y,d.w,d.h,'rgba(46,40,10,.95)',PAL.y);
   drawTextC(ctx,'FERTIG', VW/2, d.y+3, PAL.y, 1);
@@ -3979,7 +3996,6 @@ function updateSettings(){
       else for(let n=0;n<10;n++) if(hitRect(t,setSegRect(i,n))){ SETTINGS[key]=n+1; changed=true; }
     });
     if(hitRect(t,setShakeRect())){ SETTINGS.shake=!SETTINGS.shake; changed=true; }
-    if(hitRect(t,setLevelsRect()) && getUnlockedLevel()<LEVELS.length){ unlockLevel(LEVELS.length); SFX.buy(); }
     if(hitRect(t,setDoneRect()) || !hitRect(t,setPanelRect())) game.settingsOpen=false;
   }
   if(pressed.has('Escape')) game.settingsOpen=false;
@@ -4086,7 +4102,7 @@ function drawLevelWin(){
   }
   drawTextC(ctx, 'PUNKTE: '+game.score, VW/2, y+statY, PAL.y, 1);
   drawTextC(ctx, 'BESTE: '+game.best, VW/2, y+statY+11, '#9fb79a', 1);
-  if(!isEnd) drawTextC(ctx, 'LEVEL '+(n+1)+' IST JETZT FREI', VW/2, y+statY+25, '#cfe8c2', 1);
+  if(!isEnd && getUnlockedLevel()<=n) drawTextC(ctx, 'LEVEL '+(n+1)+': WELLE '+UNLOCK_EVERY*n+' IM ENDLOS', VW/2, y+statY+25, '#cfe8c2', 1);
   if(Math.floor(game.time*2)%2===0)
     drawTextC(ctx, isTouch?'TIPPEN: ZURÜCK ZUR AUSWAHL':'LEERTASTE: ZURÜCK ZUR AUSWAHL', VW/2, y+h+4, '#cfe8c2', 1);
 }

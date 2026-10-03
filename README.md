@@ -79,9 +79,6 @@ unter LEVEL) öffnet ein Fenster mit:
 - **Lautstärke**, **Musik** und **Effekte** getrennt, je 0–10 (über −/+ oder
   direkt auf den Balken tippen).
 - **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
-- **Alle Level**: der Knopf „FREISCHALTEN" öffnet alle fünf Level auf einmal
-  (zum Ausprobieren, ohne vorher Wellen schaffen zu müssen). „GESCHAFFT" steht
-  trotzdem nur bei Leveln, die du wirklich gewonnen hast.
 
 Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
 gespeichert und gilt auch nach dem Neuladen.
@@ -183,16 +180,22 @@ In den Welten **Eis, Strand und Hölle** hat jeder Gegner einen **roten
 Leben-Balken** über sich (nah dran steht zusätzlich die Zahl), damit man
 sofort sieht, dass es ein Gegner ist und wie viel Leben er noch hat.
 
-So schaltest du Level frei: Level 1 ist immer frei. Schaffst du Welle 5
-(Level 1 oder im Endlos-Modus), wird Level 2 frei; Welle 10 schaltet Level 3
-frei, Welle 15 Level 4, Welle 20 das Endlevel. **Teleportieren:** Im Spiel öffnet der Knopf LEVEL unter SUPERKRÄFTE! eine Liste;
+So schaltest du Level frei: Level 1 (und der **Endlos-Modus**, der im Wald
+spielt) ist immer frei und ganz normal spielbar. Im Endlos-Modus schaltet **jede
+zehnte Welle** das nächste Level frei: Welle 10 → Level 2, Welle 20 → Level 3,
+Welle 30 → Level 4, Welle 40 → Endlevel. Einen Knopf zum Freischalten gibt es
+nicht mehr. **Teleportieren:** Im Spiel öffnet der Knopf LEVEL unter SUPERKRÄFTE! eine Liste;
 tippe eine Zeile an (HIN), um sofort in dieses Level/diese Welt zu springen, oder
 „ENDLOS-SPIEL", um zurück in deinen Spielstand zu gehen. Ein laufendes Endlos-Spiel
-wird vorher automatisch gespeichert. Gesperrte Level lassen sich in den
-Einstellungen mit „ALLE LEVEL – FREISCHALTEN" öffnen.
+wird vorher automatisch gespeichert. Ein Level zu gewinnen setzt „GESCHAFFT",
+schaltet aber kein neues Level frei.
+
+**Musik:** Jede Welt hat ihre eigene Musik (Stadt: ruhiger Nacht-Jazz,
+Strand: chillig, Eis: sanft, Hölle: düster). Beim Levelwechsel wechselt die Musik
+sofort, ohne Verzögerung.
 
 Während eines Levels steht oben
-„LEVEL 1 · WELLE 3/5", gesperrte Level zeigen „ERST LEVEL … SCHAFFEN".
+„LEVEL 1 · WELLE 3/5", gesperrte Level zeigen „WELLE … IM ENDLOS-SPIEL".
 
 Level-Durchläufe nutzen einen eigenen Fortschrittsspeicher (höchstes
 freigeschaltetes Level) und rühren die drei Endlos-Spielstände nicht an.
