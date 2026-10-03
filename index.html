@@ -3078,7 +3078,8 @@ function tryTapCards(){
     for(let i=0;i<o.length;i++) if(hitRect(tl, ultraMenuRowRect(i))){
       player.ultraSel=i; game.ultraMenuOpen=false; game.ultraNameT=5; SFX.pick(); return true;
     }
-    if(!hitRect(tl, ultraMenuRect()) && !hitRect(tl, ultraBtnRect())) game.ultraMenuOpen=false;
+    if(!hitRect(tl, ultraMenuRect()) || hitRect(tl, ultraBtnRect())) game.ultraMenuOpen=false;   // Knopf nochmal = schliessen
+    if(hitRect(tl, ultraBtnRect())) SFX.pick();
     return true;
   }
   if(game.levelInfoOpen){                           // Zeile antippen = teleportieren
@@ -3873,14 +3874,23 @@ function drawHUD(){
   }
   if(game.msgT>0){
     const a=Math.min(1,game.msgT);
-    const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
+    const sc = textW(game.msg,2) <= VW-16 ? 2 : 1, K = sc>1 ? 0.78 : 1;
+    // Meldungen stehen UEBER dem Helden; lange Saetze werden auf zwei Zeilen umbrochen (nie ueber die Knoepfe links)
+    const maxW = 170/K;
+    let lines=[game.msg];
+    if(textW(game.msg,sc) > maxW){
+      const w=game.msg.split(' '); let best=1, bd=1e9;
+      for(let i=1;i<w.length;i++){ const d=Math.abs(textW(w.slice(0,i).join(' '),sc)-textW(w.slice(i).join(' '),sc)); if(d<bd){ bd=d; best=i; } }
+      lines=[w.slice(0,best).join(' '), w.slice(best).join(' ')];
+    }
     hudScaled(VW/2, 75, ()=>{
       ctx.globalAlpha=a;
-      const MY=86;                                                  // unter den Knopfreihen links, damit nichts in den Knoepfen liegt
-      const mw=textW(game.msg,sc)+10, mh=7*sc+6, K=sc>1?0.78:1;   // grosse Meldungen etwas kleiner
-      ctx.save(); ctx.translate(VW/2, MY+mh/2-3); ctx.scale(K,K); ctx.translate(-VW/2, -(MY+mh/2-3));
+      const MY=2, lh=7*sc+3, mh=lines.length*lh+3;
+      const mw=Math.max(...lines.map(l=>textW(l,sc)))+10;
+      ctx.save(); ctx.translate(VW/2, MY); ctx.scale(K,K); ctx.translate(-VW/2, -MY);
       ctx.fillStyle='rgba(8,14,10,.6)'; ctx.fillRect(Math.round(VW/2-mw/2), MY-3, mw, mh);   // dunkle Leiste: lesbar auf jedem Untergrund
-      drawTextC(ctx, game.msg, VW/2, MY, game.msgCol||PAL.y, sc); ctx.restore(); ctx.globalAlpha=1;
+      lines.forEach((l,i)=> drawTextC(ctx, l, VW/2, MY+i*lh, game.msgCol||PAL.y, sc));
+      ctx.restore(); ctx.globalAlpha=1;
     });
   }
   if(game.white>0){
