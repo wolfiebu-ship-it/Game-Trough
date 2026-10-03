@@ -46,6 +46,8 @@
     border:2px solid rgba(150,230,255,.55); color:#cfeeff; font-size:2.1vmin; }
   #healBtn { right:21vmin;  bottom:22vmin;  width:11vmin; height:11vmin;
     border:2px solid rgba(255,140,150,.6);  color:#ffc9cf; font-size:2.0vmin; }
+  #shieldBtn{ right:39vmin; bottom:4vmin; width:11vmin; height:11vmin;
+    border:2px solid rgba(95,215,255,.6); color:#c7f3ff; font-size:2.0vmin; }
   .abtn.cool{ opacity:.38; }
   #ultraBtn{ right:14vmin; bottom:40vmin; width:15vmin; height:15vmin;
     border:2px solid rgba(255,230,120,.75); color:#ffe66d;
@@ -102,6 +104,7 @@
       <div class="abtn" id="bowBtn">BOGEN</div>
       <div class="abtn" id="dashBtn">ROLLE</div>
       <div class="abtn" id="healBtn">HEILEN</div>
+      <div class="abtn" id="shieldBtn">SCHILD</div>
       <div class="abtn" id="ultraBtn">ULTRA</div>
     </div>
     <div id="pauseBtn"></div>
@@ -999,6 +1002,7 @@ function randomReward(){
 }
 const CODES = {
   FOREST: ()=>{ game.scrap += 100; return '+100 SCHRAUBEN'; },
+  PFEILE: ()=>{ game.scrap += 20; player.arrows += 100; return '+20 SCHRAUBEN, +100 PFEILE'; },
   WALDWACHT: ()=>{
     game.scrap += 250;
     if(!game.ultras.includes('wrath')){
@@ -1046,6 +1050,7 @@ function redeemCode(){
   if(!geber){ say('UNGÜLTIGER CODE', 1.6, PAL.R); SFX.no(); return; }
   game.usedCodes.add(code);
   say('CODE: '+geber(), 2.2, PAL.y); SFX.buy();
+  player.arrows += 50; floater(player.x, player.y-28, '+50 PFEILE', PAL.S);
   floater(player.x, player.y-20, code, PAL.y);
 }
 
@@ -1077,6 +1082,7 @@ bindBtn('swordBtn','__attack');
 bindBtn('bowBtn','__bow');
 bindBtn('dashBtn','__dash');
 bindBtn('healBtn','__heal');
+bindBtn('shieldBtn','__block');
 bindBtn('ultraBtn','__ultra');
 
 function readInput(){
@@ -1092,7 +1098,8 @@ function readInput(){
   IN.aimHeld = sticks.R.id!==null && Math.hypot(sticks.R.dx,sticks.R.dy)>0.25;
   if(IN.aimHeld) IN.aim=Math.atan2(sticks.R.dy,sticks.R.dx);
   IN.attackEdge = pressed.has('__attack')||pressed.has(' ')||pressed.has('j');
-  IN.bowEdge    = pressed.has('__bow')||pressed.has('q')||pressed.has('f');
+  IN.bowEdge    = pressed.has('__bow')||pressed.has('q');
+  IN.blockEdge  = pressed.has('__block')||pressed.has('f');
   IN.dashEdge   = pressed.has('__dash')||pressed.has('Shift')||pressed.has('l')||pressed.has('k');
   IN.healEdge   = pressed.has('__heal')||pressed.has('h')||pressed.has('r');
   IN.ultraEdge  = pressed.has('__ultra')||pressed.has('x');
@@ -1291,7 +1298,8 @@ function saveGame(){
     ultraMax:player.ultraMax, ultraGain:player.ultraGain, ultraSel:player.ultraSel,
     lifesteal:player.lifesteal, thorns:player.thorns, magnet:player.magnet,
     shieldMax:player.shieldMax, shieldEvery:player.shieldEvery, burn:player.burn, ice:player.ice,
-    extraArrows:player.extraArrows, greed:player.greed, revive:player.revive, upg:player.upg
+    extraArrows:player.extraArrows, greed:player.greed, revive:player.revive, upg:player.upg,
+    arrows:player.arrows, arrowKills:player.arrowKills
   });
   try{
     localStorage.setItem(key, payload);
@@ -1313,6 +1321,8 @@ const player = {
   ultra:0, ultraMax:100, ultraSel:0, stormT:0, stormTick:0, rainT:0, rainLeft:0, boltT:0, boltLeft:0,
   shield:0, shieldMax:0, shieldT:0, shieldEvery:18, burn:0, ice:0, extraArrows:0,
   greed:0, ultraGain:1, revive:0,
+  arrows:100, arrowKills:0,                // Pfeile sind begrenzt: 100 zum Start, +20 je 5 besiegte Bots
+  block:0, blockCd:0, blockCdMax:10,       // F-Schild: faengt 2 Treffer ab, danach 10 s Pause
   inv:0, anim:0, hurtT:0, alive:true,
   lifesteal:0, thorns:0, magnet:34,
   upg:{}
@@ -1323,6 +1333,7 @@ function resetPlayer(){
   player.swing=null; player.atkCd=0; player.dashT=0; player.dashCd=0; player.bowCd=0;
   player.healCd=0; player.regenT=0; player.stormT=0; player.rainT=0; player.rainLeft=0;
   player.boltLeft=0; player.boltT=0; player.wrathT=0; player.wrathTick=0; player.alive=true;
+  player.block=0; player.blockCd=0;
 }
 
 const BOT = {
@@ -1420,6 +1431,11 @@ function playerAttack(){
 }
 function playerShoot(){
   if(player.bowCd>0 || player.dashT>0 || player.swing || !player.alive) return;
+  if(player.arrows<=0){
+    if(!(game.noArrowT>0)){ say('KEINE PFEILE - BESIEGE BOTS', 1.4, PAL.O); SFX.no(); game.noArrowT=1.5; }
+    return;
+  }
+  player.arrows--;                                       // ein Pfeil je Schuss (auch bei Doppelschuss)
   player.bowCd = player.bowCdMax; player.shootT = 0.2;
   const a=player.aim, n=1+player.extraArrows;
   for(let i=0;i<n;i++){
@@ -1430,6 +1446,14 @@ function playerShoot(){
   }
   player.vx -= Math.cos(a)*18; player.vy -= Math.sin(a)*18;      // kleiner Rueckstoss
   SFX.bow();
+}
+function playerBlock(){
+  if(!player.alive) return;
+  if(player.block>0) return;                             // steht schon
+  if(player.blockCd>0){ SFX.no(); floater(player.x, player.y-20, 'SCHILD LÄDT', '#7f927b'); return; }
+  player.block=2;
+  SFX.heal(); floater(player.x, player.y-20, 'SCHILD', PAL.C);
+  burst(player.x, player.y-7, 14, PAL.C, 70, 0.45);
 }
 function playerHeal(){
   if(!player.alive || player.healCd>0) return;
@@ -1449,6 +1473,13 @@ function playerDash(){
 }
 function hurtPlayer(dmg, fromX, fromY){
   if(player.inv>0 || !player.alive) return;
+  if(player.block>0){                                   // F-Schild faengt den Treffer komplett ab
+    player.block--; player.inv=0.6;
+    burst(player.x, player.y-7, 18, PAL.C, 90, 0.5); SFX.hit(); shake(0.8);
+    if(player.block===0){ player.blockCd=player.blockCdMax; floater(player.x, player.y-20, 'SCHILD WEG', PAL.O); }
+    else floater(player.x, player.y-20, 'BLOCK', PAL.C);
+    return;
+  }
   if(player.shield>0){                                  // Schutzschild faengt den Schlag
     player.shield--; player.shieldT=0; player.inv=0.8;
     burst(player.x, player.y-7, 16, PAL.C, 80, 0.5);
@@ -1486,6 +1517,10 @@ function damageEnemy(e, dmg, kb, ang, heavy){
 function killEnemy(e){
   e.dead=true;
   game.kills++; game.score += e.d.score; chargeUltra(e.d.boss?40:5);
+  if(++player.arrowKills>=5){                           // alle 5 besiegten Bots: Pfeil-Nachschub
+    player.arrowKills=0; player.arrows+=20;
+    floater(player.x, player.y-26, '+20 PFEILE', PAL.S);
+  }
   burst(e.x, e.y-e.r, e.d.boss?46:16, PAL.M, e.d.boss?150:80, 0.6, e.d.boss?2:1);
   burst(e.x, e.y-e.r, e.d.boss?26:8, PAL.C, 70, 0.5);
   burst(e.x, e.y-e.r, 6, PAL.O, 60, 0.45);
@@ -1867,7 +1902,7 @@ function newGame(slot){
     healCdMax:15, healCd:0, regenT:0, regenEvery:5,
     ultra:0, ultraSel:0, stormT:0, rainT:0, rainLeft:0, boltLeft:0, boltT:0,
     shield:0, shieldMax:0, shieldT:0, shieldEvery:18, burn:0, ice:0, extraArrows:0,
-    greed:0, ultraGain:1, revive:0,
+    greed:0, ultraGain:1, revive:0, arrows:100, arrowKills:0,
     lifesteal:0, thorns:0, magnet:34, upg:{}, combo:0 });
   resetPlayer(); rollCards();
 }
@@ -1890,7 +1925,8 @@ function continueGame(slot){
     ultraGain:d.ultraGain??1, ultraSel:d.ultraSel||0,
     lifesteal:d.lifesteal||0, thorns:d.thorns||0, magnet:d.magnet??34,
     shieldMax:d.shieldMax||0, shieldEvery:d.shieldEvery??18, burn:d.burn||0, ice:d.ice||0,
-    extraArrows:d.extraArrows||0, greed:d.greed||0, revive:d.revive||0, upg:d.upg||{}
+    extraArrows:d.extraArrows||0, greed:d.greed||0, revive:d.revive||0, upg:d.upg||{},
+    arrows:d.arrows??100, arrowKills:d.arrowKills||0
   });
   resetPlayer();                                // setzt Position und Herzen auf voll
   player.shield = player.shieldMax;
@@ -1964,6 +2000,9 @@ function updatePlayer(dt){
   if(IN.bowEdge){ assist(150, 0.9); playerShoot(); }
   if(IN.dashEdge) playerDash();
   if(IN.healEdge) playerHeal();
+  if(IN.blockEdge) playerBlock();
+  if(p.block<=0) p.blockCd=Math.max(0,p.blockCd-dt);
+  game.noArrowT=Math.max(0,(game.noArrowT||0)-dt);
   // Schutzschild laedt sich nach
   if(p.shieldMax>0 && p.shield<p.shieldMax){
     p.shieldT+=dt;
@@ -2320,7 +2359,7 @@ function shopBtnRect(){ return { x:VW-52, y:VH-22, w:48, h:16 }; }   // HUD-Koor
 const ULTRA_LABEL = 'SUPERKRÄFTE!';
 function ultraBtnRect(){
   if(!ownedUltras().length) return null;
-  return { x:4, y:53, w:textW(ULTRA_LABEL,1)+14, h:11 };   // +14 fuer das Blitzsymbol
+  return { x:4, y:63, w:textW(ULTRA_LABEL,1)+14, h:11 };   // +14 fuer das Blitzsymbol
 }
 // Aufgeklappte Listen erscheinen rechts neben ihrem Knopf, damit sie die
 // Knoepfe darunter nicht verdecken.
@@ -2335,7 +2374,7 @@ function ultraMenuRowRect(i){
 // Knoepfe untereinander, gleich breit wie SUPERKRAEFTE! (bzw. an dessen
 // Stelle, solange es noch kein Ultra gibt).
 const HUD_BTN_W = textW('EINSTELLUNGEN',1)+17;
-function hudBtnRowY(){ const u=ultraBtnRect(); return u ? u.y+u.h+2 : 45; }
+function hudBtnRowY(){ const u=ultraBtnRect(); return u ? u.y+u.h+2 : 55; }
 function guideBtnRect(){
   if(isTouch) return null;                         // Tastenliste gilt nur fuer Tastatur/Maus
   return { x:4, y:hudBtnRowY(), w:HUD_BTN_W, h:11 };
@@ -2349,7 +2388,7 @@ function settingsHudBtnRect(){
   return { x:4, y:l.y+l.h+2, w:HUD_BTN_W, h:11 };
 }
 // Ultra-Leiste selbst antippbar: loest das Ultra aus (fuer Maus-Spieler)
-function ultraBarRect(){ return activeUltra() ? { x:2, y:43, w:66, h:9 } : null; }
+function ultraBarRect(){ return activeUltra() ? { x:2, y:53, w:66, h:9 } : null; }
 function closeHudMenus(){ game.ultraMenuOpen=false; game.guideOpen=false; game.levelInfoOpen=false; }
 function cardRects(){
   if(!game.shopOpen) return [];
@@ -2616,6 +2655,19 @@ function drawHeroName(){
   drawText(ctx, n, -Math.round(textW(n,1)/2), 0, '#e9f5dc', 1);
   ctx.restore();
 }
+// F-Schild: leuchtende Blase um den Helden; mit nur noch einer Ladung luechenhaft
+function drawBlockBubble(){
+  const p=player; if(p.block<=0 || !p.alive) return;
+  const cx=p.x, cy=p.y-7, r=11+Math.sin(game.time*6)*0.6, steps=40;
+  ctx.globalAlpha = p.block>1 ? 0.85 : 0.55;
+  for(let i=0;i<steps;i++){
+    if(p.block===1 && i%3===0) continue;
+    const a=i/steps*TAU + game.time*1.5;
+    ctx.fillStyle = i%5===0 ? '#ffffff' : PAL.C;
+    ctx.fillRect(Math.round(cx+Math.cos(a)*r), Math.round(cy+Math.sin(a)*r*0.9), 1, 1);
+  }
+  ctx.globalAlpha=1;
+}
 function drawPlayer(){
   const p=player;
   shadow(p.x, p.y, 11);
@@ -2648,6 +2700,7 @@ function drawPlayer(){
   }
   const blink = p.inv>0 && Math.floor(p.inv*18)%2===0;
   if(!blink) drawSpr(s, px, py, p.flip, p.hurtT>0);
+  drawBlockBubble();
   if(!behind && !p.swing){ pxLine(hx,hy+1,tipx,tipy+1,PAL.K); pxLine(hx,hy,tipx,tipy,PAL.w); }
 }
 function drawEnemy(e){
@@ -2965,7 +3018,8 @@ const GUIDE_ROWS = [
   [['KLICK','SCHWERT'], ['C','WECHSELN']],
   [['Q','BOGEN'], ['B','SHOP']],
   [['SHIFT','ROLLE'], ['P','PAUSE']],
-  [['H','HEILEN'], ['M','TON']]
+  [['H','HEILEN'], ['M','TON']],
+  [['F','SCHILD'], ['','']]
 ];
 function guideMenuRect(){
   const b=guideBtnRect();
@@ -3007,13 +3061,18 @@ function drawHUD(){
     drawSchild();
     drawRegen();
     bar(4, 15, 22, 1-player.dashCd/player.dashCdMax, player.dashCd>0?'#3a4a3a':PAL.C, 'ROLLE', player.dashCd>0);
-    bar(4, 25, 22, 1-player.bowCd/player.bowCdMax,   player.bowCd>0 ?'#4a4030':PAL.O, 'BOGEN', player.bowCd>0);
+    const noArrows = player.arrows<=0;
+    bar(4, 25, 22, noArrows?0:1-player.bowCd/player.bowCdMax, player.bowCd>0 ?'#4a4030':PAL.O, 'BOGEN '+player.arrows, player.bowCd>0||noArrows);
+    if(noArrows) drawText(ctx, 'BOGEN '+player.arrows, 29, 23, PAL.r, 1);
     bar(4, 35, 22, 1-player.healCd/player.healCdMax, player.healCd>0?'#4a3038':PAL.R, 'HEILEN', player.healCd>0);
+    const bl=player.block;
+    bar(4, 45, 22, bl>0 ? 1 : 1-player.blockCd/player.blockCdMax, bl>0?PAL.C:(player.blockCd>0?'#2a4048':'#5fb7cf'),
+        bl>0 ? 'SCHILD x'+bl : 'SCHILD', bl<=0 && player.blockCd>0);
     const u=activeUltra();
     if(u){
       const full=player.ultra>=player.ultraMax;
       const pulse = full && Math.floor(game.time*4)%2===0;
-      bar(4, 45, 30, player.ultra/player.ultraMax, full?(pulse?'#fff3c4':PAL.y):PAL.p, 'ULTRA', !full);
+      bar(4, 55, 30, player.ultra/player.ultraMax, full?(pulse?'#fff3c4':PAL.y):PAL.p, 'ULTRA', !full);
       const r=ultraBtnRect();
       panel(r.x, r.y, r.w, r.h, game.ultraMenuOpen?'rgba(46,40,10,.95)':(full?'rgba(46,40,10,.92)':'rgba(10,18,12,.9)'),
         full||game.ultraMenuOpen?PAL.y:'#4a4a4a');
@@ -3219,6 +3278,7 @@ function helpRows(){
     ['LINKSKLICK/LEERTASTE', 'SCHWERT'],
     ['RECHTSKLICK / Q', 'BOGEN'],
     ['SHIFT', 'ROLLE'],
+    ['F', 'SCHILD'],
     ['H', 'HEILEN'],
     ['X / C', 'ULTRA/WECHSELN'],
     ['B / 1-4', 'SHOP / KAUFEN'],
@@ -3238,7 +3298,6 @@ function drawHelp(){
     drawText(ctx, k, keyX, ry, PAL.y, 1);
     drawText(ctx, a, actX, ry, '#cfe8c2', 1);
   });
-  drawTextC(ctx, 'HANDY: DAUMENSTICKS + TASTEN', VW/2, p.y+p.h-18, '#7f927b', 1);
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
 // --- Einstellungen: eigenes Fenster ueber Titel oder Spiel (Spiel steht solange) ---
@@ -3359,6 +3418,7 @@ function drawPause(){
 
 const btnDash=document.getElementById('dashBtn'), btnHeal=document.getElementById('healBtn');
 const btnUltra=document.getElementById('ultraBtn');
+const btnShield=document.getElementById('shieldBtn');
 function render(){
   ctx.setTransform(SS,0,0,SS,0,0);
   ctx.imageSmoothingEnabled=false;
@@ -3384,6 +3444,7 @@ function render(){
   if(warVersteckt && !codeBox.hidden) sizeCodeBoxFont();   // Groesse war beim Verstecken 0
   if(btnDash) btnDash.classList.toggle('cool', player.dashCd>0);
   if(btnHeal) btnHeal.classList.toggle('cool', player.healCd>0 || player.hp>=player.maxHp);
+  if(btnShield) btnShield.classList.toggle('cool', player.block<=0 && player.blockCd>0);
   touchUI.classList.toggle('hasUltra', ownedUltras().length>0);
   if(btnUltra) btnUltra.classList.toggle('cool', !ultraReady());
   ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH);

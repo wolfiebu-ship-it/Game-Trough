@@ -36,7 +36,8 @@ damit sie zum Rest passen.
 | `W A S D` / Pfeile | laufen (frei, analog — kein Raster) |
 | Maus | zielen |
 | Linksklick oder `Leertaste` | Schwerthieb |
-| Rechtsklick oder `Q` | Pfeil schießen |
+| Rechtsklick oder `Q` | Pfeil schießen (verbraucht einen Pfeil) |
+| `F` | Schild: fängt die nächsten 2 Treffer ab, danach 10 s Pause |
 | `Shift` | Rolle (kurz unverwundbar, 2,8 s Wartezeit) |
 | `H` | heilen: ein ganzes Herz, alle 15 Sekunden |
 | `X` / `C` | Ultra auslösen / Ultra wechseln (ab Welle 10) |
@@ -112,6 +113,13 @@ gespeichert und gilt auch nach dem Neuladen.
   tut nichts mehr. Wechselt man die App, verliert das Fenster den Fokus oder
   geht der Bildschirm aus, pausiert das Spiel von selbst und bleibt es,
   bis man es bewusst wieder freigibt.
+- **Pfeile**: Der Bogen ist nicht mehr unendlich. Zum Start gibt es 100
+  Pfeile (die Zahl steht am BOGEN-Balken), je 5 besiegte Bots kommen 20 dazu,
+  jeder eingelöste Code bringt zusätzlich 50. Der Code `PFEILE` gibt 100
+  Pfeile und 20 Schrauben. Ohne Pfeile meldet das Spiel „KEINE PFEILE".
+- **Schild (F)**: Eine leuchtende Blase um den Helden schluckt die nächsten
+  zwei Treffer komplett. Danach lädt sie 10 Sekunden lang nach (SCHILD-Balken).
+  Am Handy gibt es dafür die Taste SCHILD.
 - **Ruhephase**: Nach jeder Welle bleiben 5 Sekunden. Im Burghof heilst du dich,
   eingesammelte Schrauben gibst du im Shop aus. Solange das Werkstattfenster
   offen ist, läuft die Ruhezeit nicht weiter. Ab Welle 10 gibt es nach jeder
