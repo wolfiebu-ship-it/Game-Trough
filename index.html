@@ -1032,8 +1032,8 @@ const THEMES = {
     id:'city', seed:777001, margin:{top:18,bot:10},
     ground:{ dark:'#23262c', base:'#2d3036', mid:'#373b42', light:'#42464e', glade:'#5a5f68' },
     path:{ a:'#2f3238', b:'#26292e', c:'#1d1f23', edge:'light', edgeP:0.9 }, court:['#3a3f44','#474c52'],
-    treeTries:900, treeCap:105, treeP:0.6, treeGlade:0.0, treePad:4, treeSpot:11, treeSolid:true,
-    rockN:46, bushN:70, stumpN:44, tint:['#10182a',0.10],
+    treeTries:900, treeCap:105, treeP:0.6, treeGlade:0.0, treePad:4, treeSpot:11, rockAvoid:30,
+    rockN:110, bushN:70, stumpN:44, tint:['#10182a',0.10],
     pixel(x,y,n,gl){ if(gl>0){ if(x%9===0||y%9===0) return [0x49,0x4e,0x56]; return n>0.5?[0x65,0x6a,0x74]:[0x5a,0x5f,0x68]; } return null; },
     sprites:()=>({ trees:[0,1,2,3,4,5].map(makeBuilding), rocks:[0,1,2,3].map(makeCar), bushes:[0,1,2].map(makeHedge), stumps:[makeLamp(),makeLamp()] }),
     decor(g,R){
@@ -1120,7 +1120,7 @@ const THEMES = {
     path:{ a:'#483e40', b:'#3b3234', c:'#2b2224' }, court:['#4a1e18','#6a2a1c'],
     treeTries:560, treeCap:120, treeP:0.5, treeGlade:0.04, treePad:4, treeSpot:5,
     rockN:90, bushN:80, stumpN:30, tint:['#7a1010',0.12], ambient:'embers',
-    music:{ bpmRest:92, bpmWave:118, chords:[{root:55,notes:[0,3,7]},{root:58.27,notes:[0,3,7]},{root:55,notes:[0,3,6]},{root:51.91,notes:[0,3,7]}],
+    music:{ bpmRest:104, bpmWave:104, chords:[{root:55,notes:[0,3,7]},{root:58.27,notes:[0,3,7]},{root:55,notes:[0,3,6]},{root:51.91,notes:[0,3,7]}],
             scale:[0,1,3,6,7], leadBase:220, leadType:'square', leadPeak:0.06, leadDur:0.35,
             lead:[-1,-1,2,-1,-1,-1,0,-1, -1,3,-1,-1,1,-1,-1,-1, -1,-1,4,-1,-1,2,-1,-1, 0,-1,-1,1,-1,-1,3,-1],
             padType:'sawtooth', padPeak:0.05, bassType:'sawtooth', bassPeak:0.34, bassSteps:[0,2,4,6], hat:0.05, swell:false },
@@ -1160,7 +1160,7 @@ const spots=[];          // nur fuer den Abstand beim Pflanzen, keine Kollision
 function plantWorld(T){
   props.length=0; solids.length=0; bushes.length=0; spots.length=0;
   if(!T._spr) T._spr=T.sprites();
-  const S=T._spr, R=mulberry(T.seed), M=T.margin;
+  const S=T._spr, R=mulberry(T.seed), M=T.margin, treeSpots=[];
   const free=(x,y,pad)=>{
     if(x<14||x>WW-14||y<M.top||y>WH-M.bot) return false;
     if(inRect(x,y,{x:CAS.x-22,y:CAS.y-26,w:CAS.w+44,h:CAS.h+46})) return false;
@@ -1179,11 +1179,12 @@ function plantWorld(T){
     // Deckung, keine Mauer (ausser Haeuser): man laeuft hindurch, sie werden dabei blass
     props.push({img:t.img, ghost:t.ghost, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'tree'});
     if(T.treeSolid) for(const dx of t.solidX) solids.push({x:x+dx, y:y-2, r:5});
-    spots.push({x, y:y-1, r:T.treeSpot});
+    spots.push({x, y:y-1, r:T.treeSpot}); treeSpots.push({x, y});
   }
   for(let i=0;i<T.rockN;i++){                               // Felsen, Autos, Eiskristalle ...
     const x=10+R()*(WW-20), y=24+R()*(WH-32);
     if(!free(x,y,2)) continue;
+    if(T.rockAvoid && treeSpots.some(q=>dist2(x,y,q.x,q.y) < T.rockAvoid*T.rockAvoid)) continue;   // z.B. Autos nicht dicht an Haeusern
     const t=S.rocks[Math.floor(R()*S.rocks.length)];
     props.push({img:t.img, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'rock'});
     for(const dx of (t.solidX||[0])) solids.push({x:x+dx, y, r:5});
@@ -1864,7 +1865,7 @@ const BOT = {
   shadow: {name:'SCHATTENFÜRST', spr:SPR.shadow, hp:260,dmg:6, speed:34, r:14, range:22, windup:0.5, cd:1.2, scrap:60, score:560, kbR:0.06, aggro:999, boss:true, bossKind:'shadow',   gateDmg:8},
   // Endlevel-Endgegner: fester Wert statt Wellen-Skalierung, damit der Kampf
   // immer gleich hart bleibt - drei Angriffsarten im Wechsel, siehe strike().
-  ultra: {name:'TEUFEL-KOLOSSUS', spr:SPR.ultra, hp:1400,dmg:9, speed:26, r:20, range:34, windup:0.6, cd:1.25, scrap:400, score:5000, kbR:0.015, aggro:999, boss:true, bossKind:'ultra', gateDmg:16, scale:1.4}
+  ultra: {name:'TEUFEL-KOLOSSUS', spr:SPR.ultra, hp:2800,dmg:10, speed:36, r:20, range:36, windup:0.42, cd:0.85, scrap:400, score:5000, kbR:0.012, aggro:999, boss:true, bossKind:'ultra', gateDmg:20, scale:1.4}
 };
 
 const enemies=[], bullets=[], parts=[], drops=[], slashes=[], waves=[], floaters=[], blitze=[], roots=[];
@@ -1878,14 +1879,15 @@ const SKINS = {
            archer:{name:'QUALLE',spr:SPR.sQualle},         bruiser:{name:'RIESENSEESTERN',spr:SPR.sRiesenstern},
            bomber:{name:'SEEIGEL',spr:SPR.sSeeigel} },
   hell:  { scout:{name:'TEUFELCHEN',spr:SPR.sTeufelchen},  blade:{name:'DÄMON',spr:SPR.sDaemon},
-           archer:{name:'HÖLLENSCHÜTZE',spr:SPR.sHoellenSchuetze}, bruiser:{name:'HÖLLENBRECHER',spr:SPR.sHoellenBrecher},
+           archer:{name:'HÖLLENSCHÜTZE',spr:SPR.sHoellenSchuetze},
+           bruiser:{name:'HÖLLENBRECHER',spr:SPR.sHoellenBrecher, hp:90, dmg:4, speed:32, windup:0.5, cd:1.1, scrap:8, score:90},
            bomber:{name:'FEUERZÜNDER',spr:SPR.sFeuerzuender} }
 };
 let curSkin=null;
 function botDef(type){
   const base=BOT[type], sk=curSkin && curSkin[type];
   if(!sk) return base;
-  return sk.d || (sk.d=Object.assign({}, base, {name:sk.name, spr:sk.spr}));
+  return sk.d || (sk.d=Object.assign({}, base, sk));
 }
 function spawnEnemy(type, x, y){
   const d=botDef(type);
@@ -2712,12 +2714,12 @@ function updateEnemies(dt){
     // --- Boss ruft Verstaerkung ---
     if(e.d.boss){
       const isUltra = e.d.bossKind==='ultra';
-      e.callT=(e.callT||(isUltra?4:6))-dt;
-      if(e.callT<=0 && enemies.filter(x=>!x.dead).length<44){
+      e.callT=(e.callT||(isUltra?2.5:6))-dt;
+      if(e.callT<=0 && enemies.filter(x=>!x.dead).length<(isUltra?13:44)){
         const wut = e.hp < e.hpMax*0.5;
         const ruf = (e.d.bossKind==='golem'||isUltra) ? 'bruiser' : 'scout';
-        e.callT = isUltra ? (wut?3:4) : (wut?5:7);
-        for(let i=0;i<(wut?3:2)+(isUltra?1:0);i++) spawnEnemy(ruf, e.x+rr(-24,24), e.y+rr(-16,16));
+        e.callT = isUltra ? (wut?2.2:3) : (wut?5:7);
+        for(let i=0;i<(isUltra ? (wut?4:3) : (wut?3:2));i++) spawnEnemy(ruf, e.x+rr(-24,24), e.y+rr(-16,16));
         burst(e.x,e.y-10,14,PAL.C,70,0.5);
       }
     }
@@ -2772,22 +2774,22 @@ function strike(e, onPlayer, gd){
         shocks.push({x:e.x, y:e.y+2, r:5, max:wutU?58:44, t:0, col:PAL.y});
         shake(4.5); SFX.boom();
         burst(e.x,e.y+2, wutU?44:32, PAL.y, 130, 0.6);
-        const rad = wutU?88:70;
+        const rad = wutU?96:78;
         if(player.alive && dpU<rad) hurtPlayer(e.dmg, e.x, e.y);
         if(gd.d<rad-16) damageCastle(d.gateDmg, gd.x, gd.y);
       } else if(e.atkCycle===1){
-        const n = wutU?11:8, speed=wutU?98:80;
+        const n = wutU?15:11, speed=wutU?112:92;
         const basis = Math.atan2((player.y-6)-(e.y-14), player.x-e.x);
         for(let i=0;i<n;i++){
           const a = basis + (i-(n-1)/2) * (1.15/Math.max(1,n-1));
           bullets.push({ x:e.x+Math.cos(a)*13, y:e.y-14+Math.sin(a)*11,
-            vx:Math.cos(a)*speed, vy:Math.sin(a)*speed, dmg:3, t:0, col:PAL.y });
+            vx:Math.cos(a)*speed, vy:Math.sin(a)*speed, dmg:4, t:0, col:PAL.y });
         }
         SFX.shoot(); SFX.heavy(); shake(1.6);
       } else {
         const tx=player.alive?player.x:gd.x, ty=player.alive?player.y:gd.y;
         const a0=Math.atan2(ty-e.y, tx-e.x);
-        e.x += Math.cos(a0)*(wutU?40:30); e.y += Math.sin(a0)*(wutU?40:30);
+        e.x += Math.cos(a0)*(wutU?48:38); e.y += Math.sin(a0)*(wutU?48:38);
         collideWorld(e,true);
         burst(e.x,e.y-10,26,PAL.y,120,0.45);
         slashes.push({x:e.x,y:e.y-10,ang:a0,arc:wutU?3.4:2.8,reach:38,t:0,dur:0.22,heavy:true});
@@ -3292,11 +3294,19 @@ function drawEnemy(e){
   if(e.spawnT>0){ ctx.globalAlpha=0.35+0.65*(1-e.spawnT/0.35); }
   drawSpr(s, x, y, e.flip, flash, scale);
   ctx.globalAlpha=1;
-  // Lebensbalken fuer dicke Brocken
-  if((e.d.boss || e.hpMax>30) && e.hp<e.hpMax){
-    const w=Math.round(s.w*scale*0.9), bx=Math.round(e.x-w/2), by=Math.round(y-4);
+  // Lebensbalken: bei dicken Brocken sobald verletzt, in den Tierwelten (Eis, Strand, Hoelle) immer
+  const showBar = (e.d.boss || e.hpMax>30) ? e.hp<e.hpMax : !!curSkin;
+  if(showBar && e.spawnT<=0){
+    const w=Math.max(12, Math.round(s.w*scale*0.9)), bx=Math.round(e.x-w/2), by=Math.round(y-4);
     ctx.fillStyle='#141019'; ctx.fillRect(bx-1,by-1,w+2,4);
-    ctx.fillStyle=PAL.r; ctx.fillRect(bx,by,Math.round(w*e.hp/e.hpMax),2);
+    ctx.fillStyle='#3a1d22'; ctx.fillRect(bx,by,w,2);
+    ctx.fillStyle=PAL.r; ctx.fillRect(bx,by,Math.round(w*clamp(e.hp/e.hpMax,0,1)),2);
+    ctx.fillStyle=PAL.R; ctx.fillRect(bx,by,Math.round(w*clamp(e.hp/e.hpMax,0,1)),1);
+    if(curSkin && !e.d.boss && dist2(e.x,e.y,player.x,player.y) < 110*110){     // genaue Zahl bei den Nahen
+      ctx.save(); ctx.translate(Math.round(e.x), by-6); ctx.scale(HUDK,HUDK);
+      drawTextC(ctx, String(Math.max(0,Math.ceil(e.hp))), 0, 0, '#ffffff', 1);
+      ctx.restore();
+    }
   }
 }
 function drawBlitz(b){
@@ -3988,11 +3998,14 @@ function overChoiceRects(){
 }
 /* --- Leben der Welten: Farbstich, Schnee, Glut, Moewen (alles in Pixeln) ------ */
 function drawBirds(){
+  // Nur wenige Moewen gleichzeitig: jede fliegt einmal quer durchs Bild und pausiert dann lange
   const t=game.time;
-  for(let i=0;i<8;i++){
-    const big=i%3===0, sc=big?2:1, dir=i%2?1:-1, sp=(big?15:10)+(i%4)*3, span=VW+70;
-    const X=Math.round((((hash2(i,3,9)*span + dir*t*sp) % span)+span)%span - 35);
-    const Y=Math.round(7+((i*19)%48)+Math.sin(t*1.3+i*2)*2.5);
+  for(let i=0;i<4;i++){
+    const big=i%2===0, sc=big?2:1, dir=i%2?1:-1, sp=(big?19:25)+i*2, span=VW+70, cross=span/sp;
+    const wait=40+((i*7)%4)*15, u=(t+i*13.1)%(cross+wait);
+    if(u>cross) continue;
+    const frac=u/cross, X=Math.round(dir>0 ? -35+frac*span : VW+35-frac*span);
+    const Y=Math.round(8+((i*19)%40)+Math.sin(t*1.3+i*2)*2.5);
     const up=Math.floor(t*(big?4:5)+i*1.7)%2===0;
     const px=(dx,dy,col)=>{ ctx.fillStyle=col; ctx.fillRect(X+dx*sc, Y+dy*sc, sc, sc); };
     const wing = up ? [[-3,-1],[-2,0],[-1,0],[1,0],[2,0],[3,-1]] : [[-3,1],[-2,0],[-1,0],[1,0],[2,0],[3,1]];
@@ -4206,7 +4219,7 @@ function frame(now){
 requestAnimationFrame(frame);
 
 // Zum Herumprobieren in der Konsole
-window.WALDWACHT = { game, player, enemies, BOT, UPGRADES, spawnEnemy, startWave, buildWorld };
+window.WALDWACHT = { game, player, enemies, BOT, UPGRADES, spawnEnemy, startWave, buildWorld, props, solids };
 })();
 // Installierbare App (Zum Home-Bildschirm): Service Worker nur registrieren,
 // wenn ueber http(s) geladen - bei einer lokal geoeffneten Datei (file://)

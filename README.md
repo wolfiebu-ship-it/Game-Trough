@@ -168,15 +168,20 @@ frei oder noch gesperrt sind.
 | Level | Welt | Ziel | Gegner |
 |---|---|---|---|
 | 1 | **Wald** | Welle 5 (Kolossus) | die normalen Schrott-Bots |
-| 2 | **Stadt** bei Nacht: Straße, Häuser, Autos, Laternen | Welle 10 (Glutgolem) | Schrott-Bots |
+| 2 | **Stadt** bei Nacht: Straße, Häuser (man kann komplett hindurchlaufen), Autos mit Abstand zu den Häusern, Laternen | Welle 10 (Glutgolem) | Schrott-Bots |
 | 3 | **Eisberge**: Schnee, Kiefern, Eiskristalle, Schneefall | Welle 15 (Frostkoloss) | Eiswölfe, Alphawölfe, Pinguine, Eisbären, Schneemänner |
-| 4 | **Strand**: Sand, Palmen, Meer, Möwen am Himmel, ruhige Musik | Welle 20 (Schattenfürst) | Seesterne, Krabben, Quallen, Riesenseesterne, Seeigel |
-| 5 | **Hölle** (Endlevel): Lava, tote Bäume, Schädel, Glut | nur der **Teufel-Kolossus** | Teufelchen, Dämonen, Höllenschützen, Höllenbrecher, Feuerzünder |
+| 4 | **Strand**: Sand, Palmen, Meer, Möwen, die einzeln nacheinander vorbeifliegen, ruhige Musik | Welle 20 (Schattenfürst) | Seesterne, Krabben, Quallen, Riesenseesterne, Seeigel |
+| 5 | **Hölle** (Endlevel): Lava, tote Bäume, Schädel, Glut | nur der **Teufel-Kolossus** | nur große Gegner: Teufel-Kolossus + Höllenbrecher, keine kleinen Roboter; gleichbleibendes Musiktempo |
 
 Der **Teufel-Kolossus** ist der stärkste Gegner im Spiel: rot-schwarz, mit
 Hörnern, größer als alle anderen, mit drei rotierenden Angriffsmustern
 (Stampf-Druckwelle, Schulter-Salven, Teleport-Klingenwirbel). Er wird schon ab
-65 % Leben wütend und ruft schneller Verstärkung.
+65 % Leben wütend und ruft schneller Verstärkung. Das Endlevel ist bewusst richtig
+schwer: Boss und Höllenbrecher sind schneller und härter als in Level 1–4.
+
+In den Welten **Eis, Strand und Hölle** hat jeder Gegner einen **roten
+Leben-Balken** über sich (nah dran steht zusätzlich die Zahl), damit man
+sofort sieht, dass es ein Gegner ist und wie viel Leben er noch hat.
 
 So schaltest du Level frei: Level 1 ist immer frei. Schaffst du Welle 5
 (Level 1 oder im Endlos-Modus), wird Level 2 frei; Welle 10 schaltet Level 3
