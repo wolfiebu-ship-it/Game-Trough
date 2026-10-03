@@ -115,7 +115,7 @@ gespeichert und gilt auch nach dem Neuladen.
   geht der Bildschirm aus, pausiert das Spiel von selbst und bleibt es,
   bis man es bewusst wieder freigibt.
 - **Pfeile**: Der Bogen ist nicht mehr unendlich. Zum Start gibt es 100
-  Pfeile (die Zahl steht am BOGEN-Balken), je 5 besiegte Bots kommen 20 dazu,
+  Pfeile (die Zahl steht am BOGEN-Balken), je 4 besiegte Bots kommen 5 dazu,
   jeder eingelöste Code bringt zusätzlich 50. Der Code `PFEILE` gibt 100
   Pfeile und 20 Schrauben. Ohne Pfeile meldet das Spiel „KEINE PFEILE".
 - **Schild (F)**: Eine leuchtende Blase um den Helden schluckt die nächsten
