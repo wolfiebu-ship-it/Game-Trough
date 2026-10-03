@@ -322,3 +322,17 @@ Das frühere Projekt **NEON CLASH** (2D-Fighting-Game) liegt weiterhin als
 Besiegst du im Endlevel den Teufel-Kolossus, läuft die Endanimation (Feuerwerk,
 Konfetti, „SIEG!", „ENDE"). Danach geht es mit der Leertaste zurück zur
 Auswahl.
+
+## Veröffentlichen
+- Das Spiel besteht aus `index.html` (alles drin), `manifest.json`, `service-worker.js`
+  und den Icons. Auf GitHub Pages hochgeladen läuft es im Browser und lässt sich am
+  Handy „zum Home-Bildschirm" hinzufügen (offline spielbar, neue Versionen werden
+  online automatisch geholt).
+- Alle Grafiken sind im Code selbst gezeichnet (Pixel-Sprites, eigene 5×7-Schrift),
+  alle Töne werden live erzeugt: es stecken keine fremden Bilder, Töne oder
+  Schriften im Spiel.
+- Nicht eingebaut: Werbung, Bezahlung, Konto, Tracking. Wer das Spiel gewerblich
+  anbietet, braucht in Deutschland ein Impressum und eine Datenschutzerklärung; das
+  ist nicht Teil dieses Projekts.
+- Beim Ladevorgang gespeichert wird nur im Browser (`localStorage`): Spielstände,
+  Freigaben, Einstellungen. Nichts wird übertragen.
