@@ -184,7 +184,8 @@ So schaltest du Level frei: Level 1 (und der **Endlos-Modus**, der im Wald
 spielt) ist immer frei und ganz normal spielbar. Im Endlos-Modus schaltet **jede
 zehnte Welle** das nächste Level frei: Welle 10 → Level 2, Welle 20 → Level 3,
 Welle 30 → Level 4, Welle 40 → Endlevel. Einen Knopf zum Freischalten gibt es
-nicht mehr. **Teleportieren:** Im Spiel öffnet der Knopf LEVEL unter SUPERKRÄFTE! eine Liste;
+nicht mehr; alte „alle frei"-Stände aus früheren Versionen werden beim Start
+zurückgesetzt (vorhandene Spielstände zählen weiter). **Teleportieren:** Im Spiel öffnet der Knopf LEVEL unter SUPERKRÄFTE! eine Liste;
 tippe eine Zeile an (HIN), um sofort in dieses Level/diese Welt zu springen, oder
 „ENDLOS-SPIEL", um zurück in deinen Spielstand zu gehen. Ein laufendes Endlos-Spiel
 wird vorher automatisch gespeichert. Ein Level zu gewinnen setzt „GESCHAFFT",
