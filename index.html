@@ -569,6 +569,12 @@ function heroSet(i){
     pSide:P_LEGS_SIDE.map(l=>sprite(P_TOP_SIDE.concat(l),pal)), roll:sprite(ROLL_ROWS,pal), head:sprite(HEAD_ROWS,pal) };
 }
 function applyHeroColor(i){ Object.assign(SPR, heroSet(i)); }
+// Schwung-Farben passend zur Heldenfarbe: hell / mittel / kraeftig
+function heroSwing(){
+  const pal=heroPal(SETTINGS.hero), base=pal ? pal.H : PRGB.H, dark=pal ? pal.h : PRGB.h;
+  const mix=(c,k)=>'#'+c.map(v=>Math.round(v+(255-v)*k).toString(16).padStart(2,'0')).join('');
+  return { hi:mix(base,.4), mid:mix(base,0), lo:mix(dark,0) };
+}
 
 /* ------------------------------------------------------------------
    3. Prozedurale Grafik: Wald, Felsen, Burg, Boden
@@ -2021,7 +2027,14 @@ function playerAttack(){
   player.vx += Math.cos(player.aim)*(heavy?70:40);
   player.vy += Math.sin(player.aim)*(heavy?70:40);
   slashes.push({x:player.x, y:player.y-8, ang:player.aim, arc:player.swing.arc,
-                reach:player.swing.reach, t:0, dur:dur*0.9, heavy});
+                reach:player.swing.reach, t:0, dur:dur*0.9, heavy, mine:true});
+  // ein paar Luftwirbel in Heldenfarbe entlang des Schwungs (dezent)
+  const sw=heroSwing(), n=heavy?11:7;
+  for(let i=0;i<n;i++){
+    const f=i/(n-1), a=player.aim-player.swing.arc*0.5+player.swing.arc*f, r=player.swing.reach*rr(0.75,1.05);
+    const px=player.x+Math.cos(a)*r, py=player.y-8+Math.sin(a)*r*0.85, ta=a+Math.PI/2*(player.swing.arc>0?1:-1);
+    part(px, py, Math.cos(ta)*rr(18,34)+Math.cos(a)*10, Math.sin(ta)*rr(14,26)*0.85+Math.sin(a)*8, rr(0.18,0.34), i%3===0?sw.hi:sw.mid, 1, 0);
+  }
   heavy ? SFX.heavy() : SFX.swing();
 }
 function playerShoot(){
@@ -3275,12 +3288,20 @@ function drawSlash(s){
     const a = cur - span*(k/7);
     if(a < s.ang-s.arc*0.5) break;
     const fade = 1-k/7;
-    ctx.fillStyle = s.heavy ? (k<2?'#fff3c4':(k<4?PAL.O:PAL.o)) : (k<2?'#ffffff':(k<4?'#dff0ff':PAL.C));
+    if(s.mine){ const sw=heroSwing(); ctx.fillStyle = k<2 ? sw.hi : (k<4 ? sw.mid : sw.lo); }
+    else ctx.fillStyle = s.heavy ? (k<2?'#fff3c4':(k<4?PAL.O:PAL.o)) : (k<2?'#ffffff':(k<4?'#dff0ff':PAL.C));
     ctx.globalAlpha = fade*(1-p*0.35);
     const rr0 = r0 + (1-fade)*3;
     for(let r=rr0; r<=r1; r+=1.1){
       const x=Math.round(s.x+Math.cos(a)*r), y=Math.round(s.y+Math.sin(a)*r*0.85);
       ctx.fillRect(x,y,1,1);
+    }
+    if(s.mine && k%2===0){                                  // duenne, luftige Auessenlinie (gepunktet) hinter dem Schwung
+      ctx.globalAlpha = fade*0.45*(1-p*0.5);
+      for(let r=r1+2; r<=r1+5; r+=2.2){
+        const x=Math.round(s.x+Math.cos(a)*r), y=Math.round(s.y+Math.sin(a)*r*0.85);
+        ctx.fillRect(x,y,1,1);
+      }
     }
   }
   ctx.globalAlpha=1;
@@ -3809,9 +3830,10 @@ function drawHUD(){
     const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
     hudScaled(VW/2, 75, ()=>{
       ctx.globalAlpha=a;
-      const mw=textW(game.msg,sc)+10, mh=7*sc+6;           // dunkle Leiste hinter der Meldung: lesbar auf jedem Untergrund
-      ctx.fillStyle='rgba(8,14,10,.6)'; ctx.fillRect(Math.round(VW/2-mw/2), 68-3, mw, mh);
-      drawTextC(ctx, game.msg, VW/2, 68, game.msgCol||PAL.y, sc); ctx.globalAlpha=1;
+      const mw=textW(game.msg,sc)+10, mh=7*sc+6, K=sc>1?0.78:1;   // grosse Meldungen etwas kleiner
+      ctx.save(); ctx.translate(VW/2, 68+mh/2-3); ctx.scale(K,K); ctx.translate(-VW/2, -(68+mh/2-3));
+      ctx.fillStyle='rgba(8,14,10,.6)'; ctx.fillRect(Math.round(VW/2-mw/2), 68-3, mw, mh);   // dunkle Leiste: lesbar auf jedem Untergrund
+      drawTextC(ctx, game.msg, VW/2, 68, game.msgCol||PAL.y, sc); ctx.restore(); ctx.globalAlpha=1;
     });
   }
   if(game.white>0){

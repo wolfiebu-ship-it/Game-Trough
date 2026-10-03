@@ -81,7 +81,7 @@ unter LEVEL) öffnet ein Fenster mit:
 - **Avatar**: zeigt dein Köpfchen. Antippen öffnet „FARBE WÄHLEN" mit 12 Farben
   (Grün, Gelb, Rot, Blau, Orange, Lila, Pink, Türkis, Hellblau, Braun, Weiß,
   Schwarz). Kapuze und Umhang des Helden nehmen die Farbe an, im Spiel, in der
-  Rolle und auf den Speicherplätzen. Die Wahl bleibt gespeichert.
+  Rolle und auf den Speicherplätzen. Die Wahl bleibt gespeichert. Auch der Schwertschwung und ein paar Luftwirbel haben die Farbe des Helden.
 - **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
 
 Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
