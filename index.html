@@ -1073,7 +1073,7 @@ const THEMES = {
             padType:'triangle', padPeak:0.09, bassType:'sine', bassPeak:0.42, bassSteps:[0,4], hat:0.015, swell:true },
     ground:{ dark:'#23262c', base:'#2d3036', mid:'#373b42', light:'#42464e', glade:'#5a5f68' },
     path:{ a:'#2f3238', b:'#26292e', c:'#1d1f23', edge:'light', edgeP:0.9 }, court:['#3a3f44','#474c52'],
-    treeTries:900, treeCap:105, treeP:0.6, treeGlade:0.0, treePad:4, treeSpot:11, rockAvoid:30,
+    treeTries:2400, treeCap:105, treeP:0.6, treeGlade:0.0, treePad:4, treeSpot:11, treeBox:[58,42], houseBox:true, rockAvoid:26,
     rockN:110, bushN:70, stumpN:44, tint:['#10182a',0.10],
     pixel(x,y,n,gl){ if(gl>0){ if(x%9===0||y%9===0) return [0x49,0x4e,0x56]; return n>0.5?[0x65,0x6a,0x74]:[0x5a,0x5f,0x68]; } return null; },
     sprites:()=>({ trees:[0,1,2,3,4,5].map(makeBuilding), rocks:[0,1,2,3].map(makeCar), bushes:[0,1,2].map(makeHedge), stumps:[makeLamp(),makeLamp()] }),
@@ -1216,17 +1216,23 @@ function plantWorld(T){
     const p = gl>0 ? T.treeGlade : T.treeP;                 // Lichtungen bleiben frei
     if(R()>p) continue;
     if(!free(x,y,T.treePad)) continue;
+    // Haeuser nie nebeneinander: Nachbarn liegen entweder weit auseinander oder deutlich versetzt
+    if(T.treeBox && treeSpots.some(q=>Math.abs(x-q.x)<T.treeBox[0] && Math.abs(y-q.y)<T.treeBox[1])) continue;
     const t=S.trees[Math.floor(R()*S.trees.length)];
     // Deckung, keine Mauer (ausser Haeuser): man laeuft hindurch, sie werden dabei blass
     props.push({img:t.img, ghost:t.ghost, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'tree'});
     if(T.treeSolid) for(const dx of t.solidX) solids.push({x:x+dx, y:y-2, r:5});
-    spots.push({x, y:y-1, r:T.treeSpot}); treeSpots.push({x, y});
+    spots.push({x, y:y-1, r:T.treeSpot}); treeSpots.push({x, y, w:t.w, h:t.h});
   }
   for(let i=0;i<T.rockN;i++){                               // Felsen, Autos, Eiskristalle ...
     const x=10+R()*(WW-20), y=24+R()*(WH-32);
     if(!free(x,y,2)) continue;
     if(T.rockAvoid && treeSpots.some(q=>dist2(x,y,q.x,q.y) < T.rockAvoid*T.rockAvoid)) continue;   // z.B. Autos nicht dicht an Haeusern
     const t=S.rocks[Math.floor(R()*S.rocks.length)];
+    if(T.houseBox && treeSpots.some(q=>{            // Auto darf das Haus nicht beruehren und nicht halb hinter ihm stehen
+      const m=8;
+      return Math.abs(x-q.x) < (q.w+t.w)/2+m && (y-t.h-m) < q.y+4 && (y+3+m) > (q.y-q.h);
+    })) continue;
     props.push({img:t.img, x:x-t.w/2, y:y-t.anchorY, w:t.w, h:t.h, sort:y, kind:'rock'});
     for(const dx of (t.solidX||[0])) solids.push({x:x+dx, y, r:5});
     spots.push({x, y, r:5});
@@ -1832,9 +1838,11 @@ function unlockLevel(n){
 }
 // Startet einen frischen, in sich abgeschlossenen Levellauf - unabhaengig
 // von den drei Endlos-Speicherplaetzen, dort wird waehrenddessen nichts ueberschrieben.
-function startLevel(n){
+function startLevel(n, fresh){
   newGame(undefined, LEVELS[n-1].world);
   game.levelMode = n; game.levelSelectOpen = false;
+  const sv = fresh ? null : loadLevelSave();
+  if(sv && sv.level===n){ applyState(sv); return; }          // Levellauf von der Speicherstelle fortsetzen
   if(LEVELS[n-1].finalBoss){
     game.scrap = 150;                    // kleiner Vorsprung fuer den Endkampf
     say('ENDLEVEL · '+WORLD_LABEL[LEVELS[n-1].world], 2.2, PAL.R);
@@ -1857,6 +1865,10 @@ const levelDone = n => getDone().includes(n);
 function winLevel(){
   const n = game.levelMode;
   markDone(n);
+  clearLevelSave();                                       // Level gewonnen: Zwischenstand nicht mehr noetig
+  game.winUltra = LEVEL_ULTRA[n] || null;                 // Belohnung: neue Superkraft
+  game.winUltraNew = game.winUltra ? earnUltra(game.winUltra) : false;
+  game.fwT = 0;
   game.state='levelwin'; game.levelWonN=n; game.winT=undefined;
   game.slow=0.5; shake(4); SFX.buy();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
@@ -1885,11 +1897,14 @@ function hasSave(slot){ return !!loadSaveRaw(slot); }
 // blockieren localStorage stillschweigend, ohne dass setItem() einen Fehler wirft.
 // death=true: Stand beim Sterben sichern - die angefangene Welle zaehlt als nicht
 // geschafft (Weiterspielen beginnt genau mit ihr), Herzen und Tor sind wieder voll.
+const LEVEL_SAVE_KEY = 'waldwacht_levelsave';
+function loadLevelSave(){ try{ const raw=localStorage.getItem(LEVEL_SAVE_KEY); return raw?JSON.parse(raw):null; }catch(e){ return null; } }
+function clearLevelSave(){ try{ localStorage.removeItem(LEVEL_SAVE_KEY); }catch(e){} }
 function saveGame(death){
-  if(game.levelMode || game.state!=='play') return false;   // Level-Laeufe belegen nie einen Spielstand
-  const slot = game.slot||1;
-  const key = slotKey(slot);
+  if(game.state!=='play') return false;
+  const key = game.levelMode ? LEVEL_SAVE_KEY : slotKey(game.slot||1);   // Levellauf hat seinen eigenen Speicherplatz (ueberschreibt nie eine Spielwelt)
   const payload = JSON.stringify({
+    level: game.levelMode||0,
     // mitten in einer Welle zaehlt die letzte geschaffte - beim Laden geht es mit genau dieser Welle weiter
     wave: game.phase==='wave' ? Math.max(0, game.wave-1) : game.wave, scrap:game.scrap, score:game.score, kills:game.kills,
     castleHp: death ? game.castleMax : game.castleHp, castleMax:game.castleMax,
@@ -2187,11 +2202,22 @@ const shocks = waves;                       // Druckwellen (Boss-Schlag, Explosi
 const ULTRAS = [
   { id:'bolt',  name:'DONNERBLITZ',  wave:3,  hint:'NEUN EINSCHLAEGE AUF DIE DICKSTEN BOTS' },
   { id:'storm', name:'KLINGENSTURM', wave:10, hint:'WIRBEL, DER ALLES UM DICH TRIFFT' },
-  { id:'rain',  name:'PFEILREGEN',   wave:15, hint:'PFEILE IN ALLE RICHTUNGEN' },
-  { id:'quake', name:'DONNERSCHLAG', wave:20, hint:'DRUCKWELLE, BETAEUBUNG, HEILUNG' },
-  { id:'wrath', name:'WALDZORN', wave:9999, hint:'WURZELN REISSEN ALLE FEINDE IM UMKREIS NIEDER' },
-  { id:'spike', name:'WURZELSTICH', wave:9999, hint:'WURZELN DURCHBOHREN RINGSUM ALLES IN WELLEN' }
+  { id:'rain',  name:'PFEILREGEN',   wave:20, hint:'PFEILE IN ALLE RICHTUNGEN' },
+  { id:'quake', name:'DONNERSCHLAG', wave:30, hint:'DRUCKWELLE, BETAEUBUNG, HEILUNG' },
+  { id:'wrath', name:'WALDZORN', wave:40, hint:'WURZELN REISSEN ALLE FEINDE IM UMKREIS NIEDER' },
+  { id:'spike', name:'WURZELSTICH', wave:9999, hint:'AUS DEM BODEN BRICHT ETWAS - JE NACH WELT ANDERS' }
 ];
+// Jedes geschaffte Level (und jede zehnte Endlos-Welle) bringt eine neue Superkraft - dauerhaft gemerkt
+const LEVEL_ULTRA = { 1:'storm', 2:'rain', 3:'quake', 4:'wrath' };
+const ULTRA_KEY = 'waldwacht_ultras';
+function earnedUltras(){
+  try{ const a=JSON.parse(localStorage.getItem(ULTRA_KEY)||'[]'); return Array.isArray(a)?a.filter(id=>ULTRAS.some(u=>u.id===id)):[]; }catch(e){ return []; }
+}
+function earnUltra(id){
+  const a=earnedUltras(); if(a.includes(id)) return false;
+  a.push(id); try{ localStorage.setItem(ULTRA_KEY, JSON.stringify(a)); }catch(e){} return true;
+}
+function mergeEarnedUltras(){ for(const id of earnedUltras()) if(!game.ultras.includes(id)) game.ultras.push(id); }
 function ownedUltras(){ return ULTRAS.filter(u=> game.ultras.includes(u.id)); }
 function activeUltra(){ const o=ownedUltras(); return o.length ? o[player.ultraSel % o.length] : null; }
 function ultraReady(){ return activeUltra() && player.ultra >= player.ultraMax; }
@@ -2229,6 +2255,7 @@ function fireUltra(){
   } else if(u.id==='spike'){
     // Drei Ringe aus Wurzeln, die zeitversetzt aus dem Boden schiessen
     player.inv=Math.max(player.inv,0.5); shake(5); SFX.heavy();
+    const kind=ROOT_KIND[game.world]||'root';
     const rings=[ {r:14,n:5,delay:0}, {r:38,n:8,delay:0.14}, {r:64,n:11,delay:0.3} ];
     for(const ring of rings){
       const off=rr(0,TAU);
@@ -2236,7 +2263,7 @@ function fireUltra(){
         const a=off+i/ring.n*TAU;
         roots.push({
           x:player.x+Math.cos(a)*ring.r, y:player.y+Math.sin(a)*ring.r*0.7,
-          delay:ring.delay+rr(0,0.08), t:0, dur:0.55, h:rr(9,15),
+          delay:ring.delay+rr(0,0.08), t:0, dur:0.75, h:rr(14,24), kind,
           lean:rr(-0.35,0.35), seed:rr(0,9), dmg:player.dmg*2.2
         });
       }
@@ -2280,8 +2307,8 @@ function updateUltra(dt){
       for(const e of enemies){
         if(e.dead||e.spawnT>0) continue;
         if(dist(tx,ty,e.x,e.y) < 24+e.r){
-          damageEnemy(e, p.dmg*3, 100, Math.atan2(e.y-ty, e.x-tx), true);
-          if(!e.dead){ e.st='cool'; e.t=0; e.cd=Math.max(e.cd,1.1); }   // betaeubt
+          damageEnemy(e, p.dmg*(e.d.boss?1.3:3), 100, Math.atan2(e.y-ty, e.x-tx), true);   // gegen Bosse deutlich schwaecher
+          if(!e.dead && !e.d.boss){ e.st='cool'; e.t=0; e.cd=Math.max(e.cd,1.1); }       // Bosse werden nicht betaeubt
         }
       }
       if(p.boltLeft===0) for(const e of enemies) e.getroffen=0;
@@ -2337,10 +2364,19 @@ function updateUltra(dt){
     }
   }
 }
-// Eine einzelne Wurzelspitze bricht durch den Boden: Schaden + Erdbrocken
+// Was aus dem Boden bricht, haengt von der Welt ab: Wald Wurzeln, Stadt Stahlstreben, Eis Kristalle, Strand Tentakel, Hoelle Lavasaeulen
+const ROOT_KIND = { forest:'root', city:'steel', ice:'ice', beach:'tentacle', hell:'lava' };
+const ROOT_FX = {
+  root:    ['#4a3320','#a9763f','#9ade6e'], steel:   ['#5f6475','#d7dcec','#ffe66d'],
+  ice:     ['#5fd7ff','#c7f3ff','#ffffff'], tentacle:['#8a4fd4','#9aeae6','#e6cd90'],
+  lava:    ['#c8392f','#f0704a','#ffc861']
+};
+// Eine einzelne Spitze bricht durch den Boden: Schaden + Brocken in Weltfarben
 function eruptRoot(r){
-  burst(r.x, r.y, 5, PAL.b, 45, 0.3, 1);
-  part(r.x, r.y-1, rr(-6,6), rr(-32,-12), 0.3, PAL.l, 1);
+  const fx=ROOT_FX[r.kind||'root'];
+  burst(r.x, r.y, 5, fx[0], 45, 0.3, 1);
+  burst(r.x, r.y-2, 4, fx[1], 60, 0.35, 1);
+  part(r.x, r.y-1, rr(-6,6), rr(-32,-12), 0.3, fx[2], 1);
   shake(0.6); SFX.hit();
   for(const e of enemies){
     if(e.dead||e.spawnT>0) continue;
@@ -2410,7 +2446,9 @@ function endWave(){
   game.score += 50 + game.wave*10;
   // Ultras freischalten
   for(const u of ULTRAS){
+    if(game.levelMode && u.wave>=10) continue;           // im Levellauf gibt es die Superkraft erst beim Levelsieg
     if(game.wave >= u.wave && !game.ultras.includes(u.id)){
+      if(u.wave>=10 && u.wave<9999) earnUltra(u.id);
       game.ultras.push(u.id);
       player.ultraSel = game.ultras.length-1;
       player.ultra = player.ultraMax;                 // gleich einmal voll
@@ -2532,7 +2570,7 @@ function buyCard(i){
 
 function gameOver(reason){
   if(game.state==='over') return;
-  game.deathSaved = saveGame(true);        // vor dem Wechsel in 'over' (nur im Endlos-Modus)
+  game.deathSaved = game.levelMode ? false : saveGame(true);        // vor dem Wechsel in 'over' (nur im Endlos-Modus)
   game.state='over'; game.deadT=undefined; game.msg=reason; game.msgT=99; game.slow=1.2; shake(8); SFX.over();
   if(game.score>game.best){ game.best=game.score; try{ localStorage.setItem('waldwacht_best',String(game.best)); }catch(e){} }
 }
@@ -2540,7 +2578,7 @@ function newGame(slot, world){
   enemies.length=0; bullets.length=0; parts.length=0; drops.length=0;
   slashes.length=0; waves.length=0; floaters.length=0; roots.length=0;
   MSGQ.length=0;
-  game.ultras=[]; game.usedCodes=new Set();
+  game.ultras=[]; game.usedCodes=new Set(); mergeEarnedUltras();
   game.turret=0; game.turretT=0; game.ultraMenuOpen=false; game.ultraNameT=0; game.guideOpen=false; game.levelInfoOpen=false;
   Object.assign(game, { state:'play', phase:'rest', wave:0, restT:6, spawnList:[], spawnT:0, paused:false,
     slot: slot||game.slot||1, levelMode:0,
@@ -2561,15 +2599,14 @@ function newGame(slot, world){
 
 // Setzt genau da wieder ein, wo zuletzt gespeichert wurde (letzte ueberstandene
 // Welle). Faellt auf ein neues Spiel zurueck, falls kein gueltiger Stand da ist.
-function continueGame(slot){
-  const d = loadSaveRaw(slot);
-  if(!d){ newGame(slot); return; }
-  newGame(slot);                                // sauberer Ausgangszustand, danach ueberschreiben
+// Schreibt einen gespeicherten Stand in Spiel und Held (gemeinsam fuer Spielwelten und Levellauf)
+function applyState(d){
   Object.assign(game, {
-    slot, wave:d.wave||0, scrap:d.scrap||0, score:d.score||0, kills:d.kills||0,
+    wave:d.wave||0, scrap:d.scrap||0, score:d.score||0, kills:d.kills||0,
     castleHp:d.castleHp??120, castleMax:d.castleMax??120,
     ultras:(d.ultras||[]).slice(), usedCodes:new Set(d.usedCodes||[])
   });
+  mergeEarnedUltras();
   Object.assign(player, {
     maxHp:d.maxHp??10, speed:d.speed??64, dmg:d.dmg??5, reach:d.reach??26, arc:d.arc??1.5,
     atkSpeed:d.atkSpeed??1, dashCdMax:d.dashCdMax??2.8, bowCdMax:d.bowCdMax??0.85, arrowDmg:d.arrowDmg??4,
@@ -2584,6 +2621,13 @@ function continueGame(slot){
   player.shield = player.shieldMax;
   player.hp = clamp(d.hp??player.maxHp, player.maxHp>0?1:0, player.maxHp);
   say('SPIELSTAND GELADEN — WELLE '+(game.wave+1), 2.4, PAL.H);
+}
+function continueGame(slot){
+  const d = loadSaveRaw(slot);
+  if(!d){ newGame(slot); return; }
+  newGame(slot);                                // sauberer Ausgangszustand, danach ueberschreiben
+  game.slot=slot;
+  applyState(d);
 }
 
 /* ------------------------------------------------------------------
@@ -3168,7 +3212,7 @@ function update(dt){
     if(game.deadT>0.7){
       const lm=game.levelMode, cur=game.slot||1;
       const leave=(fn)=>{ game.deadT=undefined; audioUnlock(); fn(); lastTap=null; pressed.clear(); };
-      const retry=()=> startLevel(lm);
+      const retry=()=> startLevel(lm, true);
       const toLevels=()=>{ buildWorld('forest'); game.state='title'; game.levelSelectOpen=true; };
       const toTitle=()=>{ buildWorld('forest'); game.state='title'; };
       const pickSlot=(sl)=> hasSave(sl) ? continueGame(sl) : newGame(sl);
@@ -3191,7 +3235,18 @@ function update(dt){
     game.slow=Math.max(0,game.slow-dt);
     if(game.winT===undefined) game.winT=0;
     game.winT+=dt;
-    if(startEdge && game.winT>0.8){ game.winT=undefined; buildWorld('forest'); game.state='title'; game.levelSelectOpen=true; }
+    if(game.levelWonN>=LEVELS.length){                    // Endanimation: Feuerwerk und Konfetti
+      game.fwT=(game.fwT||0)-dt;
+      if(game.fwT<=0){
+        game.fwT=rr(0.25,0.55);
+        const cols=[PAL.y,PAL.R,PAL.C,PAL.H,PAL.P,PAL.O,'#ffffff'], c=cols[Math.floor(Math.random()*cols.length)];
+        const fx=cam.x+rr(30,VW-30), fy=cam.y+rr(14,70);
+        burst(fx, fy, 30, c, 80, 1.0, 1);
+        for(let i=0;i<10;i++) part(cam.x+rr(0,VW), cam.y-2, rr(-8,8), rr(10,30), rr(1.6,2.4), cols[Math.floor(Math.random()*cols.length)], 1, 16);
+        SFX.buy();
+      }
+    }
+    if(startEdge && game.winT>(game.levelWonN>=LEVELS.length?6.5:0.8)){ game.winT=undefined; buildWorld('forest'); game.state='title'; game.levelSelectOpen=true; }
     pressed.clear(); return;
   }
   if(game.paused && game.helpOpen){
@@ -3206,11 +3261,7 @@ function update(dt){
     // Pause ist "sticky": nur P/Esc oder der Pause-Knopf setzen fort - kein
     // Tippen irgendwo im Bild, damit ein App-Wechsel oder ein Bildschirm-Aus
     // das Spiel nie versehentlich wieder loslaufen laesst.
-    if(pressed.has('s')){
-      if(game.levelMode){ say('IM LEVEL WIRD NICHT GESPEICHERT', 1.8, PAL.O); SFX.no(); }
-      else if(saveGame()){ say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
-      else{ say('SPEICHERN NICHT MÖGLICH', 1.8, PAL.R); SFX.no(); }
-    }
+    if(pressed.has('s')) saveAndExit();
     lastTap=null; pressed.clear(); return;
   }
 
@@ -3449,13 +3500,52 @@ function drawBlitz(b){
   }
   ctx.globalAlpha=1;
 }
+// Spitzen der anderen Welten: gleiche Hochschiess-Kurve, eigene Form und Farbe
+function drawThemedSpike(r, h, fade){
+  const x=Math.round(r.x), y=Math.round(r.y), t=game.time, k=r.kind;
+  ctx.globalAlpha=fade;
+  const segs=Math.max(3,Math.round(h));
+  for(let i=0;i<segs;i++){
+    const f=i/segs, yy=y-i;
+    if(k==='steel'){                                          // Stahlstrebe: gerade, kantig, Funken an der Spitze
+      const w=Math.max(1,Math.round(4*(1-f*0.9))), xx=Math.round(x+r.lean*i*0.25);
+      ctx.fillStyle=PAL.K; ctx.fillRect(xx-(w>>1)-1,yy,w+2,1);
+      ctx.fillStyle = (i%5===4) ? '#ffc861' : (f<0.7?PAL.m:PAL.M);                 // Querstreben-Nieten
+      ctx.fillRect(xx-(w>>1),yy,w,1);
+      if(w>=3){ ctx.fillStyle=PAL.w; ctx.fillRect(xx-(w>>1),yy,1,1); }
+    } else if(k==='ice'){                                     // Eiskristall: mitten breit, oben und unten spitz
+      const w=Math.max(1,Math.round(6*Math.pow(Math.sin(Math.PI*Math.min(1,f*0.5+0.18)),0.9)*(1-f*0.5))), xx=Math.round(x+r.lean*i*0.3);
+      ctx.fillStyle='#2a6a8a'; ctx.fillRect(xx-(w>>1)-1,yy,w+2,1);
+      ctx.fillStyle = f<0.35 ? '#5fd7ff' : '#c7f3ff'; ctx.fillRect(xx-(w>>1),yy,w,1);
+      ctx.fillStyle='#ffffff'; ctx.fillRect(xx-(w>>1),yy,1,1);
+    } else if(k==='tentacle'){                                // Tentakel: schlaengelt sich, Saugnaepfe
+      const sway=Math.sin(r.seed+i*0.45+t*7)*3.2*f, w=Math.max(2,Math.round(5*(1-f*0.65))), xx=Math.round(x+sway+r.lean*i*0.3);
+      ctx.fillStyle='#2c1450'; ctx.fillRect(xx-(w>>1)-1,yy,w+2,1);
+      ctx.fillStyle = f<0.5 ? PAL.p : '#b583e8'; ctx.fillRect(xx-(w>>1),yy,w,1);
+      if(i%4===2 && w>=3){ ctx.fillStyle='#f4b6c2'; ctx.fillRect(xx-(w>>1)+1,yy,1,1); }
+    } else {                                                  // Lavasaeule: flackernd, glutrot bis gelb
+      const w=Math.max(2,Math.round(6*(1-f*0.5))), xx=Math.round(x+Math.sin(r.seed+i*0.6+t*14)*0.8);
+      ctx.fillStyle='#3a0d0a'; ctx.fillRect(xx-(w>>1)-1,yy,w+2,1);
+      ctx.fillStyle = f<0.3 ? PAL.r : (f<0.65 ? PAL.R : PAL.O); ctx.fillRect(xx-(w>>1),yy,w,1);
+      if(w>=4){ ctx.fillStyle= (Math.floor(t*18+i)%3===0) ? '#ffe66d' : PAL.O; ctx.fillRect(xx-1,yy,2,1); }
+    }
+  }
+  // Spitze/Effekt
+  const tx=Math.round(x+(k==='tentacle'?Math.sin(r.seed+segs*0.45+t*7)*3.2:r.lean*h*0.25)), ty=Math.round(y-h);
+  if(k==='steel'){ ctx.fillStyle = Math.floor(t*24)%2? '#ffe66d' : '#ffffff'; ctx.fillRect(tx,ty-1,1,1); ctx.fillRect(tx+((Math.floor(t*30)%2)?2:-2),ty-2,1,1); }
+  else if(k==='ice'){ ctx.fillStyle='#ffffff'; ctx.fillRect(tx,ty-1,1,1); if(Math.floor(t*10)%3===0) ctx.fillRect(tx+2,ty+2,1,1); }
+  else if(k==='tentacle'){ ctx.fillStyle='#b583e8'; ctx.fillRect(tx+1,ty,1,1); ctx.fillRect(tx+2,ty-1,1,1); }
+  else { ctx.fillStyle='#ffe66d'; ctx.fillRect(tx+(Math.floor(t*20)%3)-1,ty-1-(Math.floor(t*16)%3),1,1); }
+  ctx.globalAlpha=1;
+}
 function drawRoot(r){
   const x=Math.round(r.x), y=Math.round(r.y);
   if(r.delay>0){
-    // Erde reisst kurz auf, bevor die Wurzel hochschiesst
+    // Der Boden reisst kurz auf (Farbe je Welt), bevor etwas hochschiesst
+    const c=ROOT_FX[r.kind||'root'];
     ctx.fillStyle=PAL.K; ctx.fillRect(x-2,y,5,1);
-    ctx.fillStyle=PAL.b; ctx.fillRect(x-1,y,3,1);
-    if(r.delay<0.12){ ctx.fillStyle=PAL.n; ctx.fillRect(x,y-1,1,1); }
+    ctx.fillStyle=c[0]; ctx.fillRect(x-1,y,3,1);
+    if(r.delay<0.12){ ctx.fillStyle=c[1]; ctx.fillRect(x,y-1,1,1); }
     return;
   }
   const p=clamp(r.t/r.dur,0,1);
@@ -3464,6 +3554,7 @@ function drawRoot(r){
   const overshoot = (riseP>0.7 && riseP<1) ? Math.sin((riseP-0.7)/0.3*Math.PI)*0.15 : 0;
   const h=r.h*(rise+overshoot);
   const fade = p>0.65 ? Math.max(0,1-(p-0.65)/0.35) : 1;
+  if(r.kind && r.kind!=='root'){ drawThemedSpike(r, h, fade); return; }
   ctx.globalAlpha=fade;
   const segs=Math.max(3,Math.round(h));
   // dunkler Kernschatten zuerst, damit die Wurzel sich vom Gras/Weg abhebt
@@ -3885,7 +3976,7 @@ function drawHUD(){
     }
     hudScaled(VW/2, 75, ()=>{
       ctx.globalAlpha=a;
-      const MY=2, lh=7*sc+3, mh=lines.length*lh+3;
+      const MY=14, lh=7*sc+3, mh=lines.length*lh+3;
       const mw=Math.max(...lines.map(l=>textW(l,sc)))+10;
       ctx.save(); ctx.translate(VW/2, MY); ctx.scale(K,K); ctx.translate(-VW/2, -MY);
       ctx.fillStyle='rgba(8,14,10,.6)'; ctx.fillRect(Math.round(VW/2-mw/2), MY-3, mw, mh);   // dunkle Leiste: lesbar auf jedem Untergrund
@@ -4032,7 +4123,8 @@ function drawLevelSelect(){
     const r = levelRowRect(i), ok = L.n<=unlocked, mx=r.x+r.w/2;
     panel(r.x, r.y, r.w, r.h, ok?'rgba(16,32,18,.92)':'rgba(12,14,13,.75)', ok?(L.finalBoss?PAL.R:PAL.H):'#3a3a3a');
     drawTextC(ctx, L.label+' · '+WORLD_LABEL[L.world]+(levelDone(L.n)?' · GESCHAFFT':''), mx, r.y+3, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
-    drawTextC(ctx, ok?L.desc:('WELLE '+UNLOCK_EVERY*i+' IM ENDLOS-SPIEL'), mx, r.y+13, ok?'#9fb79a':'#5a5a5a', 1);
+    const sv=loadLevelSave(), saved = ok && sv && sv.level===L.n;
+    drawTextC(ctx, saved ? ('GESPEICHERT · WELLE '+((sv.wave||0)+1)) : (ok?L.desc:('WELLE '+UNLOCK_EVERY*i+' IM ENDLOS-SPIEL')), mx, r.y+13, saved?PAL.y:(ok?'#9fb79a':'#5a5a5a'), 1);
   });
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
@@ -4249,38 +4341,57 @@ function drawOver(){
   if(ready) drawTextC(ctx, lm?'LEERTASTE: NOCHMAL':'1 2 3: WÄHLEN · ESC: TITEL', VW/2, y+p.h-12, '#9fb79a', 1);
 }
 function drawLevelWin(){
+  const n=game.levelWonN||1, isEnd = n>=LEVELS.length, ult=game.winUltra ? ULTRAS.find(u=>u.id===game.winUltra) : null;
+  if(isEnd){                                              // Endanimation: kein Kasten, freie Buehne mit Feuerwerk
+    const t=game.winT||0, fade=k=>clamp((t-k)/0.8,0,1);
+    ctx.globalAlpha=0.5; ctx.fillStyle='#07100a'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
+    const hue=['#ffe66d','#ffc861','#f0704a','#c78bff','#6fd7ff','#9ade6e'][Math.floor(t*4)%6];
+    ctx.globalAlpha=fade(0); drawTextC(ctx,'SIEG!', VW/2, 10+Math.round(Math.sin(t*3)*1.5), hue, 4);
+    const lines=[[1.4,'DER TEUFEL-KOLOSSUS IST BESIEGT',PAL.R],[2.8,'WALDWACHT IST GERETTET',PAL.H],[4.2,'DANKE FÜRS SPIELEN!',PAL.y]];
+    lines.forEach(([k,txt,col],i)=>{ ctx.globalAlpha=fade(k); drawTextC(ctx, txt, VW/2, 46+i*11, col, 1); });
+    ctx.globalAlpha=fade(5.4); drawTextC(ctx,'ENDE', VW/2, 80, '#ffffff', 2);
+    ctx.globalAlpha=fade(1); ctx.save(); ctx.translate(Math.round(VW/2-SPR.head.w*1.5), 98+Math.round(Math.abs(Math.sin(t*5))*-3)); ctx.scale(3,3); ctx.drawImage(SPR.head.img,0,0); ctx.restore();
+    ctx.globalAlpha=fade(5.4); drawTextC(ctx, 'PUNKTE: '+game.score, VW/2, 123, PAL.y, 1);
+    ctx.globalAlpha=1;
+    if(t>6.5 && Math.floor(game.time*2)%2===0) drawTextC(ctx, isTouch?'TIPPEN: ZURÜCK ZUR AUSWAHL':'LEERTASTE: ZURÜCK ZUR AUSWAHL', VW/2, 134, '#cfe8c2', 1);
+    return;
+  }
   ctx.globalAlpha=0.6; ctx.fillStyle='#0b1f10'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   const w=210, h=104, x=Math.round((VW-w)/2), y=Math.round((VH-h)/2)-4;
   panel(x,y,w,h,'rgba(10,20,12,.94)',PAL.H);
-  const n=game.levelWonN||1, isEnd = n>=LEVELS.length;
-  let statY;
-  if(isEnd){
-    drawTextC(ctx,'ENDLEVEL GESCHAFFT!', VW/2, y+9, PAL.H, 1);
-    drawTextC(ctx,'DU HAST WALDWACHT BESIEGT', VW/2, y+20, PAL.y, 1);
-    statY = 36;
-  } else {
-    drawTextC(ctx,'LEVEL '+n+' GESCHAFFT!', VW/2, y+9, PAL.H, 1);
-    statY = 28;
+  drawTextC(ctx,'LEVEL '+n+' GESCHAFFT!', VW/2, y+9, PAL.H, 1);
+  const statY = 24;
+  if(ult){
+    drawTextC(ctx, game.winUltraNew ? 'NEUE SUPERKRAFT!' : 'SUPERKRAFT:', VW/2, y+statY, PAL.y, 1);
+    drawTextC(ctx, ult.name, VW/2, y+statY+10, PAL.C, 1);
+    drawTextC(ctx, ult.hint, VW/2, y+statY+20, '#9fb79a', 1);
   }
-  drawTextC(ctx, 'PUNKTE: '+game.score, VW/2, y+statY, PAL.y, 1);
-  drawTextC(ctx, 'BESTE: '+game.best, VW/2, y+statY+11, '#9fb79a', 1);
-  if(!isEnd && getUnlockedLevel()<=n) drawTextC(ctx, 'LEVEL '+(n+1)+': WELLE '+UNLOCK_EVERY*n+' IM ENDLOS', VW/2, y+statY+25, '#cfe8c2', 1);
+  drawTextC(ctx, 'PUNKTE: '+game.score, VW/2, y+58, PAL.y, 1);
+  drawTextC(ctx, 'BESTE: '+game.best, VW/2, y+69, '#9fb79a', 1);
+  if(getUnlockedLevel()<=n) drawTextC(ctx, 'LEVEL '+(n+1)+': WELLE '+UNLOCK_EVERY*n+' IM ENDLOS', VW/2, y+83, '#cfe8c2', 1);
   if(Math.floor(game.time*2)%2===0)
     drawTextC(ctx, isTouch?'TIPPEN: ZURÜCK ZUR AUSWAHL':'LEERTASTE: ZURÜCK ZUR AUSWAHL', VW/2, y+h+4, '#cfe8c2', 1);
 }
-function pauseSaveRect(){ return { x:VW/2-42, y:VH/2+18, w:84, h:16 }; }
+function pausePanelRect(){ const w=182, h=84; return { x:Math.round((VW-w)/2), y:Math.round((VH-h)/2)-6, w, h }; }
+function pauseSaveRect(){ const p=pausePanelRect(); return { x:VW/2-70, y:p.y+40, w:140, h:16 }; }
+// "Speichern" = Spielstand sichern und zurueck zur Auswahl der drei Spielwelten (im Levellauf: eigener Level-Speicher, Fortsetzen ueber LEVEL)
+function leaveToTitle(){ game.paused=false; game.helpOpen=false; game.shopOpen=false; buildWorld('forest'); game.state='title'; game.levelSelectOpen=false; }
+function saveAndExit(){
+  if(saveGame()){ SFX.pick(); leaveToTitle(); }
+  else{ say('SPEICHERN NICHT MÖGLICH', 1.8, PAL.R); SFX.no(); }
+}
 function drawPause(){
   // Deutlich abgedunkelt, damit HUD-Text im Hintergrund nicht mehr lesbar
   // durchscheint - nur noch die Umrisse der Welt bleiben schemenhaft sichtbar.
   ctx.globalAlpha=0.86; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
-  const w=182, h=50, x=Math.round((VW-w)/2), y=Math.round((VH-h)/2)-12;
-  panel(x,y,w,h);
-  drawTextC(ctx,'PAUSE', VW/2, y+7, PAL.H, 2);
-  drawTextC(ctx, isTouch?'PAUSE-KNOPF ANTIPPEN: WEITER':'P ODER ESC: WEITER', VW/2, y+34, '#9fb79a', 1);
+  const p=pausePanelRect(), {x,y,w}=p;
+  panel(x,y,p.w,p.h);                                    // alles in einem gruenen Kasten
+  drawTextC(ctx,'PAUSE', VW/2, y+6, PAL.H, 2);
+  drawTextC(ctx, isTouch?'PAUSE-KNOPF ANTIPPEN: WEITER':'P ODER ESC: WEITER', VW/2, y+27, '#9fb79a', 1);
   const r=pauseSaveRect();
   panel(r.x, r.y, r.w, r.h, 'rgba(16,32,18,.92)', PAL.H);
-  drawTextC(ctx, 'SPEICHERN', VW/2, r.y+5, PAL.y, 1);
-  if(!isTouch) drawTextC(ctx, '? ODER F1: STEUERUNG', VW/2, r.y+r.h+8, '#9fb79a', 1);
+  drawTextC(ctx, 'SPEICHERN UND ZURÜCK', VW/2, r.y+5, PAL.y, 1);
+  if(!isTouch) drawTextC(ctx, '? ODER F1: STEUERUNG', VW/2, y+p.h-14, '#9fb79a', 1);
 }
 
 const btnDash=document.getElementById('dashBtn'), btnHeal=document.getElementById('healBtn');
@@ -4324,7 +4435,7 @@ function render(){
   drawAmbient();
   if(game.state==='play'){ if(!game.paused && !game.settingsOpen) drawHUD(); if(game.paused) drawPause(); if(game.paused && game.helpOpen) drawHelp(); }
   else if(game.state==='over'){ drawHUD(); drawOver(); }
-  else if(game.state==='levelwin'){ drawHUD(); drawLevelWin(); }
+  else if(game.state==='levelwin'){ if(game.levelWonN<LEVELS.length) drawHUD(); drawLevelWin(); }
   else { drawTitle(); if(game.levelSelectOpen) drawLevelSelect(); if(game.helpOpen) drawHelp(); }
   if(game.settingsOpen) drawSettings();
   // Ohne Fokus kommt keine Taste an (z.B. eingebettet in einer Vorschau) - sagen statt raten lassen.
@@ -4372,9 +4483,7 @@ placePct(pauseSaveBtn, pauseSaveRect().x, pauseSaveRect().y, pauseSaveRect().w, 
     if(now-lastSaveT<400) return;      // ein Antippen kann mehrere Events feuern - nur einmal ausloesen
     lastSaveT=now;
     audioUnlock();
-    if(game.levelMode){ say('IM LEVEL WIRD NICHT GESPEICHERT', 1.8, PAL.O); SFX.no(); }
-    else if(saveGame()){ say('GESPEICHERT', 1.4, PAL.H); SFX.pick(); }
-    else{ say('SPEICHERN NICHT MÖGLICH', 1.8, PAL.R); SFX.no(); }
+    saveAndExit();
   };
   // Auf mehrere Ereignistypen gleichzeitig hoeren: je nach Browser/Geraet
   // (Handy, iPad, Desktop, eingebettete Ansichten) kommt nicht ueberall

@@ -45,7 +45,7 @@ damit sie zum Rest passen.
 | `1` `2` `3` `4` | Karte kaufen |
 | `Enter` | nächste Welle früher starten |
 | `P` / `Esc` | Pause (auch per gelbem Pixel-Knopf oben rechts) |
-| `S` oder Antippen von „SPEICHERN" (in der Pause) | von Hand speichern |
+| `S` oder Antippen von „SPEICHERN UND ZURÜCK" (in der Pause) | Stand sichern und zurück zur Auswahl der drei Spielwelten (im Level: eigener Level-Speicher, Fortsetzen über LEVEL) |
 | `N` (im Titelbild) | neues Spiel, auch wenn ein Spielstand da ist |
 | `M` | Ton an/aus |
 | `?` / `F1` oder **HILFE**-Knopf im Titelbild | Steuerungs-Übersicht mit allen Tasten (auch in der Pause) |
@@ -145,17 +145,19 @@ gespeichert und gilt auch nach dem Neuladen.
   Lauf-Sticks gerät.
 - **Ultras**: Der Ultra-Balken füllt sich durch ausgeteilten Schaden. Nach
   Welle 3 gibt es den **Donnerblitz** (neun Einschläge auf die dicksten Bots
-  in der Nähe, mit Betäubung), nach Welle 10 den **Klingensturm** (anderthalb
-  Sekunden Wirbel, der alles im Umkreis zerlegt), nach Welle 15 den
-  **Pfeilregen** (drei Salven in alle Richtungen), nach Welle 20 den
-  **Donnerschlag** (Druckwelle, betäubt die Bots und heilt ein Herz). Über
-  den Code `WALDWACHT` gibt es zusätzlich exklusiv den **Waldzorn**
-  (anderthalb Sekunden lang reißen Wurzeln alles im großen Umkreis nieder
-  und verlangsamen die Bots). Über den Code `DEMIRCI` gibt es exklusiv den
-  **Wurzelstich**: drei Ringe aus Wurzeln schießen zeitversetzt in Wellen
-  aus dem Boden und durchbohren alles ringsum — die krasseste Superkraft
-  im Spiel. Der gelbe Knopf **SUPERKRÄFTE!** öffnet eine
-  Liste aller besessenen Ultras zum Auswählen; `C` wechselt schnell durch.
+  in der Nähe; gegen Bosse deutlich schwächer und ohne Betäubung). Jedes
+  geschaffte Level schenkt dir **dauerhaft** eine neue Superkraft – genauso
+  jede zehnte Welle im Endlos-Modus: Level 1 / Welle 10 den **Klingensturm**
+  (Wirbel, der alles im Umkreis zerlegt), Level 2 / Welle 20 den **Pfeilregen**
+  (drei Salven in alle Richtungen), Level 3 / Welle 30 den **Donnerschlag**
+  (Druckwelle, betäubt die Bots, heilt ein Herz), Level 4 / Welle 40 den
+  **Waldzorn** (Wurzeln reißen alles im großen Umkreis nieder und verlangsamen
+  die Bots). Über den Code `DEMIRCI` gibt es zusätzlich den **Wurzelstich**:
+  drei Ringe schießen zeitversetzt aus dem Boden und durchbohren alles
+  ringsum – und **je nach Welt kommt etwas anderes heraus**: im Wald Wurzeln,
+  in der Stadt Stahlstreben mit Funken, im Eis Kristalle, am Strand Tentakel,
+  in der Hölle Lavasäulen. Der gelbe Knopf **SUPERKRÄFTE!** öffnet eine Liste
+  aller besessenen Ultras zum Auswählen; `C` wechselt schnell durch.
   Sobald ein Boss auftaucht, ist der Balken geschenkt voll.
 - **Kombo**: Zwei schnelle Hiebe hintereinander enden im dritten, schweren
   Schlag — mehr Schaden, mehr Wucht, weiter Bogen.
@@ -296,3 +298,8 @@ Zum Herumprobieren liegt in der Konsole `window.WALDWACHT` mit `game`, `player`,
 
 Das frühere Projekt **NEON CLASH** (2D-Fighting-Game) liegt weiterhin als
 `neon-clash.html` im Repo.
+
+## Spielende
+Besiegst du im Endlevel den Teufel-Kolossus, läuft die Endanimation (Feuerwerk,
+Konfetti, „SIEG!", „ENDE"). Danach geht es mit der Leertaste zurück zur
+Auswahl.
