@@ -1576,6 +1576,10 @@ const CODES = {
   FROSTHAUCH:    ()=> grantUpgrade('ice', 25),
   GOLDADER:      ()=>{ const n=ri(80,150); game.scrap+=n; return '+'+n+' SCHRAUBEN'; },
   // Codes je Level - alle funktionieren in jedem Level, auch in Level 1
+  EICHENLAUB:    ()=>{ game.scrap+=90; if(ownedUltras().length) player.ultra=player.ultraMax; return '+90 SCHRAUBEN'; },
+  EICHENHERZ:    ()=> grantUpgrade('heart', 30),
+  MOOSPOLSTER:   ()=>{ game.castleHp=Math.min(game.castleMax,game.castleHp+40); player.hp=player.maxHp; return 'TOR +40, VOLL GEHEILT'; },
+  FARNKRAUT:     ()=> grantUpgrade('boots', 25),
   STADTLICHT:    ()=>{ game.scrap+=120; if(ownedUltras().length) player.ultra=player.ultraMax; return '+120 SCHRAUBEN'; },
   NEONNACHT:     ()=> randomReward(),
   STRASSENFEGER: ()=> grantUpgrade('blade', 30),
@@ -3274,7 +3278,13 @@ function update(dt){
         SFX.buy();
       }
     }
-    if(startEdge && game.winT>(game.levelWonN>=LEVELS.length?6.5:0.8)){ game.winT=undefined; buildWorld('forest'); game.state='title'; game.levelSelectOpen=true; }
+    const wonN=game.levelWonN, isEndWin=wonN>=LEVELS.length;
+    if(pressed.has('Escape') && game.winT>0.8 && !isEndWin){ game.winT=undefined; buildWorld('forest'); game.state='title'; game.levelSelectOpen=true; }
+    else if(startEdge && game.winT>(isEndWin?6.5:0.8)){
+      game.winT=undefined;
+      if(isEndWin){ buildWorld('forest'); game.state='title'; game.levelSelectOpen=true; }
+      else { audioUnlock(); startLevel(wonN+1, true); }          // weiter zum naechsten Level
+    }
     pressed.clear(); return;
   }
   if(game.paused && game.helpOpen){
@@ -3293,6 +3303,8 @@ function update(dt){
     lastTap=null; pressed.clear(); return;
   }
 
+  // V: Liste der Superkraefte auf/zu (wie der Knopf SUPERKRAEFTE!)
+  if(pressed.has('v') && ownedUltras().length && !game.shopOpen){ const o=!game.ultraMenuOpen; closeHudMenus(); game.ultraMenuOpen=o; SFX.pick(); }
   // Werkstatt
   if(game.phase==='rest'){
     if(pressed.has('b')||pressed.has('Tab')) game.shopOpen=!game.shopOpen;
@@ -3851,7 +3863,7 @@ const GUIDE_ROWS = [
   [['Q','BOGEN'], ['B','SHOP']],
   [['SHIFT','ROLLE'], ['P','PAUSE']],
   [['H','HEILEN'], ['M','TON']],
-  [['F','SCHILD HALTEN'], ['','']]
+  [['F','SCHILD HALTEN'], ['V','KRÄFTE']]
 ];
 function guideMenuRect(){
   const b=guideBtnRect();
@@ -4169,6 +4181,7 @@ function helpRows(){
     ['F HALTEN', 'SCHILD'],
     ['H', 'HEILEN'],
     ['X / C', 'ULTRA/WECHSELN'],
+    ['V', 'SUPERKRÄFTE-LISTE'],
     ['B / 1-4', 'SHOP / KAUFEN'],
     ['ENTER', 'NÄCHSTE WELLE'],
     ['P / ESC', 'PAUSE'],
@@ -4182,7 +4195,7 @@ function drawHelp(){
   drawTextC(ctx,'STEUERUNG', VW/2, p.y+5, PAL.C, 1);
   const keyX=p.x+8, actX=p.x+134;
   helpRows().forEach(([k,a],i)=>{
-    const ry=p.y+17+i*9;
+    const ry=p.y+16+i*8.4;
     drawText(ctx, k, keyX, ry, PAL.y, 1);
     drawText(ctx, a, actX, ry, '#cfe8c2', 1);
   });
@@ -4398,7 +4411,8 @@ function drawLevelWin(){
   drawTextC(ctx, 'BESTE: '+game.best, VW/2, y+69, '#9fb79a', 1);
   drawTextC(ctx, 'LEVEL '+(n+1)+' IST JETZT FREI', VW/2, y+83, '#cfe8c2', 1);
   if(Math.floor(game.time*2)%2===0)
-    drawTextC(ctx, isTouch?'TIPPEN: ZURÜCK ZUR AUSWAHL':'LEERTASTE: ZURÜCK ZUR AUSWAHL', VW/2, y+h+4, '#cfe8c2', 1);
+    drawTextC(ctx, isTouch?'TIPPEN: WEITER ZU LEVEL '+(n+1):'LEERTASTE: WEITER ZU LEVEL '+(n+1), VW/2, y+h+4, '#cfe8c2', 1);
+  if(!isTouch) drawTextC(ctx, 'ESC: LEVELAUSWAHL', VW/2, y+h+14, '#7f927b', 1);
 }
 function pausePanelRect(){ const w=182, h=84; return { x:Math.round((VW-w)/2), y:Math.round((VH-h)/2)-6, w, h }; }
 function pauseSaveRect(){ const p=pausePanelRect(); return { x:VW/2-70, y:p.y+40, w:140, h:16 }; }
@@ -4551,7 +4565,7 @@ function frame(now){
 requestAnimationFrame(frame);
 
 // Zum Herumprobieren in der Konsole
-window.WALDWACHT = { game, player, enemies, BOT, UPGRADES, spawnEnemy, startWave, buildWorld, props, solids };
+window.WALDWACHT = { game, player, enemies, BOT, UPGRADES, spawnEnemy, startWave, buildWorld, props, solids, botDef, SKINS, ULTRAS, THEMES };
 })();
 // Installierbare App (Zum Home-Bildschirm): Service Worker nur registrieren,
 // wenn ueber http(s) geladen - bei einer lokal geoeffneten Datei (file://)

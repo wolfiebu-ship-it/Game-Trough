@@ -41,6 +41,7 @@ damit sie zum Rest passen.
 | `Shift` | Rolle (kurz unverwundbar, 2,8 s Wartezeit) |
 | `H` | heilen: ein ganzes Herz, alle 15 Sekunden |
 | `X` / `C` | Ultra auslösen / Ultra wechseln (ab Welle 10) |
+| `V` | Liste der Superkräfte auf/zu (wie der Knopf SUPERKRÄFTE!) |
 | `B` | Shop öffnen und schließen (in der Ruhephase) |
 | `1` `2` `3` `4` | Karte kaufen |
 | `Enter` | nächste Welle früher starten |
@@ -202,7 +203,7 @@ nicht mehr; alte „alle frei"-Stände aus früheren Versionen werden beim Start
 zurückgesetzt (vorhandene Spielstände zählen weiter). **Teleportieren:** Im Spiel öffnet der Knopf LEVEL unter SUPERKRÄFTE! eine Liste;
 tippe eine Zeile an (HIN), um sofort in dieses Level/diese Welt zu springen, oder
 „ENDLOS-SPIEL", um zurück in deinen Spielstand zu gehen. Ein laufendes Endlos-Spiel
-wird vorher automatisch gespeichert. Ein gewonnenes Level bekommt „GESCHAFFT".
+wird vorher automatisch gespeichert. Ein gewonnenes Level bekommt „GESCHAFFT". Nach dem Sieg startet die Leertaste direkt das nächste Level (Esc: zurück zur Levelauswahl).
 
 **Musik:** Jede Welt hat ihre eigene Musik (Stadt: ruhiger Nacht-Jazz,
 Strand: chillig, Eis: sanft, Hölle: düster). Beim Levelwechsel wechselt die Musik
@@ -275,7 +276,7 @@ Durchlauf einlösbar. Alle Codes funktionieren in jedem Level – auch in Level 
 ### Codes je Level
 | Level | Codes |
 |---|---|
-| 1 · Wald | `FOREST`, `PFEILE`, `WALDWACHT`, `DEMIRCI` und die Fundstück-Codes oben |
+| 1 · Wald | `EICHENLAUB` (90 Schrauben, Ultra voll), `EICHENHERZ` (Herz), `MOOSPOLSTER` (Tor +40, voll geheilt), `FARNKRAUT` (Tempo); dazu `FOREST`, `PFEILE`, `WALDWACHT`, `DEMIRCI` und die Fundstück-Codes oben |
 | 2 · Stadt | `STADTLICHT` (120 Schrauben, Ultra voll), `NEONNACHT` (Zufall), `STRASSENFEGER` (Schaden), `BETONHERZ` (Herz) |
 | 3 · Eis | `EISZAPFEN` (Eispfeile), `SCHNEEBALL` (80 Schrauben, voll geheilt), `FROSTBISS` (Rolle), `POLARSTERN` (Ultra voll) |
 | 4 · Strand | `MUSCHELHORN` (Zufall), `SONNENBRAND` (Feuerklinge), `WELLENREITER` (Tempo), `PALMENSCHATTEN` (Tor +40, voll geheilt) |
