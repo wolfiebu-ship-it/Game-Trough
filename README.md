@@ -94,8 +94,8 @@ gespeichert und gilt auch nach dem Neuladen.
   Tor, ist das Spiel ebenfalls vorbei. Das Tor erkennt nur dich — du kannst
   hindurch, die Bots nicht.
 - **Speicherstand**: Drei Speicherplätze nebeneinander im Titelbild. Ein
-  belegter Platz zeigt „SPIELWELT 1/2/3" mit Heldenköpfchen, Schrauben,
-  Punkten und der erreichten Welle — antippen (oder `1`/`2`/`3`) setzt genau
+  belegter Platz zeigt „WELT 1/2/3" mit Heldenköpfchen, der erreichten Welle
+  und „SCHRAUBEN: n" — antippen (oder `1`/`2`/`3`) setzt genau
   dort fort. Ein leerer Platz zeigt „NEUES SPIEL ANFANGEN" und startet dort
   ein frisches Spiel. Nach jeder gehaltenen Welle, jedem Kauf und beim
   Verlassen des Spiels wird automatisch in den aktiven Platz gespeichert (ein

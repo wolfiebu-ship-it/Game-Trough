@@ -3843,9 +3843,11 @@ function drawSaveSlot(b){
     panel(b.x, b.y, b.w, b.h, 'rgba(16,32,18,.92)', PAL.H);
     drawTextC(ctx, 'WELT '+b.slot, mx, b.y+3, PAL.y, 1);
     ctx.save(); ctx.translate(Math.round(mx-SPR.head.w), b.y+11); ctx.scale(2,2); ctx.drawImage(SPR.head.img,0,0); ctx.restore();
-    const scoreLine = 'S'+(d.scrap||0)+' P'+(d.score||0);
-    drawTextC(ctx, scoreLine, mx, b.y+28, '#cfe8c2', 1);
-    drawTextC(ctx, 'WELLE '+(d.wave||0), mx, b.y+38, '#9fb79a', 1);
+    drawTextC(ctx, 'WELLE '+(d.wave||0), mx, b.y+27, '#cfe8c2', 1);
+    const sl='SCHRAUBEN: '+(d.scrap||0), ss=Math.min(0.75, (b.w-10)/textW(sl,1));   // klein, passt auch bei vielen Schrauben ins Feld
+    ctx.save(); ctx.translate(Math.round(mx), b.y+38); ctx.scale(ss,ss);
+    drawTextC(ctx, sl, 0, 0, '#9fb79a', 1);
+    ctx.restore();
   } else {
     panel(b.x, b.y, b.w, b.h, 'rgba(12,18,13,.8)', '#3a4a3a');
     drawTextC(ctx, 'NEUES', mx, b.y+14, PAL.O, 1);
@@ -3882,8 +3884,15 @@ function drawTitle(){
   drawText(ctx, 'HILFE', hb.x+13, hb.y+2, '#e9d98a', 1);
   drawTextC(ctx,'WALDWACHT', VW/2, y+6, PAL.H, 3);
   if(game.best>0){
-    const b='BESTE '+game.best;
-    drawText(ctx, b, x+w-6-textW(b,1), y+6, PAL.y, 1);
+    // oben links in der Ecke, zweizeilig, damit nichts in die grosse Ueberschrift oder den Vollbild-Knopf ragt
+    const n=String(game.best), lx=x+5, maxW=28;
+    for(const [t,yy] of [['BESTE',y+3],[n,y+12]]){
+      const k=Math.min(1, maxW/textW(t,1));
+      ctx.save(); ctx.translate(lx, yy); ctx.scale(k,k);
+      drawText(ctx, t, 0, 0, PAL.y, 1);
+      drawText(ctx, t, 1, 0, PAL.y, 1);                                              // doppelt gezeichnet = etwas dicker
+      ctx.restore();
+    }
   }
   if(noKeyFocus()) drawTextC(ctx, KEY_HINT, VW/2, y+32, PAL.y, 1);     // Platz des Untertitels, nichts ueberlagert
   else drawTextC(ctx,'HALTE DIE BOTS VON DER BURG FERN', VW/2, y+32, '#cfe8c2', 1);
