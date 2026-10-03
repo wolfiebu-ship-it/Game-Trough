@@ -154,24 +154,26 @@ gespeichert und gilt auch nach dem Neuladen.
   bremsen, Felsen und Mauern blockieren. Auf den Lichtungen kämpft es sich am
   freiesten.
 
-## Level-Modus
+## Level-Modus und Welten
 
 Neben dem Endlos-Modus (drei Spielstände, unendlich viele Wellen) gibt es fünf
-feste Level zum Durchspielen. Der gelbe **LVL**-Knopf oben links im Titelbild
-öffnet — genau wie **SUPERKRÄFTE!** im Spiel — eine antippbare Liste: Level 1
-ist von Anfang an frei, jedes weitere schaltet sich erst frei, sobald das
-vorherige geschafft ist. Gesperrte Level sind grau mit „GESPERRT"
-beschriftet, geschaffte grün umrandet.
+feste Level zum Durchspielen, jedes in einer **eigenen Welt** mit eigenem Boden,
+eigenen Bäumen/Häusern, eigener Musik und eigenen Gegnern. Der Knopf **LEVEL**
+(im Titelbild und im Spiel unter SUPERKRÄFTE!) zeigt, welche Level geschafft,
+frei oder noch gesperrt sind.
 
-- **Level 1–4**: normale Wellen bis zum jeweiligen Boss (Kolossus, Glutgolem,
-  Schattenfürst, Kolossus) — wie im Endlos-Modus, endet aber automatisch mit
-  „LEVEL GESCHAFFT!", sobald der Boss fällt.
-- **Level 5 — Endlevel**: kein Wellen-Marathon, sondern direkt der
-  **Ultra-Kolossus**, eine dunkel gepanzerte, sichtbar größere Fassung des
-  Kolossus mit glühendem Kern, spürbar mehr Leben und drei rotierenden
-  Angriffsmustern (Stampf-Druckwelle, Schulter-Salven, Teleport-Klingenwirbel).
-  Er wird bereits ab 65 % Leben wütend (statt 50 %) und ruft schneller
-  Verstärkung — der schwerste Kampf im Spiel.
+| Level | Welt | Ziel | Gegner |
+|---|---|---|---|
+| 1 | **Wald** | Welle 5 (Kolossus) | die normalen Schrott-Bots |
+| 2 | **Stadt** bei Nacht: Straße, Häuser, Autos, Laternen | Welle 10 (Glutgolem) | Schrott-Bots |
+| 3 | **Eisberge**: Schnee, Kiefern, Eiskristalle, Schneefall | Welle 15 (Frostkoloss) | Eiswölfe, Alphawölfe, Pinguine, Eisbären, Schneemänner |
+| 4 | **Strand**: Sand, Palmen, Meer, Möwen am Himmel, ruhige Musik | Welle 20 (Schattenfürst) | Seesterne, Krabben, Quallen, Riesenseesterne, Seeigel |
+| 5 | **Hölle** (Endlevel): Lava, tote Bäume, Schädel, Glut | nur der **Teufel-Kolossus** | Teufelchen, Dämonen, Höllenschützen, Höllenbrecher, Feuerzünder |
+
+Der **Teufel-Kolossus** ist der stärkste Gegner im Spiel: rot-schwarz, mit
+Hörnern, größer als alle anderen, mit drei rotierenden Angriffsmustern
+(Stampf-Druckwelle, Schulter-Salven, Teleport-Klingenwirbel). Er wird schon ab
+65 % Leben wütend und ruft schneller Verstärkung.
 
 So schaltest du Level frei: Level 1 ist immer frei. Schaffst du Welle 5
 (Level 1 oder im Endlos-Modus), wird Level 2 frei; Welle 10 schaltet Level 3
@@ -180,6 +182,15 @@ frei, Welle 15 Level 4, Welle 20 das Endlevel. Während eines Levels steht oben
 
 Level-Durchläufe nutzen einen eigenen Fortschrittsspeicher (höchstes
 freigeschaltetes Level) und rühren die drei Endlos-Spielstände nicht an.
+
+**Beim Sterben** kannst du direkt weitermachen, ohne zum Titelbild zu müssen:
+Im Endlos-Modus zeigt der Bildschirm die drei Spielstände. Der Stand beim Tod
+wird automatisch in den aktuellen Platz gespeichert (die Welle, in der du
+gestorben bist, zählt als nicht geschafft, also beginnst du genau mit ihr, mit
+vollen Herzen und heilem Tor, Schrauben und Verbesserungen bleiben). Tippe einen
+Platz an, um dort weiterzuspielen (ein leerer Platz startet ein neues Spiel),
+oder drücke `1`/`2`/`3`, `Leertaste` (selber Platz) oder `Esc` (Titelbild). Im
+Level-Modus gibt es „Nochmal versuchen", „Anderes Level" und „Zum Titelbild".
 
 ## Die Bots
 
@@ -190,7 +201,8 @@ freigeschaltetes Level) und rühren die drei Endlos-Spielstände nicht an.
 | **Schütze** (lila) | hält Abstand und schießt Energiebolzen |
 | **Brecher** (rot, groß) | langsam, zäh, prügelt besonders hart aufs Tor |
 | **Zünder** (gelb) | rennt heran und sprengt sich — reißt auch eigene Bots mit |
-| **Kolossus** (Boss) | Welle 5, 15, 25, … doppelt so groß wie du, stampft Druckwellen, feuert Salven aus den Schulterwerfern und ruft Späher. Unter halber Lebensanzeige **Wut**: schneller, mehr Salven, mehr Verstärkung |
+| **Kolossus** (Boss) | Welle 5, 25, 45, … doppelt so groß wie du, stampft Druckwellen, feuert Salven aus den Schulterwerfern und ruft Späher. Unter halber Lebensanzeige **Wut**: schneller, mehr Salven, mehr Verstärkung |
+| **Frostkoloss** (Boss) | Welle 15, 35, 55, … der eisblaue Bruder des Kolossus mit denselben Angriffen (Welle 5, 25, 45 bleiben dem Kolossus) |
 | **Glutgolem** (Boss) | Welle 10, 30, 50, … reiner Nahkämpfer mit deutlich mehr Leben als der Kolossus, ein einzelner aber sehr weitreichender Feuerstampfer, ruft Brecher statt Späher |
 | **Schattenfürst** (Boss) | Welle 20, 40, 60, … schneller und aggressiver als die anderen beiden, teleportiert sich mit einem kurzen Sprung heran und schlägt sofort mit einem Klingenwirbel zu |
 
