@@ -2211,7 +2211,7 @@ function fireUltra(){
   // Nicht still ignorieren - sagen, warum es gerade nicht geht.
   if(!activeUltra()){ say('ULTRA GIBT ES AB WELLE 3', 1.4, PAL.O); SFX.no(); return; }
   if(!ultraReady()){
-    say('ULTRA LÄDT NOCH '+Math.floor(player.ultra/player.ultraMax*100)+'% - TREFFER LADEN', 1.4, PAL.O); SFX.no(); return;
+    say('ULTRA '+Math.floor(player.ultra/player.ultraMax*100)+'% · TREFFER LADEN', 1.4, PAL.O); SFX.no(); return;
   }
   const u=activeUltra(); player.ultra=0;
   say(u.name+'!', 1.4, PAL.y); game.flash=0.4;
@@ -2612,14 +2612,17 @@ function updatePlayer(dt){
   p.atkCd=Math.max(0,p.atkCd-dt); p.dashCd=Math.max(0,p.dashCd-dt);
   p.comboT-=dt; if(p.comboT<=0) p.combo=0;
 
-  // --- Funken in Heldenfarbe: im Stehen ein wenig mehr, beim Laufen weniger ---
+  // --- Luftwirbel in Heldenfarbe um den Helden (wie beim Schlag): im Stehen oefter, beim Laufen seltener ---
   if(p.alive && p.dashT<=0){
     const still = Math.hypot(p.vx,p.vy)<12;
     p.sparkT=(p.sparkT||0)-dt;
     if(p.sparkT<=0){
-      p.sparkT = still ? rr(0.1,0.22) : rr(0.3,0.5);
-      const sw=heroSwing(), a=rr(0,TAU), r=rr(5,9);
-      part(p.x+Math.cos(a)*r, p.y-7+Math.sin(a)*r*0.8, Math.cos(a)*rr(2,8), rr(-16,-8), rr(0.5,0.9), Math.random()<0.3?sw.hi:sw.mid, 1, -8);
+      p.sparkT = still ? rr(0.35,0.6) : rr(0.8,1.3);
+      const sw=heroSwing(), a0=rr(0,TAU), dir=Math.random()<0.5?1:-1, r=rr(8,12), n=6;
+      for(let i=0;i<n;i++){                              // kurzer Bogen, dessen Punkte tangential nach vorn wehen
+        const a=a0+dir*i*0.17, ta=a+dir*Math.PI/2, sp=rr(22,34);
+        part(p.x+Math.cos(a)*r, p.y-7+Math.sin(a)*r*0.8, Math.cos(ta)*sp, Math.sin(ta)*sp*0.8, rr(0.22,0.4), i<2?sw.hi:sw.mid, 1, 0);
+      }
     }
   }
 
@@ -3873,10 +3876,11 @@ function drawHUD(){
     const sc = textW(game.msg,2) <= VW-16 ? 2 : 1;
     hudScaled(VW/2, 75, ()=>{
       ctx.globalAlpha=a;
+      const MY=86;                                                  // unter den Knopfreihen links, damit nichts in den Knoepfen liegt
       const mw=textW(game.msg,sc)+10, mh=7*sc+6, K=sc>1?0.78:1;   // grosse Meldungen etwas kleiner
-      ctx.save(); ctx.translate(VW/2, 68+mh/2-3); ctx.scale(K,K); ctx.translate(-VW/2, -(68+mh/2-3));
-      ctx.fillStyle='rgba(8,14,10,.6)'; ctx.fillRect(Math.round(VW/2-mw/2), 68-3, mw, mh);   // dunkle Leiste: lesbar auf jedem Untergrund
-      drawTextC(ctx, game.msg, VW/2, 68, game.msgCol||PAL.y, sc); ctx.restore(); ctx.globalAlpha=1;
+      ctx.save(); ctx.translate(VW/2, MY+mh/2-3); ctx.scale(K,K); ctx.translate(-VW/2, -(MY+mh/2-3));
+      ctx.fillStyle='rgba(8,14,10,.6)'; ctx.fillRect(Math.round(VW/2-mw/2), MY-3, mw, mh);   // dunkle Leiste: lesbar auf jedem Untergrund
+      drawTextC(ctx, game.msg, VW/2, MY, game.msgCol||PAL.y, sc); ctx.restore(); ctx.globalAlpha=1;
     });
   }
   if(game.white>0){
@@ -3940,7 +3944,7 @@ function drawSaveSlot(b){
     drawTextC(ctx, 'WELT '+b.slot, mx, b.y+3, PAL.y, 1);
     ctx.save(); ctx.translate(Math.round(mx-SPR.head.w), b.y+11); ctx.scale(2,2); ctx.drawImage(SPR.head.img,0,0); ctx.restore();
     drawTextC(ctx, 'WELLE '+(d.wave||0), mx, b.y+27, '#cfe8c2', 1);
-    const sl='SCHRAUBEN: '+(d.scrap||0), ss=Math.min(0.75, (b.w-10)/textW(sl,1));   // klein, passt auch bei vielen Schrauben ins Feld
+    const sl='SCHRAUBEN: '+(d.scrap||0), ss=HUDK;   // klein, passt auch bei vielen Schrauben ins Feld
     ctx.save(); ctx.translate(Math.round(mx), b.y+38); ctx.scale(ss,ss);
     drawTextC(ctx, sl, 0, 0, '#cfe8c2', 1);
     ctx.restore();
@@ -3981,12 +3985,12 @@ function drawTitle(){
   drawTextC(ctx,'WALDWACHT', VW/2, y+6, PAL.H, 3);
   if(game.best>0){
     // oben links in der Ecke, zweizeilig, damit nichts in die grosse Ueberschrift oder den Vollbild-Knopf ragt
-    const n=String(game.best), lx=x+5, maxW=28;
+    const n=String(game.best), lx=x+3, maxW=30;
     for(const [t,yy] of [['BESTE',y+3],[n,y+12]]){
-      const k=Math.min(1, maxW/textW(t,1));
+      const k = textW(t,1)<=maxW ? 1 : HUDK;                                         // nur ganze Pixelstufen (1 oder 2/3): bleibt scharf
       ctx.save(); ctx.translate(lx, yy); ctx.scale(k,k);
       drawText(ctx, t, 0, 0, PAL.y, 1);
-      drawText(ctx, t, 1, 0, PAL.y, 1);                                              // doppelt gezeichnet = etwas dicker
+      if(k===1) drawText(ctx, t, 1, 0, PAL.y, 1);                                    // doppelt gezeichnet = etwas dicker (nur bei voller Groesse)
       ctx.restore();
     }
   }

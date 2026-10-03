@@ -81,7 +81,7 @@ unter LEVEL) öffnet ein Fenster mit:
 - **Avatar**: zeigt dein Köpfchen. Antippen öffnet „FARBE WÄHLEN" mit 12 Farben
   (Grün, Gelb, Rot, Blau, Orange, Lila, Pink, Türkis, Hellblau, Braun, Weiß,
   Schwarz). Kapuze und Umhang des Helden nehmen die Farbe an, im Spiel, in der
-  Rolle und auf den Speicherplätzen. Die Wahl bleibt gespeichert. Auch der Schwertschwung und ein paar Luftwirbel haben die Farbe des Helden.
+  Rolle und auf den Speicherplätzen. Die Wahl bleibt gespeichert. Auch der Schwertschwung und die Luftwirbel um den Helden haben die Farbe des Helden.
 - **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
 
 Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
@@ -127,7 +127,7 @@ gespeichert und gilt auch nach dem Neuladen.
   Sekunden. Lässt du los, verschwindet das Schild sofort (kurze Sperre von 2 s).
   Hält es 3 Treffer aus oder läuft die Zeit ab, lädt es 5 s nach (im Bosskampf
   10 s; SCHILD-Balken). Am Handy: die Taste SCHILD gedrückt halten.
-- **Funken**: Der Held funkelt dezent in seiner Avatar-Farbe, im Stehen etwas
+- **Luftwirbel**: Um den Helden wehen kleine Wirbel in seiner Avatar-Farbe, im Stehen etwas
   mehr; beim Schlagen kommen Luftwirbel dazu.
 - **Fokus**: Verliert das Spiel den Fokus (z. B. zum Chatten), werden alle
   gehaltenen Tasten losgelassen und das Spiel pausiert – der Held läuft nie
