@@ -1322,7 +1322,7 @@ const player = {
   shield:0, shieldMax:0, shieldT:0, shieldEvery:18, burn:0, ice:0, extraArrows:0,
   greed:0, ultraGain:1, revive:0,
   arrows:100, arrowKills:0,                // Pfeile sind begrenzt: 100 zum Start, +20 je 5 besiegte Bots
-  block:0, blockCd:0, blockCdMax:10,       // F-Schild: faengt 2 Treffer ab, danach 10 s Pause
+  block:0, blockCd:0, blockCdMax:5,        // F-Schild: beliebig oft, faengt 2 Treffer ab; 5 s Nachladen (Boss: 10 s)
   inv:0, anim:0, hurtT:0, alive:true,
   lifesteal:0, thorns:0, magnet:34,
   upg:{}
@@ -1447,6 +1447,9 @@ function playerShoot(){
   player.vx -= Math.cos(a)*18; player.vy -= Math.sin(a)*18;      // kleiner Rueckstoss
   SFX.bow();
 }
+// Im Bosskampf laedt der Schild doppelt so lange nach.
+const bossFight = ()=> enemies.some(e=>!e.dead && e.d.boss);
+const blockReload = ()=> bossFight() ? 10 : 5;
 function playerBlock(){
   if(!player.alive) return;
   if(player.block>0) return;                             // steht schon
@@ -1476,7 +1479,7 @@ function hurtPlayer(dmg, fromX, fromY){
   if(player.block>0){                                   // F-Schild faengt den Treffer komplett ab
     player.block--; player.inv=0.6;
     burst(player.x, player.y-7, 18, PAL.C, 90, 0.5); SFX.hit(); shake(0.8);
-    if(player.block===0){ player.blockCd=player.blockCdMax; floater(player.x, player.y-20, 'SCHILD WEG', PAL.O); }
+    if(player.block===0){ player.blockCdMax=blockReload(); player.blockCd=player.blockCdMax; floater(player.x, player.y-20, 'SCHILD WEG', PAL.O); }
     else floater(player.x, player.y-20, 'BLOCK', PAL.C);
     return;
   }
@@ -3039,13 +3042,13 @@ function drawGuideMenu(){
 }
 function levelInfoRect(){
   const b=levelInfoBtnRect();
-  return { x:b.x+b.w+3, y:b.y, w:150, h:LEVELS.length*9+5 };
+  return { x:b.x+b.w+3, y:b.y, w:154, h:LEVELS.length*12+6 };
 }
 function drawLevelInfo(){
   const m=levelInfoRect(), un=getUnlockedLevel();
   panel(m.x, m.y, m.w, m.h, 'rgba(10,18,12,.96)', PAL.y);
   LEVELS.forEach((L,i)=>{
-    const y=m.y+3+i*9, done=levelDone(L.n), open=L.n<=un;
+    const y=m.y+4+i*12, done=levelDone(L.n), open=L.n<=un;
     const cur = game.levelMode===L.n;
     drawText(ctx, (cur?'>':' ')+L.label, m.x+3, y, open?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
     const st = done?'GESCHAFFT':(open?'FREI':'GESPERRT');
@@ -3248,23 +3251,23 @@ function drawTitle(){
 }
 // --- Levelauswahl: eigenes Overlay ueber dem Titelbild, volle Flaeche zur
 // Verfuegung, deshalb hier keine Platznot wie im engen Titel-Panel. ---
-const LVLSEL = { w:204, h:128 };
+const LVLSEL = { w:204, h:140 };
 function levelSelectPanelRect(){ return { x:Math.round((VW-LVLSEL.w)/2), y:Math.round((VH-LVLSEL.h)/2), w:LVLSEL.w, h:LVLSEL.h }; }
 function levelRowRect(i){
   const p=levelSelectPanelRect();
-  return { x:p.x+8, y:p.y+22+i*19, w:p.w-16, h:17 };
+  return { x:p.x+8, y:p.y+15+i*23, w:p.w-16, h:22 };
 }
 function drawLevelSelect(){
   ctx.globalAlpha=0.82; ctx.fillStyle='#0b120d'; ctx.fillRect(0,0,VW,VH); ctx.globalAlpha=1;
   const p=levelSelectPanelRect();
   panel(p.x,p.y,p.w,p.h);
-  drawTextC(ctx,'LEVEL WÄHLEN', VW/2, p.y+6, PAL.H, 1);
+  drawTextC(ctx,'LEVEL WÄHLEN', VW/2, p.y+5, PAL.H, 1);
   const unlocked = getUnlockedLevel();
   LEVELS.forEach((L,i)=>{
     const r = levelRowRect(i), ok = L.n<=unlocked, mx=r.x+r.w/2;
     panel(r.x, r.y, r.w, r.h, ok?'rgba(16,32,18,.92)':'rgba(12,14,13,.75)', ok?(L.finalBoss?PAL.R:PAL.H):'#3a3a3a');
-    drawTextC(ctx, levelDone(L.n)?L.label+' · GESCHAFFT':L.label, mx, r.y+2, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
-    drawTextC(ctx, ok?L.desc:'GESPERRT', mx, r.y+10, ok?'#9fb79a':'#4a4a4a', 1);
+    drawTextC(ctx, levelDone(L.n)?L.label+' · GESCHAFFT':L.label, mx, r.y+3, ok?(L.finalBoss?PAL.R:PAL.y):'#5a5a5a', 1);
+    drawTextC(ctx, ok?L.desc:'GESPERRT', mx, r.y+13, ok?'#9fb79a':'#4a4a4a', 1);
   });
   drawTextC(ctx, isTouch?'AUSSERHALB TIPPEN: ZURÜCK':'ESC: ZURÜCK', VW/2, p.y+p.h-9, '#7f927b', 1);
 }
