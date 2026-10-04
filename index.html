@@ -4668,7 +4668,8 @@ function frame(now){
   if(dt>0.2) dt=0.2;
   // Fokus weg (z.B. zum Chatten geklickt): gehaltene Tasten/Stick sofort loslassen, nie automatisch weiterlaufen
   const hasF = document.hasFocus();
-  if(!hasF){ releaseAllKeys(); if(hadFocus && game.state==='play' && !game.paused) game.paused=true; }
+  // Nur am Rechner mit Tastatur: Am Handy meldet das eingebettete Spiel oft "kein Fokus", obwohl die Finger bedienen - dort darf der Stick nie freigegeben werden.
+  if(!hasF && !isTouch){ for(const k in keys) keys[k]=false; if(hadFocus && game.state==='play' && !game.paused) game.paused=true; }
   hadFocus = hasF;
   let rest=dt;
   while(rest>0.00001){ const step=Math.min(rest, MAXSTEP); update(step); rest-=step; }
