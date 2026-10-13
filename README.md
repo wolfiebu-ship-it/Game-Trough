@@ -324,6 +324,10 @@ Konfetti, „SIEG!", „ENDE"). Danach geht es mit der Leertaste zurück zur
 Auswahl.
 
 ## Veröffentlichen
+- **GitHub Pages einschalten** (einmalig, nur der Besitzer kann das): Repository →
+  Settings → Pages → „Deploy from a branch" → Branch `claude/forest-bot-combat-game-nycw11`,
+  Ordner `/ (root)` → Save. Nach etwa einer Minute läuft das Spiel unter
+  `https://wolfiebu-ship-it.github.io/Game-Trough/`.
 - Das Spiel besteht aus `index.html` (alles drin), `manifest.json`, `service-worker.js`
   und den Icons. Auf GitHub Pages hochgeladen läuft es im Browser und lässt sich am
   Handy „zum Home-Bildschirm" hinzufügen (offline spielbar, neue Versionen werden

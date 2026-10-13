@@ -1370,7 +1370,7 @@ function grabFocus(e){
 addEventListener('pointerdown', grabFocus, true);
 addEventListener('mousedown',   grabFocus, true);
 addEventListener('touchstart',  grabFocus, {capture:true, passive:true});
-addEventListener('blur', ()=>{ releaseAllKeys(); if(game.state==='play') game.paused=true; });
+addEventListener('blur', ()=>{ releaseAllKeys(); if(game.state==='play' && !typingInCode()) game.paused=true; });   // beim Tippen im Codefeld nicht pausieren (Feld wuerde sonst verschwinden)
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ releaseAllKeys(); if(game.state==='play') game.paused=true; } });
 addEventListener('pagehide', ()=>{ releaseAllKeys(); saveGame(); });
 // Spiel verlassen (Tab zu, App gewechselt, Bildschirm aus): Stand automatisch in den eigenen Platz
@@ -1430,7 +1430,11 @@ function touchStart(e){
   }
   e.preventDefault();
 }
+// Beruehrungen, die auf Eingabefeldern (Code, Name) liegen, gehoeren dem Browser: kein preventDefault,
+// sonst bekommt das Feld am iPad/iPhone keinen Fokus und die Tastatur geht nicht auf.
+const onInputField = e => { const t=e.target; return t===codeInput || t===codeBtn || t===nameInput; };
 function touchMove(e){
+  if(onInputField(e)) return;
   syncSticks(e);
   const r=touchUI.getBoundingClientRect();
   for(const t of e.changedTouches){
@@ -1451,6 +1455,7 @@ function syncSticks(e){
     if(s.id!==null && !ids.has(s.id)){ s.id=null; s.dx=0; s.dy=0; s.el.classList.remove('on'); } }
 }
 function touchEnd(e){
+  if(onInputField(e)) return;
   const ended = Array.from(e.changedTouches||[]).map(t=>t.identifier);
   for(const t of e.changedTouches){
     for(const key of ['L','R']){ const s=sticks[key];
