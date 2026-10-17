@@ -4377,7 +4377,7 @@ function setCtrlX(){ return setPanelRect().x+80; }
 function setMinusRect(i){ return { x:setCtrlX(), y:setRowY(i)-2, w:11, h:11 }; }
 function setSegRect(i,n){ return { x:setCtrlX()+14+n*7, y:setRowY(i)-2, w:6, h:11 }; }
 function setPlusRect(i){ return { x:setCtrlX()+14+70+2, y:setRowY(i)-2, w:11, h:11 }; }
-function setHeroRect(){ return { x:setCtrlX(), y:setRowY(5)-4, w:30, h:16 }; }
+function setHeroRect(){ return { x:setCtrlX(), y:setRowY(5)-2, w:22, h:12 }; }
 function setResetRect(){ return { x:setCtrlX(), y:setRowY(6)-2, w:112, h:11 }; }
 // Farbwahl: kleines Fenster mit 12 Farbfeldern (6 x 2), liegt ueber den Reglern
 function setPickRect(){ const p=setPanelRect(); return { x:p.x+14, y:p.y+40, w:p.w-28, h:62 }; }
@@ -4423,7 +4423,7 @@ function drawSettings(){
   drawText(ctx,'AVATAR', lx, setRowY(5), '#cfe8c2', 1);
   const hr=setHeroRect();
   panel(hr.x,hr.y,hr.w,hr.h, game.heroPick?'rgba(26,46,26,.95)':'rgba(16,26,18,.95)', game.heroPick?PAL.l:PAL.C);
-  ctx.save(); ctx.translate(hr.x+Math.round((hr.w-SPR.head.w*2)/2), hr.y+2); ctx.scale(2,2); ctx.drawImage(SPR.head.img,0,0); ctx.restore();
+  ctx.save(); ctx.translate(hr.x+4+1/3, hr.y+1+1/3); ctx.scale(4/3,4/3); ctx.drawImage(SPR.head.img,0,0); ctx.restore();   // 4/3: jeder Pixel genau 4 Zeichenpixel, bleibt scharf
   drawText(ctx, HERO_COLORS[SETTINGS.hero].name, hr.x+hr.w+5, setRowY(5), PAL.y, 1);
   drawText(ctx,'NEUSTART', lx, setRowY(6), '#cfe8c2', 1);
   const rr2=setResetRect(), armed=(game.resetArmT||0)>0;
