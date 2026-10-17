@@ -91,6 +91,10 @@ unter LEVEL) öffnet ein Fenster mit:
   Fortschritt: die drei Spielwelten, den Level-Speicher, alle Freigaben und
   „GESCHAFFT"-Haken, die erspielten Superkräfte und den Rekord. Name, Avatar
   und Lautstärke bleiben. Danach beginnt alles wie beim ersten Start.
+- **Texteingabe im Spiel**: Heldenname und Code werden über ein eigenes Tastenfeld im
+  Spiel getippt (A–Z, Ä Ö Ü, 0–9, Leerzeichen, Löschen, OK, Abbruch); eine angeschlossene
+  Tastatur funktioniert zusätzlich (Enter = OK, Esc = Abbruch). Das ist unabhängig von
+  der Bildschirmtastatur des Geräts und läuft deshalb auch eingebettet am iPad.
 - **Wackeln** an/aus: Bildschirmwackeln bei Treffern und Explosionen.
 
 Während das Fenster offen ist, steht das Spiel. Alles wird im Browser
