@@ -344,3 +344,7 @@ Auswahl.
   ist nicht Teil dieses Projekts.
 - Beim Ladevorgang gespeichert wird nur im Browser (`localStorage`): Spielstände,
   Freigaben, Einstellungen. Nichts wird übertragen.
+
+## iOS-App
+
+Eine native iOS-App (Swift, WKWebView) liegt im Ordner [`ios/`](ios/README.md). Bauen mit XcodeGen und Xcode, Anleitung dort.

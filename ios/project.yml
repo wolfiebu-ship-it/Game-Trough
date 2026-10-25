@@ -1,0 +1,56 @@
+name: Waldwacht
+options:
+  bundleIdPrefix: de.waldwacht
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Waldwacht:
+    type: application
+    platform: iOS
+    sources:
+      - path: Waldwacht
+      - path: ../index.html
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.waldwacht.spiel
+        PRODUCT_NAME: Waldwacht
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        # In Xcode unter "Signing & Capabilities" das eigene Team waehlen.
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: Waldwacht/Info.plist
+      properties:
+        CFBundleDisplayName: WALDWACHT
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        LSRequiresIPhoneOS: true
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: true
+        UIUserInterfaceStyle: Dark
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+schemes:
+  Waldwacht:
+    build:
+      targets:
+        Waldwacht: all
+    run:
+      config: Debug
+    archive:
+      config: Release

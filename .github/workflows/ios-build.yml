@@ -1,0 +1,56 @@
+name: iOS-Build
+
+on:
+  push:
+    paths: ['ios/**', 'index.html', '.github/workflows/ios-build.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: XcodeGen installieren und Projekt erzeugen
+        run: |
+          brew install xcodegen
+          cd ios && xcodegen generate
+
+      - name: Fuer iPhone bauen (ohne Signatur)
+        run: |
+          cd ios
+          xcodebuild -project Waldwacht.xcodeproj -scheme Waldwacht \
+            -configuration Release -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
+      - name: Unsignierte IPA packen
+        run: |
+          cd ios/build/Build/Products/Release-iphoneos
+          mkdir Payload && cp -R Waldwacht.app Payload/
+          zip -qr Waldwacht-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Waldwacht-unsigned-ipa
+          path: ios/build/Build/Products/Release-iphoneos/Waldwacht-unsigned.ipa
+
+      - name: Im Simulator starten und Screenshot machen
+        run: |
+          cd ios
+          xcodebuild -project Waldwacht.xcodeproj -scheme Waldwacht \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-sim \
+            CODE_SIGNING_ALLOWED=NO build
+          DEVICE=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone [^(]+' | sed 's/ *$//')
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl install booted build-sim/Build/Products/Debug-iphonesimulator/Waldwacht.app
+          xcrun simctl launch booted de.waldwacht.spiel
+          sleep 15
+          xcrun simctl io booted screenshot ../simulator.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Simulator-Screenshot
+          path: simulator.png
