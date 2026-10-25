@@ -11,6 +11,10 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
+        // Dem Spiel sagen, dass es in der iOS-App laeuft (startet dann mit Touch-Steuerung).
+        config.userContentController.addUserScript(
+            WKUserScript(source: "window.WALDWACHT_NATIVE='ios';", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+
         // Die App ist ohnehin Vollbild: den Vollbild-Knopf des Spiels ausblenden.
         let js = "var s=document.createElement('style');s.textContent='#fsBtn{display:none!important}';document.documentElement.appendChild(s);"
         config.userContentController.addUserScript(
