@@ -3,7 +3,8 @@
 Ein Top-Down-Pixelspiel: Du verteidigst deine Waldburg gegen Wellen von Schrott-Bots.
 Schwert, Herzen, Burgtor, Wald — alles steckt in **einer einzigen HTML-Datei**.
 Kein Build, keine Assets, kein Server: jedes Pixel, jeder Baum und jeder Ton
-entsteht beim Laden zur Laufzeit.
+entsteht beim Laden zur Laufzeit. Nur fürs Spielen zu zweit wird online eine
+kleine Verbindungsbibliothek nachgeladen (siehe „Zu zweit spielen“).
 
 ## Starten
 
@@ -26,6 +27,43 @@ Technisch steckt dahinter `manifest.json` (Name, Icons, `display:
 standalone`) und `service-worker.js` (cacht die Seite fürs Offline-Spielen).
 Die Icons in `icons/` sind direkt aus dem Helden-Sprite des Spiels gerendert,
 damit sie zum Rest passen.
+
+## Zu zweit spielen
+
+Im Titelbild oben **„1 SPIELER“ oder „2 SPIELER“** wählen. Zu zweit verteidigt ihr
+gemeinsam dieselbe Burg, jeder auf seinem eigenen Gerät (Handy, Tablet, PC, iOS-App,
+auch gemischt).
+
+1. Einer tippt **„RAUM ERSTELLEN“** und bekommt einen **Raumcode** aus 4 Zeichen (z. B. `BRF9`).
+2. Der andere tippt **„RAUM BEITRETEN“** und gibt den Code über das Tastenfeld im Spiel ein.
+3. Sobald beide verbunden sind, startet das Spiel automatisch.
+
+Was zu zweit anders ist:
+
+- **Viel schwerer:** rund 60 % mehr Bots, die 75 % mehr Leben haben, 40 % härter
+  zuschlagen, 12 % schneller laufen und schneller nachrücken. Bosse haben doppelt so viel Leben.
+- Die Bots greifen immer den **nächsten Helden** an. Flächenangriffe (Stampfer,
+  Explosionen) treffen beide.
+- Wer fällt, steht nach **12 Sekunden** am Tor wieder auf (nach einer geschafften Welle
+  sofort). Verloren ist erst, wenn **beide** liegen oder das Tor fällt. Danach kann der
+  Ersteller „NOCHMAL ZU ZWEIT“ starten.
+- Schrauben und die Werkstatt teilt ihr euch. Jede Verbesserung gilt für den Helden, der
+  sie kauft. Solange einer im Shop stöbert, läuft die Ruhepause nicht ab.
+- Die **Pause** gilt für beide, jeder kann sie ein- und ausschalten.
+- Oben in der Mitte stehen Name und Herzen des Mitspielers. Jeder Held hat Namen und
+  Farbe aus seinen eigenen Einstellungen.
+- Zu zweit wird **nicht gespeichert**, und Level gibt es nur allein.
+- „SPIEL VERLASSEN“ in der Pause beendet die Runde für dich. Geht der Mitspieler, spielt
+  der Ersteller allein weiter.
+
+Technik: Die Geräte verbinden sich direkt miteinander (WebRTC). Ein kostenloser
+Vermittlungsdienst ([PeerJS](https://peerjs.com/)) bringt sie nur zusammen. Das Gerät des
+Erstellers rechnet das Spiel und schickt den Zustand 20-mal pro Sekunde, der Mitspieler
+schickt seine Eingaben. Seine eigene Bewegung rechnet sein Gerät selbst, damit sie
+sich nicht verzögert anfühlt. Beide brauchen Internet und dieselbe Spielversion. In manchen
+Netzen (etwa Firmen- oder Schul-WLAN, einige Mobilfunknetze) sind direkte Verbindungen
+gesperrt, dann klappt das Beitreten nicht. In der Vorschau auf claude.ai kann der
+Mehrspieler-Modus gesperrt sein, auf GitHub Pages und in der iOS-App läuft er.
 
 ## Steuerung
 
@@ -343,7 +381,11 @@ Auswahl.
   anbietet, braucht in Deutschland ein Impressum und eine Datenschutzerklärung; das
   ist nicht Teil dieses Projekts.
 - Beim Ladevorgang gespeichert wird nur im Browser (`localStorage`): Spielstände,
-  Freigaben, Einstellungen. Nichts wird übertragen.
+  Freigaben, Einstellungen. Allein gespielt wird nichts übertragen.
+- Nur zu zweit gehen Daten übers Netz: Spielzustand, Heldenname und Heldenfarbe direkt
+  zum Mitspieler. Der Vermittlungsdienst PeerJS (`0.peerjs.com`) und die STUN-Server
+  von Google sehen dabei die IP-Adressen und den Raumcode. Die Bibliothek kommt von
+  cdnjs bzw. jsDelivr. Bei einer Veröffentlichung gehört das in die Datenschutzerklärung.
 
 ## iOS-App
 

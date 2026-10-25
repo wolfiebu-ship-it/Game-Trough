@@ -1,6 +1,6 @@
 // WALDWACHT - minimaler Offline-Cache fuer die installierte App.
 // Alles steckt in index.html selbst, deshalb reicht ein kleiner App-Shell-Cache.
-const CACHE = 'waldwacht-v1';
+const CACHE = 'waldwacht-v2';
 const SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -16,8 +16,9 @@ self.addEventListener('activate', e => {
 });
 
 // Network-first fuer index.html (frische Version, wenn online), sonst Cache.
+// Nur eigene Dateien: Verbindungsdienste fuers Zweierspiel (PeerJS) laufen ungecacht durch.
 self.addEventListener('fetch', e => {
-  if(e.request.method !== 'GET') return;
+  if(e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request).then(res => {
       const copy = res.clone();
