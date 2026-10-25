@@ -49,6 +49,8 @@ jobs:
           xcrun simctl launch booted de.waldwacht.spiel
           sleep 15
           xcrun simctl io booted screenshot ../simulator.png
+          sips -s format jpeg -s formatOptions 55 -Z 700 ../simulator.png --out ../sim_small.jpg
+          echo "-----BEGIN-SCREENSHOT-----"; base64 -i ../sim_small.jpg; echo "-----END-SCREENSHOT-----"
 
       - uses: actions/upload-artifact@v4
         with:
