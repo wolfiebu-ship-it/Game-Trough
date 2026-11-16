@@ -3,21 +3,53 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GEO RUSH">
+<meta name="theme-color" content="#04020a">
 <title>GEO RUSH</title>
 <style>
   :root{ color-scheme: dark; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ height:100%; margin:0; background:#04020a; overflow:hidden;
     font-family:"Trebuchet MS",Verdana,system-ui,sans-serif; }
-  #wrap{ width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-    touch-action:none; }
+  #wrap{ width:100%; height:100%; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; touch-action:none; background:#04020a; }
+  #rot{ display:none; color:#cfd6ff; font-size:15px; text-align:center; margin-top:18px; padding:0 16px; }
+  @media (orientation: portrait) and (pointer: coarse){ #rot{ display:block; } }
+  /* Dialog fuer Texteingaben (Levelname, Level-Code) */
+  #dlg{ position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center;
+    justify-content:center; padding:16px; z-index:10; }
+  #dlg[hidden]{ display:none; }
+  #dlg .box{ width:min(520px, 100%); background:#140c2c; border:3px solid #7dff4f; border-radius:18px;
+    padding:20px; color:#fff; display:flex; flex-direction:column; gap:12px;
+    box-shadow:0 10px 60px rgba(0,0,0,.6); }
+  #dlg h2{ margin:0; font-size:22px; color:#7dff4f; }
+  #dlg p{ margin:0; font-size:14px; color:#cfd6ff; line-height:1.4; }
+  #dlg input, #dlg textarea{ width:100%; font:16px/1.3 ui-monospace, Menlo, Consolas, monospace;
+    background:#05030c; color:#fff; border:2px solid #4a3d7a; border-radius:10px; padding:10px; }
+  #dlg textarea{ height:120px; resize:none; word-break:break-all; }
+  #dlg input:focus, #dlg textarea:focus{ outline:none; border-color:#7dff4f; }
+  #dlg .row{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+  #dlg button{ font:bold 16px "Trebuchet MS", Verdana, sans-serif; padding:10px 18px; border-radius:12px;
+    border:3px solid rgba(255,255,255,.8); background:rgba(0,0,0,.4); color:#fff; cursor:pointer; }
+  #dlg button.hot{ background:#7dff4f; color:#000; border-color:#000; }
+  #dlg button:focus-visible{ outline:3px solid #fff; outline-offset:2px; }
   canvas{ display:block; width:min(100vw, calc(100vh * 16 / 9)); aspect-ratio:16/9;
-    max-height:100vh; touch-action:none; user-select:none; -webkit-user-select:none;
+    max-width:100%; max-height:100vh; touch-action:none; user-select:none; -webkit-user-select:none;
     box-shadow:0 0 60px rgba(60,120,255,.25); }
 </style>
 </head>
 <body>
-<div id="wrap"><canvas id="game" width="960" height="540"></canvas></div>
+<div id="wrap"><canvas id="game" width="960" height="540"></canvas>
+  <div id="rot">Dreh dein Handy quer – dann wird das Spiel groß.</div></div>
+<div id="dlg" hidden><div class="box" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+  <h2 id="dlgT"></h2><p id="dlgP"></p>
+  <input id="dlgI" type="text" maxlength="28" autocomplete="off">
+  <textarea id="dlgA" spellcheck="false"></textarea>
+  <div class="row" id="dlgB"></div>
+</div></div>
 <script>
 "use strict";
 (function(){
@@ -533,7 +565,9 @@ const Game = {
   state:'menu', sel:0, practice:false, L:null, li:0, p:null, attempt:1,
   cps:[], deadT:0, winT:0, parts:[], shake:0, camX:-PLAYER_SX, camY:CAM0, t:0,
   best0:0, newBest:false, hits:[], shipA:0, menuX:0, runJumps:0, runTime:0,
-  sq:0, sqV:0, blink:0, nextBlink:2.5
+  sq:0, sqV:0, blink:0, nextBlink:2.5,
+  cur:{ kind:'main', i:0 },      // was gerade gespielt wird (Hauptlevel oder eigenes Level)
+  modal:null, toast:null
 };
 
 function heldNow(){
@@ -545,8 +579,31 @@ function heldNow(){
 }
 
 function startLevel(i){
+  Game.li = i;
+  startDef(PARSED[i], { kind:'main', i });
+}
+function startCustom(id, test){
+  const lv = customById(id);
+  if (!lv) return;
+  startDef(parseLevel(customDef(lv)), { kind:'custom', id, test:!!test });
+}
+function restartCurrent(){
+  const c = Game.cur;
+  if (c.kind === 'main') startLevel(c.i); else startCustom(c.id, c.test);
+}
+// Verlassen eines Laufs: zurueck dahin, wo man herkam
+function exitPlay(){
+  Music.stop();
+  if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume();
+  const c = Game.cur;
+  if (c.kind === 'custom' && c.test) openEditor(c.id, true);
+  else if (c.kind === 'custom') Game.state = 'mylevels';
+  else Game.state = 'menu';
+}
+function exitLabel(){ const c = Game.cur; return c.kind === 'custom' ? (c.test ? 'Editor' : 'Zurück') : 'Menü'; }
+function startDef(L, cur){
   initAudio();
-  Game.li = i; Game.L = PARSED[i];
+  Game.cur = cur; Game.L = L; Game.modal = null;
   Game.p = newPlayer(Game.L);
   Game.attempt = 1; Game.cps = []; Game.parts = []; Game.shake = 0; Game.sq = 0; Game.sqV = 0;
   Game.camX = Game.p.x - PLAYER_SX; Game.camY = CAM0; Game.shipA = 0;
@@ -589,10 +646,6 @@ function addCheckpoint(){
   Game.cps.push({ p: clonePlayer(p) }); SFX.check();
 }
 function removeCheckpoint(){ if (Game.practice) Game.cps.pop(); }
-function toMenu(){
-  Music.stop(); Game.state = 'menu';
-  if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume();
-}
 function togglePause(){
   if (Game.state === 'play'){ Game.state = 'pause'; if (A.ctx) A.ctx.suspend(); }
   else if (Game.state === 'pause'){ Game.state = 'play'; needRelease = true; if (A.ctx) A.ctx.resume(); }
@@ -644,6 +697,8 @@ function update(dt){
   }
   Game.parts = Game.parts.filter(q => q.life > 0);
 
+  if (Game.toast){ Game.toast.t -= dt; if (Game.toast.t <= 0) Game.toast = null; }
+  if (Game.state === 'editor'){ edUpdate(dt); return; }
   if (Game.state === 'dead'){
     Game.deadT += dt;
     if (Game.deadT > 1.0) respawn();
@@ -701,6 +756,10 @@ function onEvent(e){
     case 'win': {
       Music.stop(); SFX.win();
       recordProgress(100);
+      if (Game.cur.kind === 'custom'){
+        const lv = customById(Game.cur.id);
+        if (lv && !lv.verified){ lv.verified = true; persist(); }
+      }
       if (!Game.practice){
         const id = Game.L.def.id, got = save.coins[id] || [];
         for (const c of p.coins) got[c] = true;
@@ -888,12 +947,12 @@ function drawCoin(o, taken){
   ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
 }
-function drawFinish(L){
+function drawFinish(L, camY = Game.camY){
   const x = L.endX;
   const gr = ctx.createLinearGradient(x - 60, 0, x + 20, 0);
   gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,0.5)');
-  ctx.fillStyle = gr; ctx.fillRect(x - 60, Game.camY, 80, H);
-  ctx.fillStyle = '#fff'; ctx.fillRect(x + 18, Game.camY, 4, H);
+  ctx.fillStyle = gr; ctx.fillRect(x - 60, camY, 80, H);
+  ctx.fillStyle = '#fff'; ctx.fillRect(x + 18, camY, 4, H);
 }
 
 // Die Spielfigur: abgerundeter Wuerfel mit Maske, grossen Augen und Mund.
@@ -1059,12 +1118,22 @@ function outlined(s, x, y, size, col){
   ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.16; ctx.strokeStyle = '#000'; ctx.strokeText(s, x, y);
   ctx.fillStyle = col || '#fff'; ctx.fillText(s, x, y);
 }
-function button(label, x, y, w, h, fn, hot){
+function button(label, x, y, w, h, fn, hot, size){
   roundRect(x, y, w, h, 12);
-  ctx.fillStyle = hot ? 'rgba(125,255,79,0.95)' : 'rgba(0,0,0,0.45)'; ctx.fill();
+  ctx.fillStyle = hot === 2 ? 'rgba(255,216,74,0.95)' : hot ? 'rgba(125,255,79,0.95)' : 'rgba(0,0,0,0.45)'; ctx.fill();
   ctx.lineWidth = 3; ctx.strokeStyle = hot ? '#000' : 'rgba(255,255,255,0.8)'; ctx.stroke();
-  text(label, x + w / 2, y + h / 2 + 1, 20, hot ? '#000' : '#fff');
+  if (typeof label === 'function') label(x + w / 2, y + h / 2, hot ? '#000' : '#fff');
+  else text(label, x + w / 2, y + h / 2 + 1, size || 20, hot ? '#000' : '#fff');
   Game.hits.push({ x, y, w, h, fn });
+}
+// Vollbild-Symbol: vier Ecken
+function fsIcon(cx, cy, col){
+  const a = 9, b = 4;
+  ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath();
+  for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]){
+    ctx.moveTo(cx + sx * a, cy + sy * (a - b)); ctx.lineTo(cx + sx * a, cy + sy * a); ctx.lineTo(cx + sx * (a - b), cy + sy * a);
+  }
+  ctx.stroke(); ctx.lineCap = 'butt';
 }
 
 function drawHUD(){
@@ -1088,12 +1157,15 @@ function drawHUD(){
     button('◆+', 16, 470, 64, 52, addCheckpoint);
     button('◆−', 90, 470, 64, 52, removeCheckpoint);
   }
-  // Pause-Knopf
+  // Pause- und Vollbild-Knopf
   button('II', W - 64, 12, 48, 40, togglePause);
+  button(fsIcon, W - 120, 12, 48, 40, toggleFS);
+  if (Game.cur.kind === 'custom' && !Game.practice)
+    outlined(Game.cur.test ? 'TESTLAUF' : clipText(Game.L.def.name, 200, 16), 110, 24, 16, Game.cur.test ? '#ffd84a' : '#fff');
   // Muenzen dieses Laufs
   for (let i = 0; i < L.coins; i++){
     const got = Game.p.coins.includes(i);
-    ctx.beginPath(); ctx.arc(W - 150 + i * 24, 32, 8, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(W - 200 + i * 24, 32, 8, 0, Math.PI * 2);
     ctx.fillStyle = got ? '#ffd84a' : 'rgba(0,0,0,.35)'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = got ? '#b87a00' : 'rgba(255,255,255,.5)'; ctx.stroke();
   }
@@ -1108,7 +1180,8 @@ function drawPause(){
   text(Game.L.def.name + '  ·  ' + pc + '%', W / 2, 210, 22, 'rgba(255,255,255,.85)');
   button('Weiter', W / 2 - 110, 260, 220, 54, togglePause, true);
   button('Neustart', W / 2 - 110, 326, 220, 54, () => { togglePause(); Game.cps = []; Game.p.dead = true; Game.state = 'dead'; Game.deadT = 1; });
-  button('Menü', W / 2 - 110, 392, 220, 54, toMenu);
+  button(exitLabel(), W / 2 - 110, 392, 220, 54, exitPlay);
+  button(fsIcon, W / 2 + 124, 392, 54, 54, toggleFS);
 }
 
 function drawWin(){
@@ -1136,8 +1209,8 @@ function drawWin(){
     ctx.fillStyle = got ? '#ffd84a' : 'rgba(255,255,255,.12)'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = got ? '#b87a00' : 'rgba(255,255,255,.4)'; ctx.stroke();
   }
-  button('Nochmal', W / 2 - 200, 370, 190, 54, () => startLevel(Game.li), true);
-  button('Menü', W / 2 + 10, 370, 190, 54, toMenu);
+  button('Nochmal', W / 2 - 200, 370, 190, 54, restartCurrent, true);
+  button(exitLabel(), W / 2 + 10, 370, 190, 54, exitPlay);
 }
 
 function drawMenu(){
@@ -1197,10 +1270,12 @@ function drawMenu(){
     Game.hits.push({ x, y, w:cw, h:ch, fn: () => { if (Game.sel === i) startLevel(i); else { Game.sel = i; SFX.click(); } } });
   });
 
-  button('▶  SPIELEN', W / 2 - 150, 384, 300, 56, () => startLevel(Game.sel), true);
-  button('Übung: ' + (Game.practice ? 'AN' : 'AUS'), W / 2 - 150 - 200, 390, 180, 44, () => { Game.practice = !Game.practice; SFX.click(); });
-  button('Ton: ' + (save.muted ? 'AUS' : 'AN'), W / 2 + 170, 390, 160, 44, () => { initAudio(); setMuted(!save.muted); SFX.click(); });
-  text('Leertaste / Klick / Tippen = springen  ·  ←/→ Level  ·  ↑/↓ Figur  ·  Enter starten  ·  P Übung  ·  M Ton',
+  button('Übung: ' + (Game.practice ? 'AN' : 'AUS'), 64, 390, 166, 44, () => { Game.practice = !Game.practice; SFX.click(); }, false, 18);
+  button('▶  SPIELEN', 244, 384, 240, 56, () => startLevel(Game.sel), true);
+  button('Level bauen', 498, 390, 200, 44, openMyLevels, 2, 19);
+  button('Ton: ' + (save.muted ? 'AUS' : 'AN'), 712, 390, 120, 44, () => { initAudio(); setMuted(!save.muted); SFX.click(); }, false, 18);
+  button(fsIcon, 846, 390, 50, 44, toggleFS);
+  text('Leertaste / Tippen = springen  ·  ←/→ Level  ·  ↑/↓ Figur  ·  Enter starten  ·  B Level bauen  ·  F Vollbild  ·  M Ton',
        W / 2, 460, 12.5, 'rgba(255,255,255,.8)', 'center', 'normal');
 }
 
@@ -1208,11 +1283,537 @@ function render(){
   resize();
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   Game.hits = [];
-  if (Game.state === 'menu'){ drawMenu(); return; }
-  drawWorld();
-  if (Game.state === 'play' || Game.state === 'dead') drawHUD();
-  if (Game.state === 'pause') drawPause();
-  if (Game.state === 'win') drawWin();
+  const st = Game.state;
+  if (st === 'menu') drawMenu();
+  else if (st === 'mylevels') drawMyLevels();
+  else if (st === 'editor') drawEditor();
+  else {
+    drawWorld();
+    if (st === 'play' || st === 'dead') drawHUD();
+    if (st === 'pause') drawPause();
+    if (st === 'win') drawWin();
+  }
+  if (Game.modal) drawModal();
+  drawToast();
+}
+
+/* ----------------------------- Vollbild ----------------------------- */
+function fsElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function toggleFS(){
+  const d = document.documentElement;
+  const req = d.requestFullscreen || d.webkitRequestFullscreen;
+  try {
+    if (fsElement()){ (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    if (!req){ fsHelp(); return; }
+    const lock = () => { try { const o = screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch(_){} };
+    const r = req.call(d, { navigationUI:'hide' });
+    if (r && r.then) r.then(lock, fsHelp); else lock();
+  } catch(_){ fsHelp(); }
+}
+function fsHelp(){
+  const ios = /iPhone|iPod/.test(navigator.userAgent);
+  toast(ios ? 'iPhone: Teilen-Symbol → „Zum Home-Bildschirm“ – von dort startet GEO RUSH im Vollbild.'
+            : 'Vollbild ist hier gesperrt – öffne das Spiel direkt im Browser.', 6);
+}
+
+/* ------------------------- Hinweise & Dialoge ----------------------- */
+function toast(msg, t){ Game.toast = { msg, t: t || 2.5 }; }
+function drawToast(){
+  const q = Game.toast;
+  if (!q || Game.modal) return;
+  const ty = Game.state === 'editor' ? 54 : 412;      // im Editor oben, damit nichts verdeckt wird
+  ctx.font = 'bold 16px Trebuchet MS, Verdana, sans-serif';
+  const w = Math.min(W - 40, ctx.measureText(q.msg).width + 44);
+  ctx.globalAlpha = clamp(q.t * 3, 0, 1);
+  roundRect((W - w) / 2, ty, w, 40, 20); ctx.fillStyle = 'rgba(10,6,30,0.92)'; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = '#7dff4f'; ctx.stroke();
+  text(q.msg, W / 2, ty + 21, 16, '#fff');
+  ctx.globalAlpha = 1;
+}
+function clipText(s, maxW, size){
+  ctx.font = `bold ${size}px Trebuchet MS, Verdana, sans-serif`;
+  if (ctx.measureText(s).width <= maxW) return s;
+  while (s.length > 1 && ctx.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+  return s + '…';
+}
+
+// Bestaetigungen und Auswahlmenues direkt im Canvas
+function modal(title, msg, buttons){ Game.modal = { title, msg, buttons }; }
+function drawModal(){
+  const m = Game.modal;
+  const bs = typeof m.buttons === 'function' ? m.buttons() : m.buttons;
+  Game.hits = [];
+  drawDim(0.6);
+  const bh = 44, w = 440, h = 84 + (m.msg ? 34 : 0) + bs.length * (bh + 10);
+  const x = (W - w) / 2, y = Math.max(8, (H - h) / 2);
+  roundRect(x, y, w, h, 18); ctx.fillStyle = '#140c2c'; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = '#7dff4f'; ctx.stroke();
+  outlined(m.title, W / 2, y + 36, 26, '#7dff4f');
+  let yy = y + 66;
+  if (m.msg){ text(m.msg, W / 2, yy + 6, 15, '#cfd6ff', 'center', 'normal'); yy += 34; }
+  for (const b of bs){
+    button(clipText(b.label, w - 90, 18), x + 30, yy, w - 60, bh, () => { if (!b.keep) Game.modal = null; if (b.fn) b.fn(); }, b.hot, 18);
+    yy += bh + 10;
+  }
+}
+
+// Texteingaben laufen ueber ein echtes HTML-Formular (Tastatur am Handy, Einfuegen, Kopieren)
+const dlg = document.getElementById('dlg'), dlgT = document.getElementById('dlgT'), dlgP = document.getElementById('dlgP');
+const dlgI = document.getElementById('dlgI'), dlgA = document.getElementById('dlgA'), dlgB = document.getElementById('dlgB');
+function dlgOpen(){ return !dlg.hidden; }
+function closeDialog(){ dlg.hidden = true; }
+function dialog(o){
+  dlgT.textContent = o.title;
+  dlgP.textContent = o.text || ''; dlgP.hidden = !o.text;
+  dlgI.hidden = o.input === undefined; dlgI.value = o.input || '';
+  dlgA.hidden = o.area === undefined; dlgA.value = o.area || ''; dlgA.readOnly = !!o.readonly;
+  dlgB.textContent = '';
+  for (const b of o.buttons){
+    const el = document.createElement('button');
+    el.type = 'button'; el.textContent = b.label;
+    if (b.hot) el.className = 'hot';
+    el.onclick = () => {
+      const r = b.fn ? b.fn({ input:dlgI.value, area:dlgA.value, el }) : undefined;
+      if (r !== false) closeDialog();
+    };
+    dlgB.appendChild(el);
+  }
+  keysHeld.clear(); pointers.clear();
+  dlg.hidden = false;
+  setTimeout(() => {
+    if (o.input !== undefined){ dlgI.focus(); dlgI.select(); }
+    else if (o.area !== undefined){ dlgA.focus(); if (o.readonly) dlgA.select(); }
+  }, 30);
+}
+dlgI.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); const hot = dlgB.querySelector('.hot'); if (hot) hot.click(); }
+});
+dlg.addEventListener('pointerdown', e => { if (e.target === dlg) closeDialog(); });
+function copyText(t, el){
+  const ok = () => { if (el) el.textContent = 'Kopiert ✓'; };
+  const fallback = () => { dlgA.hidden = false; dlgA.value = t; dlgA.focus(); dlgA.select(); if (el) el.textContent = 'Markiert – jetzt kopieren'; };
+  try { navigator.clipboard.writeText(t).then(ok, fallback); } catch(_){ fallback(); }
+}
+
+/* --------------------------- Eigene Level --------------------------- */
+if (!Array.isArray(save.custom)) save.custom = [];
+const THEMES = [LEVELS[0].colors, LEVELS[1].colors, LEVELS[2].colors,
+  { top:'#14c98d', bot:'#03362a', ground:'#0b7353', line:'#b8ffe2', block:'#04261c' },
+  { top:'#ff9a2e', bot:'#4a1a02', ground:'#a8460c', line:'#ffe0b0', block:'#3a1202' },
+  { top:'#30364f', bot:'#06070d', ground:'#1c2136', line:'#a9b8ff', block:'#0a0d18' }];
+const THEME_NAMES = ['Blau', 'Lila', 'Rot', 'Grün', 'Orange', 'Nacht'];
+const SONGS = [LEVELS[0].song, LEVELS[1].song, LEVELS[2].song,
+  { bpm:118, root:55, prog:[0, 4, 5, 3] }, { bpm:172, root:52, prog:[0, 6, 5, 6] }];
+const songName = i => 'Song ' + (i + 1) + ' · ' + SONGS[i].bpm + ' BPM';
+const TOOL_CHARS = '#-^.vypoqbSCGN><*';
+const MAX_COL = 1500, MAX_ROW = 10;
+
+function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function customById(id){ return save.custom.find(l => l.id === id); }
+function coinCount(cells){ let n = 0; for (const k in cells) if (cells[k] === '*') n++; return n; }
+
+// Ein eigenes Level wird in dasselbe ASCII-Format uebersetzt wie die eingebauten
+function customDef(lv){
+  let maxC = -1;
+  for (const k in lv.cells){ const c = +k.split(',')[0]; if (c > maxC) maxC = c; }
+  const w = Math.max(maxC + 1, 24), lines = [];
+  for (let r = MAX_ROW; r >= 0; r--){
+    let line = '';
+    for (let c = 0; c < w; c++) line += lv.cells[c + ',' + r] || ' ';
+    lines.push(line);
+  }
+  return { id:'c_' + lv.id, name:lv.name, stars:0, speed:lv.speed ? 1 : 0,
+           colors:THEMES[lv.theme] || THEMES[0], song:SONGS[lv.song] || SONGS[0], chunks:[lines, 14] };
+}
+
+// Teilen: Level -> kurzer Text-Code (JSON mit Lauflaengen, Base64url) und zurueck
+function b64e(str){
+  let bin = '';
+  for (const x of new TextEncoder().encode(str)) bin += String.fromCharCode(x);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64d(s){
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s), b = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(b);
+}
+function encodeLevel(lv){
+  const cells = Object.keys(lv.cells).map(k => k.split(',').map(Number)).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  const runs = [];
+  for (const [c, r] of cells){
+    const ch = lv.cells[c + ',' + r], q = runs[runs.length - 1];
+    if (q && q[1] === r && q[2] === ch && q[0] + q[3] === c) q[3]++;
+    else runs.push([c, r, ch, 1]);
+  }
+  return 'GR1' + b64e(JSON.stringify({ n:lv.name, t:lv.theme | 0, m:lv.song | 0, s:lv.speed ? 1 : 0, d:runs }));
+}
+function decodeLevel(code){
+  code = String(code || '');
+  const i = code.indexOf('GR1');
+  if (i < 0) return null;
+  code = code.slice(i + 3).replace(/[^A-Za-z0-9_-]/g, '');
+  let o;
+  try { o = JSON.parse(b64d(code)); } catch(_){ return null; }
+  if (!o || !Array.isArray(o.d)) return null;
+  const cells = {};
+  for (const q of o.d){
+    if (!Array.isArray(q) || q.length < 4) continue;
+    const [c, r, ch, n] = q;
+    if (!Number.isInteger(c) || !Number.isInteger(r) || !Number.isInteger(n) || typeof ch !== 'string' ||
+        ch.length !== 1 || !TOOL_CHARS.includes(ch) || r < 0 || r > MAX_ROW) continue;
+    for (let k = 0; k < Math.min(n, MAX_COL); k++){
+      const cc = c + k;
+      if (cc < 0 || cc >= MAX_COL) continue;
+      if (ch === '*' && coinCount(cells) >= 3) continue;
+      cells[cc + ',' + r] = ch;
+    }
+  }
+  return { id:newId(), name:String(o.n || 'Geteiltes Level').slice(0, 28) || 'Geteiltes Level',
+           theme:clamp(o.t | 0, 0, THEMES.length - 1), song:clamp(o.m | 0, 0, SONGS.length - 1),
+           speed:o.s ? 1 : 0, cells, verified:false };
+}
+function shareLevel(lv){
+  const code = encodeLevel(lv);
+  let top = false;
+  try { top = window.top === window && /^https?:$/.test(location.protocol); } catch(_){}
+  const link = top ? location.href.split('#')[0] + '#' + code : null;
+  const buttons = [];
+  if (link) buttons.push({ label:'Link kopieren', fn:({ el }) => { copyText(link, el); return false; } });
+  buttons.push({ label:'Code kopieren', hot:true, fn:({ el }) => { copyText(code, el); return false; } });
+  buttons.push({ label:'Schließen' });
+  dialog({ title:'„' + lv.name + '“ teilen',
+    text: link ? 'Schick den Link: Wer ihn öffnet, hat dein Level sofort im Spiel. Oder schick den Code – der lässt sich unter „Level bauen → Code einfügen“ laden.'
+               : 'Kopier den Code und schick ihn weiter. Wer ihn unter „Level bauen → Code einfügen“ einfügt, kann dein Level spielen.',
+    area:code, readonly:true, buttons });
+}
+function importDialog(){
+  dialog({ title:'Level-Code einfügen', text:'Füge den Code ein, den du bekommen hast (er beginnt mit GR1).', area:'',
+    buttons:[ { label:'Abbrechen' },
+      { label:'Laden', hot:true, fn:({ area }) => {
+          const lv = decodeLevel(area);
+          if (!lv){ dlgP.textContent = 'Das ist kein gültiger Level-Code. Prüf, ob er vollständig kopiert wurde.'; return false; }
+          save.custom.unshift(lv); persist(); ML.scroll = 0; toast('„' + lv.name + '“ geladen');
+        } } ] });
+}
+// Geteilter Link: #GR1... in der Adresse laedt das Level direkt
+function importFromHash(){
+  let h = '';
+  try { h = decodeURIComponent(location.hash.slice(1)); } catch(_){}
+  if (!h.startsWith('GR1')) return;
+  const lv = decodeLevel(h);
+  if (!lv) return;
+  const code = encodeLevel(lv);
+  const known = save.custom.find(l => encodeLevel(l) === code);
+  if (!known){ save.custom.unshift(lv); persist(); }
+  try { history.replaceState(null, '', location.pathname + location.search); } catch(_){}
+  Game.state = 'mylevels';
+  toast('Level „' + lv.name + '“ empfangen – tipp auf ▶ zum Spielen!', 5);
+}
+
+const ML = { scroll:0, drag:null };
+function openMyLevels(){ Music.stop(); Game.state = 'mylevels'; Game.modal = null; SFX.click(); }
+function newCustomLevel(){
+  const n = save.custom.length + 1;
+  const lv = { id:newId(), name:'Mein Level ' + n, theme:(n - 1) % THEMES.length, song:(n - 1) % SONGS.length,
+               speed:0, cells:{ '14,0':'^' }, verified:false };
+  save.custom.unshift(lv); persist();
+  openEditor(lv.id);
+}
+function deleteCustom(lv){
+  modal('Level löschen?', '„' + lv.name + '“ ist danach weg.', [
+    { label:'Ja, löschen', hot:2, fn:() => { save.custom = save.custom.filter(l => l !== lv); persist(); } },
+    { label:'Abbrechen' } ]);
+}
+
+function drawMyLevels(){
+  const col = THEMES[3];
+  drawBackground(col, Game.menuX * 0.5, CAM0);
+  drawGround(col, Game.menuX * 0.5, CAM0 - 40);
+  outlined('LEVEL BAUEN', 330, 42, 36, '#ffd84a');
+  button('◀ Menü', 16, 18, 120, 44, () => { Game.state = 'menu'; SFX.click(); }, false, 18);
+  button('Code einfügen', W - 356, 18, 166, 44, importDialog, false, 17);
+  button('+ Neues Level', W - 180, 18, 164, 44, newCustomLevel, true, 18);
+
+  const list = save.custom, rowH = 72, top = 82, view = 384;
+  if (!list.length){
+    ctx.save(); ctx.translate(W / 2, 210); ctx.rotate(Math.sin(Game.t * 2) * 0.1);
+    drawHero(64, skin(), 0, true, Game.blink > 0); ctx.restore();
+    text('Noch keine eigenen Level.', W / 2, 290, 24, '#fff');
+    text('Tippe auf „+ Neues Level“, setz Blöcke, Stacheln und Portale – und teste dein Level sofort.', W / 2, 326, 16, 'rgba(255,255,255,.9)', 'center', 'normal');
+    text('Fremde Level lädst du über „Code einfügen“.', W / 2, 352, 16, 'rgba(255,255,255,.9)', 'center', 'normal');
+    return;
+  }
+  const maxScroll = Math.max(0, list.length * rowH - view);
+  ML.scroll = clamp(ML.scroll, 0, maxScroll);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, view); ctx.clip();
+  list.forEach((lv, i) => {
+    const y = top + i * rowH - ML.scroll;
+    if (y < top - rowH || y > top + view) return;
+    const th = THEMES[lv.theme] || THEMES[0];
+    roundRect(30, y + 4, W - 60, rowH - 10, 14);
+    const gr = ctx.createLinearGradient(30, 0, W - 30, 0);
+    gr.addColorStop(0, th.top); gr.addColorStop(1, th.bot);
+    ctx.fillStyle = gr; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.stroke();
+    text(clipText(lv.name, 360, 21), 52, y + 27, 21, '#fff', 'left');
+    const n = Object.keys(lv.cells).length, best = save.best['c_' + lv.id] || 0;
+    text(n + ' Objekte  ·  Bestwert ' + best + '%' + (lv.verified ? '  ·  ✓ geschafft' : ''),
+         52, y + 50, 13, 'rgba(255,255,255,.9)', 'left', 'normal');
+    const h0 = Game.hits.length, by = y + 15;
+    button('▶', W - 446, by, 56, 38, () => startCustom(lv.id, false), true, 20);
+    button('Bearbeiten', W - 382, by, 132, 38, () => openEditor(lv.id), false, 16);
+    button('Teilen', W - 242, by, 100, 38, () => shareLevel(lv), false, 16);
+    button('Löschen', W - 134, by, 92, 38, () => deleteCustom(lv), false, 16);
+    if (y < top - 4 || y + rowH > top + view + 4) Game.hits.length = h0;   // halb verdeckt: nicht klickbar
+  });
+  ctx.restore();
+  if (maxScroll > 0){
+    const f = ML.scroll / maxScroll, th = view * view / (list.length * rowH);
+    roundRect(W - 14, top + f * (view - th), 6, th, 3); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fill();
+  }
+}
+
+/* ---------------------------- Level-Editor -------------------------- */
+const ED_TOOLS = ['hand', 'erase', '#', '-', '^', '.', 'v', 'y', 'p', 'o', 'q', 'b', 'S', 'C', 'G', 'N', '>', '<', '*'];
+const TOOL_NAMES = { hand:'Bewegen', erase:'Radierer', '#':'Block', '-':'Plattform', '^':'Stachel', '.':'Mini-Stachel',
+  v:'Hängender Stachel', y:'Gelbes Pad (hoch)', p:'Pinkes Pad (flach)', o:'Gelber Orb', q:'Pinker Orb',
+  b:'Blauer Orb (Schwerkraft)', S:'Schiff-Portal', C:'Würfel-Portal', G:'Schwerkraft umdrehen',
+  N:'Schwerkraft normal', '>':'Schnell', '<':'Normales Tempo', '*':'Münze (max. 3)' };
+const ICONS = {};
+for (const ch of TOOL_CHARS) ICONS[ch] = parseLevel({ chunks:[[ch]] }).objs[0];
+const ED_CAMY = CAM0, PAL_Y = 480;
+const SB = { x:346, y:20, w:288, h:14 };          // Scrollleiste oben
+const Ed = { lv:null, L:null, camX:-160, tool:'#', drag:null, undo:[], hover:null, keys:new Set(), last:null, prev:0 };
+
+function openEditor(id, keepCam){
+  const lv = customById(id);
+  if (!lv) return;
+  if (Ed.lv !== lv || !keepCam){ Ed.camX = -160; Ed.undo = []; }
+  Ed.lv = lv; Ed.drag = null; Ed.hover = null;
+  edRebuild();
+  Music.stop();
+  if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume();
+  Game.modal = null; Game.state = 'editor';
+}
+function edRebuild(){ Ed.L = parseLevel(customDef(Ed.lv)); }
+function edMaxCol(){ let m = 0; for (const k in Ed.lv.cells){ const c = +k.split(',')[0]; if (c > m) m = c; } return m; }
+function edSpan(){ return Math.min(MAX_COL, Math.max(edMaxCol() + 50, 60)) * T; }
+function edClampCam(){ Ed.camX = clamp(Ed.camX, -200, Math.max(0, edSpan() - W)); }
+function edThumb(){ return Math.max(20, SB.w * W / edSpan()); }
+function edScrollbarHit(pt){ return pt.x >= SB.x - 8 && pt.x <= SB.x + SB.w + 8 && pt.y >= SB.y - 12 && pt.y <= SB.y + SB.h + 12; }
+function edScrollTo(x){
+  const tw = edThumb();
+  Ed.camX = clamp((x - SB.x - tw / 2) / (SB.w - tw), 0, 1) * (edSpan() - W);
+  edClampCam();
+}
+function edCell(pt){
+  if (pt.y >= PAL_Y - 4) return null;
+  const c = Math.floor((pt.x + Ed.camX) / T), r = Math.floor(-(pt.y + ED_CAMY) / T);
+  if (c < 0 || c >= MAX_COL || r < 0 || r > MAX_ROW) return null;
+  return { c, r };
+}
+function edDown(pt, e){
+  const cell = edCell(pt);
+  if (Ed.tool === 'hand' || e.button === 1 || (!cell && pt.y < PAL_Y)){
+    Ed.drag = { pan:true, x0:pt.x, cam0:Ed.camX }; return;
+  }
+  if (!cell) return;
+  Ed.drag = { paint:true, erase:Ed.tool === 'erase' || e.button === 2, batch:[] };
+  Ed.last = null;
+  edPaint(cell);
+}
+function edMove(pt, e){
+  Ed.hover = e.pointerType === 'mouse' ? edCell(pt) : null;
+  const d = Ed.drag;
+  if (!d) return;
+  if (d.scroll) edScrollTo(pt.x);
+  else if (d.pan){ Ed.camX = d.cam0 - (pt.x - d.x0); edClampCam(); }
+  else if (d.paint){ const cell = edCell(pt); if (cell) edPaint(cell); }
+}
+function edUp(){
+  const d = Ed.drag;
+  if (d && d.paint && d.batch.length){
+    Ed.undo.push(d.batch);
+    if (Ed.undo.length > 200) Ed.undo.shift();
+    Ed.lv.verified = false;
+    persist();
+  }
+  Ed.drag = null;
+}
+function edPaint(cell){
+  const k = cell.c + ',' + cell.r;
+  if (Ed.last === k) return;
+  Ed.last = k;
+  const cells = Ed.lv.cells, old = cells[k] || null, ch = Ed.drag.erase ? null : Ed.tool;
+  if (old === ch) return;
+  if (ch === '*' && old !== '*' && coinCount(cells) >= 3){ toast('Höchstens 3 Münzen pro Level'); return; }
+  Ed.drag.batch.push([k, old]);
+  if (ch) cells[k] = ch; else delete cells[k];
+  edRebuild();
+}
+function edUndo(){
+  const b = Ed.undo.pop();
+  if (!b){ toast('Nichts zum Rückgängigmachen'); return; }
+  for (let i = b.length - 1; i >= 0; i--){
+    const [k, old] = b[i];
+    if (old) Ed.lv.cells[k] = old; else delete Ed.lv.cells[k];
+  }
+  Ed.lv.verified = false;
+  edRebuild(); persist();
+}
+function edExit(){ persist(); clearTimeout(Ed.prev); Music.stop(); Game.state = 'mylevels'; SFX.click(); }
+function edTest(){ persist(); clearTimeout(Ed.prev); startCustom(Ed.lv.id, true); }
+function edUpdate(dt){
+  const k = Ed.keys;
+  const dir = (k.has('ArrowRight') || k.has('KeyD') ? 1 : 0) - (k.has('ArrowLeft') || k.has('KeyA') ? 1 : 0);
+  if (dir){ Ed.camX += dir * 720 * dt; edClampCam(); }
+}
+function edKey(e){
+  const c = e.code;
+  if ((e.ctrlKey || e.metaKey) && c === 'KeyZ'){ e.preventDefault(); edUndo(); return; }
+  if (c === 'Escape'){ edExit(); return; }
+  if (c === 'Enter' || c === 'KeyT'){ edTest(); return; }
+  if (c === 'ArrowLeft' || c === 'ArrowRight' || c === 'KeyA' || c === 'KeyD'){ Ed.keys.add(c); return; }
+  if (c === 'KeyE'){ Ed.tool = 'erase'; return; }
+  if (c === 'KeyH'){ Ed.tool = 'hand'; return; }
+  const m = /^Digit(\d)$/.exec(c);
+  if (m){ const i = (+m[1] + 9) % 10; Ed.tool = ED_TOOLS[2 + i]; toast(TOOL_NAMES[Ed.tool], 1.2); }
+}
+function edSettings(){
+  Game.modal = { title:'Level-Einstellungen', buttons:() => {
+    const lv = Ed.lv;
+    return [
+      { label:'Name: ' + lv.name, keep:true, fn:() => dialog({ title:'Levelname', input:lv.name, buttons:[
+          { label:'Abbrechen' },
+          { label:'Speichern', hot:true, fn:({ input }) => { const v = input.trim().slice(0, 28); if (v){ lv.name = v; persist(); edRebuild(); } } } ] }) },
+      { label:'Farbe: ' + THEME_NAMES[lv.theme | 0], keep:true, fn:() => { lv.theme = ((lv.theme | 0) + 1) % THEMES.length; persist(); edRebuild(); } },
+      { label:'Musik: ' + songName(lv.song | 0) + '  ♪', keep:true, fn:() => {
+          lv.song = ((lv.song | 0) + 1) % SONGS.length; persist(); edRebuild();
+          initAudio(); Music.play(SONGS[lv.song]);
+          clearTimeout(Ed.prev); Ed.prev = setTimeout(() => { if (Game.state === 'editor') Music.stop(); }, 4500);
+        } },
+      { label:'Start-Tempo: ' + (lv.speed ? 'schnell' : 'normal'), keep:true, fn:() => { lv.speed = lv.speed ? 0 : 1; persist(); edRebuild(); } },
+      { label:'Alles löschen', fn:() => modal('Alles löschen?', 'Alle Objekte in diesem Level werden entfernt.', [
+          { label:'Ja, alles löschen', hot:2, fn:() => {
+              const b = Object.entries(lv.cells);
+              lv.cells = {}; Ed.undo.push(b); lv.verified = false; persist(); edRebuild();
+            } },
+          { label:'Abbrechen' } ]) },
+      { label:'Fertig', hot:true, fn:() => { clearTimeout(Ed.prev); Music.stop(); } }
+    ];
+  } };
+}
+
+function drawToolIcon(t, cx, cy, col){
+  if (t === 'hand'){
+    ctx.strokeStyle = '#fff'; ctx.fillStyle = '#fff'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx - 13, cy); ctx.lineTo(cx + 13, cy); ctx.moveTo(cx, cy - 13); ctx.lineTo(cx, cy + 13); ctx.stroke();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){
+      ctx.beginPath();
+      ctx.moveTo(cx + dx * 16, cy + dy * 16);
+      ctx.lineTo(cx + dx * 9 - dy * 6, cy + dy * 9 + dx * 6);
+      ctx.lineTo(cx + dx * 9 + dy * 6, cy + dy * 9 - dx * 6);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.lineCap = 'butt'; return;
+  }
+  if (t === 'erase'){
+    ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx - 10, cy - 10); ctx.lineTo(cx + 10, cy + 10); ctx.moveTo(cx + 10, cy - 10); ctx.lineTo(cx - 10, cy + 10); ctx.stroke();
+    ctx.lineCap = 'butt'; return;
+  }
+  const o = ICONS[t];
+  const s = (t === '>' || t === '<') ? 0.6 : o.k === 'portal' ? 0.3 : 0.78;
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-T / 2, T / 2);
+  drawObj(o, col, false, false);
+  ctx.restore();
+}
+function drawObj(o, col, used, coinTaken){
+  switch (o.k){
+    case 'block':  drawBlock(o, col); break;
+    case 'slab':   drawSlab(o, col); break;
+    case 'spike': case 'mini': drawSpike(o); break;
+    case 'pad':    drawPad(o); break;
+    case 'orb':    drawOrb(o, used); break;
+    case 'coin':   drawCoin(o, coinTaken); break;
+    case 'portal': drawPortal(o); break;
+  }
+}
+
+function drawEditor(){
+  const lv = Ed.lv, L = Ed.L, col = L.def.colors, camX = Ed.camX, camY = ED_CAMY;
+  drawBackground(col, camX, camY);
+  ctx.save();
+  ctx.translate(-camX, -camY);
+  const c0 = Math.floor(camX / T), c1 = c0 + Math.ceil(W / T) + 1;
+  if (camX < 0){ ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(camX, CEIL - 3 * T, -camX, -CEIL + 3 * T); }
+  // Raster
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let c = Math.max(0, c0); c <= c1; c++){ ctx.moveTo(c * T, 0); ctx.lineTo(c * T, -(MAX_ROW + 1) * T); }
+  for (let r = 1; r <= MAX_ROW + 1; r++){ ctx.moveTo(Math.max(0, c0) * T, -r * T); ctx.lineTo(c1 * T, -r * T); }
+  ctx.stroke();
+  // Decke im Schiff-Modus
+  ctx.setLineDash([10, 8]); ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(Math.max(0, c0) * T, CEIL); ctx.lineTo(c1 * T, CEIL); ctx.stroke(); ctx.setLineDash([]);
+  for (let c = Math.max(0, Math.ceil(c0 / 10) * 10); c <= c1; c += 10)
+    text(String(c), c * T + 4, CEIL - 8, 11, 'rgba(255,255,255,.55)', 'left', 'normal');
+
+  const vis = near(L, camX - T, camX + W + T, []);
+  for (const o of vis) if (o.k !== 'portal') drawObj(o, col, false, false);
+  for (const o of vis) if (o.k === 'portal') drawPortal(o);
+  drawFinish(L, camY);
+  // Startposition
+  ctx.save(); ctx.globalAlpha = 0.6; ctx.translate(HALF, -HERO / 2); drawHero(HERO, skin(), 0, false, false); ctx.restore();
+  text('START', HALF, -HERO - 14, 13, '#fff');
+  // Zeiger
+  if (Ed.hover && Ed.tool !== 'hand'){
+    const { c, r } = Ed.hover, er = Ed.tool === 'erase';
+    ctx.fillStyle = er ? 'rgba(255,90,90,.3)' : 'rgba(125,255,79,.22)';
+    ctx.fillRect(c * T, -(r + 1) * T, T, T);
+    ctx.strokeStyle = er ? '#ff6b6b' : '#7dff4f'; ctx.lineWidth = 2;
+    ctx.strokeRect(c * T + 1, -(r + 1) * T + 1, T - 2, T - 2);
+    if (!er){
+      ctx.save(); ctx.globalAlpha = 0.5; ctx.translate(c * T, -r * T);   // Vorschau: Symbol liegt in Zelle (0,0)
+      drawObj(ICONS[Ed.tool], col, false, false); ctx.restore();
+    }
+  }
+  ctx.restore();
+  drawGround(col, camX, camY);
+
+  // Werkzeugleiste unten
+  const n = ED_TOOLS.length, sw = 45, gap = 3, pw = n * (sw + gap) - gap, px0 = (W - pw) / 2;
+  roundRect(px0 - 7, PAL_Y - 6, pw + 14, 62, 14); ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
+  ED_TOOLS.forEach((t, i) => {
+    const x = px0 + i * (sw + gap), y = PAL_Y, sel = Ed.tool === t;
+    roundRect(x, y, sw, 50, 10);
+    ctx.fillStyle = sel ? 'rgba(125,255,79,0.35)' : 'rgba(255,255,255,0.08)'; ctx.fill();
+    ctx.lineWidth = sel ? 3 : 1.5; ctx.strokeStyle = sel ? '#7dff4f' : 'rgba(255,255,255,0.25)'; ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, sw, 50); ctx.clip();
+    drawToolIcon(t, x + sw / 2, y + 25, col);
+    ctx.restore();
+    Game.hits.push({ x, y, w:sw, h:50, fn:() => { Ed.tool = t; SFX.click(); toast(TOOL_NAMES[t], 1.3); } });
+  });
+
+  // Leiste oben
+  button('◀ Fertig', 10, 8, 112, 38, edExit, false, 17);
+  ctx.save(); ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+  text(clipText(lv.name, 200, 17), 132, 27, 17, '#fff', 'left');
+  ctx.restore();
+  roundRect(SB.x, SB.y, SB.w, SB.h, 7); ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.stroke();
+  const tw = edThumb(), f = clamp(Ed.camX / Math.max(1, edSpan() - W), 0, 1);
+  roundRect(SB.x + f * (SB.w - tw), SB.y + 2, tw, SB.h - 4, 5); ctx.fillStyle = '#7dff4f'; ctx.fill();
+  button('↶', 646, 8, 54, 38, edUndo, false, 24);
+  button('Optionen', 708, 8, 112, 38, edSettings, false, 17);
+  button('▶ Testen', 828, 8, 122, 38, edTest, true, 17);
+
+  if (Object.keys(lv.cells).length < 4){
+    ctx.save(); ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+    text('Unten ein Objekt wählen, dann ins Raster tippen oder ziehen.  ✥ = verschieben, ✕ = löschen', W / 2, 70, 15, '#fff', 'center', 'normal');
+    ctx.restore();
+  }
 }
 
 /* ------------------------- Eingabe-Handler -------------------------- */
@@ -1230,22 +1831,50 @@ function hitTest(pt){
 cv.addEventListener('pointerdown', e => {
   e.preventDefault();
   initAudio();
-  const h = hitTest(canvasPos(e));
+  const pt = canvasPos(e);
+  if (Game.state === 'editor' && !Game.modal && edScrollbarHit(pt)){
+    Ed.drag = { scroll:true }; edScrollTo(pt.x);
+    try { cv.setPointerCapture(e.pointerId); } catch(_){}
+    return;
+  }
+  const h = hitTest(pt);
   if (h){ h.fn(); return; }
+  if (Game.modal) return;
   if (Game.state === 'play'){ pointers.add(e.pointerId); latch = true; try { cv.setPointerCapture(e.pointerId); } catch(_){} }
+  else if (Game.state === 'editor'){ edDown(pt, e); try { cv.setPointerCapture(e.pointerId); } catch(_){} }
+  else if (Game.state === 'mylevels'){ ML.drag = { y0:pt.y, s0:ML.scroll }; }
 });
-const up = e => { pointers.delete(e.pointerId); };
+cv.addEventListener('pointermove', e => {
+  const pt = canvasPos(e);
+  if (Game.state === 'editor') edMove(pt, e);
+  else if (Game.state === 'mylevels' && ML.drag && e.buttons) ML.scroll = ML.drag.s0 - (pt.y - ML.drag.y0);
+});
+cv.addEventListener('wheel', e => {
+  if (Game.state === 'editor'){ e.preventDefault(); Ed.camX += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY); edClampCam(); }
+  else if (Game.state === 'mylevels'){ e.preventDefault(); ML.scroll += e.deltaY; }
+}, { passive:false });
+const up = e => { pointers.delete(e.pointerId); if (Game.state === 'editor') edUp(); ML.drag = null; };
 cv.addEventListener('pointerup', up);
 cv.addEventListener('pointercancel', up);
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
 window.addEventListener('keydown', e => {
+  if (dlgOpen()){ if (e.code === 'Escape') closeDialog(); return; }
   if (JUMP_KEYS.has(e.code) || e.code.startsWith('Arrow')) e.preventDefault();
   if (e.repeat) return;
   initAudio();
   const s = Game.state;
+  if (Game.modal){ if (e.code === 'Escape') Game.modal = null; return; }
   if (e.code === 'KeyM'){ setMuted(!save.muted); return; }
+  if (e.code === 'KeyF'){ toggleFS(); return; }
+  if (s === 'editor'){ edKey(e); return; }
+  if (s === 'mylevels'){
+    if (e.code === 'Escape' || e.code === 'Backspace') Game.state = 'menu';
+    else if (e.code === 'KeyN') newCustomLevel();
+    return;
+  }
   if (s === 'menu'){
+    if (e.code === 'KeyB'){ openMyLevels(); return; }
     if (e.code === 'ArrowLeft' || e.code === 'KeyA'){ Game.sel = (Game.sel + PARSED.length - 1) % PARSED.length; SFX.click(); }
     else if (e.code === 'ArrowRight' || e.code === 'KeyD'){ Game.sel = (Game.sel + 1) % PARSED.length; SFX.click(); }
     else if (e.code === 'Enter' || e.code === 'Space'){ keysHeld.add(e.code); startLevel(Game.sel); }
@@ -1255,14 +1884,14 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (s === 'win'){
-    if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyR'){ keysHeld.add(e.code); startLevel(Game.li); }
-    else if (e.code === 'Escape') toMenu();
+    if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyR'){ keysHeld.add(e.code); restartCurrent(); }
+    else if (e.code === 'Escape') exitPlay();
     return;
   }
   if (e.code === 'Escape' || e.code === 'KeyP'){ togglePause(); return; }
   if (s === 'pause'){
     if (e.code === 'Enter' || e.code === 'Space'){ keysHeld.add(e.code); togglePause(); }
-    else if (e.code === 'Backspace' || e.code === 'KeyQ') toMenu();
+    else if (e.code === 'Backspace' || e.code === 'KeyQ') exitPlay();
     return;
   }
   if (e.code === 'KeyR' && s === 'play'){ Game.cps = []; Game.p.dead = true; Game.state = 'dead'; Game.deadT = 1; return; }
@@ -1270,8 +1899,8 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyX') removeCheckpoint();
   if (JUMP_KEYS.has(e.code)){ keysHeld.add(e.code); latch = true; }
 });
-window.addEventListener('keyup', e => { keysHeld.delete(e.code); });
-window.addEventListener('blur', () => { keysHeld.clear(); pointers.clear(); if (Game.state === 'play') togglePause(); });
+window.addEventListener('keyup', e => { keysHeld.delete(e.code); Ed.keys.delete(e.code); });
+window.addEventListener('blur', () => { keysHeld.clear(); pointers.clear(); Ed.keys.clear(); if (Game.state === 'play') togglePause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && Game.state === 'play') togglePause(); });
 
 /* ------------------------------ Schleife ---------------------------- */
@@ -1283,10 +1912,12 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 resize();
+importFromHash();
 requestAnimationFrame(frame);
 
 // Zum Herumprobieren in der Konsole (und fuer den Level-Loeser in den Tests)
-window.GEO_RUSH = { LEVELS, PARSED, parseLevel, newPlayer, clonePlayer, step, Game, save, SPEEDS, T, DT };
+window.GEO_RUSH = { LEVELS, PARSED, parseLevel, newPlayer, clonePlayer, step, Game, save, SPEEDS, T, DT,
+                    Ed, customDef, encodeLevel, decodeLevel, startCustom, openEditor, newCustomLevel };
 })();
 </script>
 </body>
