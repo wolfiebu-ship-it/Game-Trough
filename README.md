@@ -79,6 +79,8 @@ von vorne los — bis du jedes Hindernis im Schlaf kannst.
 | `R` | Level neu starten |
 | `Z` / `X` | im Übungsmodus Checkpoint setzen / löschen (auf dem Handy: ◆+ / ◆−) |
 | `M` | Ton an/aus |
+| `F` | Vollbild an/aus (auf dem iPhone: Teilen → „Zum Home-Bildschirm“) |
+| `B` | im Menü: Level bauen |
 
 ## Was drin ist
 
@@ -90,6 +92,11 @@ von vorne los — bis du jedes Hindernis im Schlaf kannst.
 - **Portale**: Schiff-Modus (halten = steigen), Würfel-Modus, Schwerkraft umdrehen, Geschwindigkeit
 - **3 Münzen** pro Level, Bestwert in Prozent, Versuchszähler — alles wird lokal im Browser gespeichert
 - **Übungsmodus** mit Checkpoints; die Musik läuft dabei einfach weiter
+- **Level-Editor** wie im Vorbild: alle 17 Objekte per Klick oder Wischen ins Raster setzen,
+  Radierer, Rückgängig, Farbe, Musik und Start-Tempo wählen, jederzeit **▶ Testen**.
+  Eigene Level werden im Browser gespeichert und lassen sich als Code (oder direkter Link
+  `…/geo-rush/index.html#GR1…`) teilen und unter „Code einfügen“ laden
+- **Vollbild** per Knopf oder `F`; im Hochformat am Handy kommt ein Hinweis zum Querdrehen
 - Musik und Soundeffekte werden live mit der WebAudio-API erzeugt, der Hintergrund pulsiert im Takt
 
 ## Technik
